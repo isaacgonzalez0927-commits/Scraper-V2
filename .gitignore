@@ -1,0 +1,10 @@
+.env
+venv/
+__pycache__/
+*.pyc
+.search_progress.json
+hvac_no_website_port_st_lucie.txt
+leads.csv
+leads_v2.json
+generated_history.json
+hvac_leads_data.json
