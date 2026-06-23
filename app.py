@@ -1,38 +1,32 @@
 #!/usr/bin/env python3
 """
-Acsend Leads — mobile web app.
+Acsend Leads — mobile web app for cold callers.
 
-Tap "Generate New Leads", wait for the pipeline to run, then copy a clean
-block of qualified HVAC leads to send to your cold caller.
+Your caller opens this on their phone, taps "Get My Call List", and gets
+HVAC businesses with no website (or a dead one) ready to dial.
 
-Runs the Scraper V2 pipeline in a background thread and reports live progress
-so the phone never times out. Dedupes against leads already generated so each
-run gives fresh businesses.
-
-Run:
-  cd lead-finder
-  ./venv/bin/python app.py
-Then open the printed address on your phone (same Wi-Fi network).
+Deploy on Render (see README) so they don't need your Wi-Fi.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import random
 import socket
 import threading
 import uuid
-from datetime import datetime
 from pathlib import Path
 
+from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template_string, request
 
-import scraper_v2 as sv
+import simple_scraper as engine
+from florida_cities import FLORIDA_CITIES
 
 HERE = Path(__file__).parent
+load_dotenv(HERE / ".env")
 HISTORY_FILE = HERE / "generated_history.json"
-
-import os
 
 app = Flask(__name__)
 
@@ -77,55 +71,64 @@ def set_job(job_id: str, **fields) -> None:
         JOBS[job_id].update(fields)
 
 
-def run_pipeline(job_id: str, cities: list[str], max_leads: int, min_reviews: int) -> None:
+# Skip businesses with fewer reviews than this (filters out dead/empty profiles).
+MIN_REVIEWS = 3
+
+
+def run_pipeline(
+    job_id: str,
+    cities: list[str],
+    top_n: int,
+) -> None:
     def progress(message: str) -> None:
         set_job(job_id, message=message)
 
     try:
-        google_key, openai_key = sv.load_keys()
-        set_job(job_id, status="running", message="Starting search...")
+        set_job(job_id, status="running", message="Finding HVAC businesses...")
 
+        # Same engine the command-line script uses, so results are identical.
+        # The engine returns ONLY businesses that need a site (no/dead website).
         exclude = load_history()
-        leads = sv.collect_businesses(
-            cities, google_key, max_leads, min_reviews,
-            exclude_keys=exclude, progress=progress,
-            require_no_website=True,
+        rows = engine.collect_leads(
+            cities,
+            max_leads=top_n,
+            pool_size=100,
+            min_score=60,
+            min_reviews=MIN_REVIEWS,
+            use_openai=False,
+            exclude_phones=exclude,
+            progress=progress,
+            opportunities_only=True,
         )
 
-        if not leads:
+        if not rows:
             set_job(
                 job_id,
                 status="done",
-                message="No fresh leads found. Try different cities.",
+                message="No high-scoring leads found. Try different cities.",
                 leads=[],
             )
             return
 
-        sv.analyze_all(leads, progress=progress)
-        sv.qualify_all(leads, openai_key, sv.DEFAULT_MODEL, skip_ai=False, progress=progress)
-
-        leads.sort(key=lambda x: (-x.score, -x.review_count, x.name.lower()))
-
-        # Record these phones so future runs return new businesses
-        new_keys = {sv.phone_key(lead.phone) for lead in leads if lead.phone}
-        save_history(exclude | new_keys)
+        # Record these phones so future runs return new businesses.
+        new_phones = {r["phone"] for r in rows if r.get("phone")}
+        save_history(exclude | new_phones)
 
         payload = [
             {
-                "name": lead.name,
-                "phone": lead.phone,
-                "rating": lead.rating,
-                "reviews": lead.review_count,
-                "website": lead.website or "",
-                "score": lead.score,
-                "confidence": lead.confidence,
-                "sales_angle": lead.sales_angle,
-                "weaknesses": lead.weaknesses,
-                "address": lead.address,
+                "name": r["name"],
+                "phone": r["phone"],
+                "rating": r["rating"],
+                "reviews": r["reviews"],
+                "website": r["website"] or "",
+                "site_status": r["site_status"],
+                "score": r["score"],
+                "reason": r["reason"],
+                "address": r["address"],
             }
-            for lead in leads
+            for r in rows
         ]
-        set_job(job_id, status="done", message=f"Done — {len(payload)} new leads.", leads=payload)
+        set_job(job_id, status="done", message=f"Ready — {len(payload)} businesses to call.", leads=payload)
     except Exception as exc:  # noqa: BLE001 - surface any failure to the UI
         set_job(job_id, status="error", error=str(exc), message=f"Error: {exc}")
 
@@ -138,16 +141,16 @@ def run_pipeline(job_id: str, cities: list[str], max_leads: int, min_reviews: in
 @app.route("/")
 def index():
     return render_template_string(
-        PAGE, cities=sv.FLORIDA_CITIES, require_code=bool(ACCESS_CODE)
+        PAGE, cities=FLORIDA_CITIES, require_code=bool(ACCESS_CODE)
     )
 
 
 @app.route("/manifest.webmanifest")
 def manifest():
     return jsonify({
-        "name": "Acsend Leads",
-        "short_name": "Acsend Leads",
-        "description": "Generate qualified HVAC leads to call.",
+        "name": "Acsend Call List",
+        "short_name": "Call List",
+        "description": "Build your HVAC call list — businesses that need a website.",
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
@@ -170,8 +173,7 @@ def generate():
 
     data = request.get_json(silent=True) or {}
     mode = data.get("mode", "random")
-    count = max(3, min(int(data.get("count", 10)), 30))
-    min_reviews = max(0, int(data.get("min_reviews", 5)))
+    count = max(3, min(int(data.get("count", 20)), 30))
 
     if mode == "city" and data.get("city"):
         cities = [data["city"]]
@@ -179,13 +181,15 @@ def generate():
         # Whole-state search: shuffle every Florida city so each run reaches a
         # different part of the state. collect_businesses stops once it has
         # enough fresh leads, so it won't grind through all 123 every time.
-        cities = random.sample(sv.FLORIDA_CITIES, k=len(sv.FLORIDA_CITIES))
+        cities = random.sample(FLORIDA_CITIES, k=len(FLORIDA_CITIES))
 
     job_id = uuid.uuid4().hex
     set_job(job_id, status="queued", message="Queued...", leads=None, error=None)
 
     thread = threading.Thread(
-        target=run_pipeline, args=(job_id, cities, count, min_reviews), daemon=True
+        target=run_pipeline,
+        args=(job_id, cities, count),
+        daemon=True,
     )
     thread.start()
 
@@ -230,9 +234,9 @@ PAGE = r"""<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Acsend Leads">
+<meta name="apple-mobile-web-app-title" content="Call List">
 <meta name="theme-color" content="#04060d">
-<title>Acsend Leads</title>
+<title>Acsend Call List</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="/static/icon-192.png">
@@ -258,7 +262,12 @@ header{padding:calc(30px + env(safe-area-inset-top)) 0 16px;text-align:center}
 .logo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.6rem;letter-spacing:-.03em}
 .logo span{background:linear-gradient(135deg,var(--blue-light),var(--blue-bright));
 -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.tag{color:var(--muted);font-size:.85rem;margin-top:4px}
+.tag{color:var(--muted);font-size:.85rem;margin-top:4px;line-height:1.45}
+.steps{margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(37,99,235,.08);
+border:1px solid var(--border);font-size:.82rem;color:var(--muted);line-height:1.6}
+.steps strong{color:var(--blue-bright);font-weight:700}
+.steps ol{margin:8px 0 0 18px;padding:0}
+.steps li{margin-bottom:4px}
 
 .panel{background:var(--card);border:1px solid var(--border);border-radius:18px;
 padding:18px;margin-top:18px;backdrop-filter:blur(12px)}
@@ -325,8 +334,16 @@ font-size:.78rem;text-decoration:underline;cursor:pointer}
 <div class="bgglow"><span></span><span></span></div>
 <div class="wrap">
   <header>
-    <div class="logo">Acsend <span>Leads</span></div>
-    <div class="tag">Generate qualified HVAC leads to call</div>
+    <div class="logo">Acsend <span>Call List</span></div>
+    <div class="tag">Your dial list · HVAC shops with no website or a dead site</div>
+    <div class="steps">
+      <strong>How to use</strong>
+      <ol>
+        <li>Pick <strong>Whole Florida</strong> or a city</li>
+        <li>Tap <strong>Get My Call List</strong> and wait ~1–2 min</li>
+        <li>Tap any <strong>phone number</strong> to call · use <strong>Copy list</strong> for notes</li>
+      </ol>
+    </div>
   </header>
 
   <div class="panel">
@@ -346,26 +363,17 @@ font-size:.78rem;text-decoration:underline;cursor:pointer}
 
     <div class="row" style="margin-top:12px">
       <div class="field">
-        <label>How many</label>
+        <label>How many to call today</label>
         <select id="count">
-          <option value="5">5 leads</option>
-          <option value="10" selected>10 leads</option>
-          <option value="15">15 leads</option>
-          <option value="20">20 leads</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Min reviews</label>
-        <select id="minReviews">
-          <option value="0">Any</option>
-          <option value="5" selected>5+</option>
-          <option value="15">15+</option>
-          <option value="30">30+</option>
+          <option value="10">Up to 10</option>
+          <option value="15">Up to 15</option>
+          <option value="20" selected>Up to 20</option>
+          <option value="30">Up to 30</option>
         </select>
       </div>
     </div>
 
-    <button class="generate" id="genBtn">Generate New Leads</button>
+    <button class="generate" id="genBtn">Get My Call List</button>
   </div>
 
   <div class="status" id="status">
@@ -375,13 +383,13 @@ font-size:.78rem;text-decoration:underline;cursor:pointer}
 
   <div class="results">
     <div class="results-bar" id="resultsBar">
-      <button class="copybtn" id="copyBtn">Copy all to send</button>
+      <button class="copybtn" id="copyBtn">Copy list</button>
       <div class="count-pill" id="countPill">0</div>
     </div>
     <div id="list"></div>
   </div>
 
-  <button class="reset" id="resetBtn">Reset history (allow repeat leads)</button>
+  <button class="reset" id="resetBtn">Clear my history (show businesses again)</button>
 </div>
 
 <script>
@@ -391,7 +399,7 @@ const REQUIRE_CODE = {{ 'true' if require_code else 'false' }};
 
 function getCode(){ return localStorage.getItem("acsend_code") || ""; }
 function askCode(){
-  const c = prompt("Enter your access code:");
+  const c = prompt("Enter your access code (ask your manager if you don't have one):");
   if(c){ localStorage.setItem("acsend_code", c.trim()); return c.trim(); }
   return "";
 }
@@ -413,7 +421,7 @@ const list = document.getElementById("list");
 
 genBtn.addEventListener("click", async () => {
   genBtn.disabled = true;
-  genBtn.textContent = "Generating...";
+  genBtn.textContent = "Building list...";
   statusEl.classList.add("show");
   resultsBar.classList.remove("show");
   list.innerHTML = "";
@@ -423,7 +431,6 @@ genBtn.addEventListener("click", async () => {
     mode,
     city: document.getElementById("city").value,
     count: parseInt(document.getElementById("count").value, 10),
-    min_reviews: parseInt(document.getElementById("minReviews").value, 10),
   };
 
   let code = getCode();
@@ -453,7 +460,7 @@ genBtn.addEventListener("click", async () => {
 
 function resetBtnState(){
   genBtn.disabled = false;
-  genBtn.textContent = "Generate New Leads";
+  genBtn.textContent = "Get My Call List";
 }
 
 async function poll(jobId){
@@ -483,26 +490,26 @@ async function poll(jobId){
 function render(leads){
   lastLeads = leads;
   if(!leads.length){
-    list.innerHTML = '<div class="empty">No fresh leads this round. Try other cities or reset history.</div>';
+    list.innerHTML = '<div class="empty">No new businesses this round. Try another city or clear your history below.</div>';
     return;
   }
-  document.getElementById("countPill").textContent = leads.length + " new";
+  document.getElementById("countPill").textContent = leads.length + " to call";
   resultsBar.classList.add("show");
 
+  const statusText = {none: "NO WEBSITE", dead: "DEAD WEBSITE", working: "has website"};
   list.innerHTML = leads.map(l => {
     const hot = l.score >= 60 ? "hot" : "";
     const rating = l.rating ? l.rating.toFixed(1) + " (" + l.reviews + ")" : l.reviews + " reviews";
-    const site = l.website ? '<a href="'+l.website+'" target="_blank">'+shortUrl(l.website)+'</a>' : "No website";
-    const gaps = (l.weaknesses||[]).map(w => '<span class="gap">'+w+'</span>').join("");
+    const status = statusText[l.site_status] || l.site_status || "";
+    const site = l.website ? ' &middot; <a href="'+l.website+'" target="_blank">'+shortUrl(l.website)+'</a>' : "";
     return `<div class="lead">
       <div class="lead-top">
         <div class="lead-name">${esc(l.name)}</div>
         <div class="score ${hot}">${l.score}</div>
       </div>
       <a class="phone" href="tel:${l.phone.replace(/[^0-9]/g,'')}">${esc(l.phone)}</a>
-      <div class="meta">${rating} &middot; ${site}</div>
-      <div class="angle">${esc(l.sales_angle||"")}</div>
-      <div class="gaps">${gaps}</div>
+      <div class="meta"><b>${status}</b> &middot; ${rating}${site}</div>
+      <div class="angle">${esc(l.reason||"")}</div>
     </div>`;
   }).join("");
 }
@@ -513,21 +520,22 @@ function esc(s){ return (s||"").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;',
 document.getElementById("copyBtn").addEventListener("click", () => {
   if(!lastLeads.length) return;
   const today = new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"});
-  let txt = "HVAC LEADS — " + today + "\n\n";
+  let txt = "MY CALL LIST — " + today + "\n";
+  txt += "Pitch: modern website + hosting + monthly maintenance\n\n";
+  const statusText = {none: "NO WEBSITE", dead: "DEAD WEBSITE", working: "has website"};
   lastLeads.forEach((l,i) => {
     const rating = l.rating ? l.rating.toFixed(1)+" stars ("+l.reviews+" reviews)" : l.reviews+" reviews";
     txt += (i+1)+") "+l.name+"  [score "+l.score+"]\n";
     txt += "   Phone: "+l.phone+"\n";
-    txt += "   "+rating+"\n";
-    txt += "   Site: "+(l.website || "NO WEBSITE")+"\n";
-    if(l.sales_angle) txt += "   Pitch: "+l.sales_angle+"\n";
-    if(l.weaknesses && l.weaknesses.length) txt += "   Gaps: "+l.weaknesses.join("; ")+"\n";
+    txt += "   "+(statusText[l.site_status]||"")+" \u00b7 "+rating+"\n";
+    if(l.website) txt += "   Site: "+l.website+"\n";
+    if(l.reason) txt += "   Why: "+l.reason+"\n";
     txt += "\n";
   });
 
   const btn = document.getElementById("copyBtn");
   const done = () => { btn.textContent="Copied!"; btn.classList.add("copied");
-    setTimeout(()=>{btn.textContent="Copy all to send";btn.classList.remove("copied");},1800); };
+    setTimeout(()=>{btn.textContent="Copy list";btn.classList.remove("copied");},1800); };
 
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));
@@ -544,7 +552,7 @@ function fallbackCopy(text, done){
 document.getElementById("resetBtn").addEventListener("click", async () => {
   await fetch("/reset-history",{method:"POST"});
   document.getElementById("resetBtn").textContent = "History cleared";
-  setTimeout(()=>{document.getElementById("resetBtn").textContent="Reset history (allow repeat leads)";},1800);
+  setTimeout(()=>{document.getElementById("resetBtn").textContent="Clear my history (show businesses again)";},1800);
 });
 </script>
 </body>
@@ -555,7 +563,7 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))
     ip = local_ip()
     print("=" * 60)
-    print("Acsend Leads — mobile web app")
+    print("Acsend Call List — for your cold caller")
     print("=" * 60)
     print(f"  On this computer : http://127.0.0.1:{port}")
     print(f"  On your phone    : http://{ip}:{port}   (same Wi-Fi)")
