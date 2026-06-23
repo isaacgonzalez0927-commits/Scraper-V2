@@ -48,10 +48,11 @@ MIN_REVIEWS = 3         # skip businesses with fewer reviews than this
 USE_OPENAI = False      # scoring uses the rubric below (fast + consistent)
 
 # Scoring rubric (max 100):
-#   Site opportunity (no/dead website)  50 pts
-#   Reviews                             0-20 pts
-#   Rating                              0-15 pts
-#   Business legitimacy                 0-15 pts
+#   Dead website (broken link on Google)   55 pts
+#   No website                             44 pts
+#   Reviews                                0-20 pts
+#   Rating                                 0-15 pts
+#   Business legitimacy                    0-15 pts
 
 # ---------------------------------------------------------------------------
 
@@ -272,9 +273,12 @@ def legitimacy_points(lead: dict) -> int:
 
 
 def site_opportunity_points(lead: dict) -> int:
-    """50 points when there is no website or the site is dead."""
-    if lead.get("site_status") in ("none", "dead"):
-        return 50
+    """Dead website scores higher — they already tried online and need a rebuild."""
+    status = lead.get("site_status")
+    if status == "dead":
+        return 60
+    if status == "none":
+        return 30
     return 0
 
 
@@ -340,7 +344,7 @@ def collect_leads(
 
     1. Pull up to `pool_size` businesses from Google Places.
     2. Keep only real opportunities (no website or dead website).
-    3. Score every opportunity with the rubric (50 + reviews + rating + legitimacy).
+    3. Score every opportunity with the rubric (site + reviews + rating + legitimacy).
     4. Return up to `max_leads` with score >= `min_score` (best first).
 
     Shared engine for both the command line and the phone app.
