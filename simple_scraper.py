@@ -161,13 +161,27 @@ _GENERIC = {
 }
 
 
-def _domain_guesses(name: str) -> list[str]:
-    """Build a short list of likely web addresses from a business name.
+def _city_from_address(address: str) -> str:
+    """Pull a city token from a Google formatted address for domain guessing."""
+    if not address:
+        return ""
+    parts = [p.strip() for p in address.split(",")]
+    skip = {"fl", "florida", "usa", "united", "states"}
+    for part in reversed(parts):
+        clean = re.sub(r"[^a-z]", "", part.lower())
+        if len(clean) >= 3 and clean not in skip and not clean.isdigit():
+            return clean
+    return ""
 
-    e.g. "Sharkey Air LLC" -> sharkey.com, sharkeyair.com, sharkeyac.com, ...
+
+def _domain_guesses(name: str, address: str = "") -> list[str]:
+    """Build likely web addresses from a business name and city.
+
+    e.g. "Sharkey Air LLC" in Stuart -> sharkey.com, sharkeystuart.com, ...
     """
     words = [w for w in re.findall(r"[a-z0-9]+", name.lower()) if len(w) >= 3]
     distinct = [w for w in words if w not in _GENERIC]
+    city = _city_from_address(address)
 
     stems: set[str] = set()
     if distinct:
@@ -177,17 +191,24 @@ def _domain_guesses(name: str) -> list[str]:
             stems.add("".join(distinct[:2]))
         for suffix in ("air", "ac", "hvac", "heating", "cooling", "comfort"):
             stems.add(distinct[0] + suffix)
-    stems.add("".join(words))  # whole name mashed together
+        if city:
+            stems.add(distinct[0] + city)
+            stems.add(city + distinct[0])
+            stems.add("".join(distinct[:2]) + city)
+    stems.add("".join(words))
+    if city and len(city) >= 3:
+        stems.add(city + "hvac")
+        stems.add(city + "air")
 
     domains: list[str] = []
     for stem in stems:
         if 3 <= len(stem) <= 30:
             domains.append(stem + ".com")
             domains.append(stem + ".net")
-    return domains[:8]
+    return domains[:12]
 
 
-def find_unlinked_website(name: str, phone: str) -> str:
+def find_unlinked_website(name: str, phone: str, address: str = "") -> str:
     """Find a website Google DOESN'T know about by guessing the address.
 
     Probes likely domains in parallel; only counts a hit if the business phone
@@ -197,7 +218,7 @@ def find_unlinked_website(name: str, phone: str) -> str:
     if not phone_digits:
         return ""
 
-    domains = _domain_guesses(name)
+    domains = _domain_guesses(name, address)
     with ThreadPoolExecutor(max_workers=6) as pool:
         futures = [pool.submit(_probe_domain, d, phone_digits) for d in domains]
         for fut in as_completed(futures):
@@ -276,9 +297,9 @@ def site_opportunity_points(lead: dict) -> int:
     """Dead website scores higher — they already tried online and need a rebuild."""
     status = lead.get("site_status")
     if status == "dead":
-        return 60
+        return 55
     if status == "none":
-        return 30
+        return 44
     return 0
 
 
@@ -311,9 +332,22 @@ def score_all_leads(leads: list[dict]) -> None:
         lead["score"], lead["reason"] = compute_lead_score(lead)
 
 
+def call_opener(lead: dict) -> str:
+    """One-line cold-call opener based on website status."""
+    if lead.get("site_status") == "dead":
+        return (
+            "I tried your website link from Google — it's not loading. "
+            "We help HVAC companies get a modern site that actually works."
+        )
+    return (
+        "I noticed you don't have a website on your Google listing — "
+        "we build sites for local HVAC companies with hosting included."
+    )
+
+
 def _verify_no_site(lead: dict) -> dict | None:
     """Return lead if confirmed no website, else None."""
-    if find_unlinked_website(lead["name"], lead["phone"]):
+    if find_unlinked_website(lead["name"], lead["phone"], lead.get("address", "")):
         return None
     lead["has_website"] = False
     lead["site_status"] = "none"
@@ -329,6 +363,11 @@ def _verify_dead_site(lead: dict) -> dict | None:
     return lead
 
 
+def normalize_phone(phone: str) -> str:
+    digits = re.sub(r"\D", "", phone or "")
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
 def collect_leads(
     cities: list[str],
     max_leads: int = MAX_LEADS,
@@ -339,6 +378,7 @@ def collect_leads(
     exclude_phones: set[str] | None = None,
     progress=None,
     opportunities_only: bool = True,
+    site_filter: str = "all",
 ) -> list[dict]:
     """Find HVAC leads and return the best ones as a list of dicts.
 
@@ -350,7 +390,7 @@ def collect_leads(
     Shared engine for both the command line and the phone app.
     """
     google_key, _openai_key = load_keys()
-    exclude_phones = exclude_phones or set()
+    exclude_phones = {normalize_phone(p) for p in (exclude_phones or set()) if normalize_phone(p)}
 
     def say(msg: str) -> None:
         print(msg)
@@ -376,11 +416,12 @@ def collect_leads(
             if place.get("businessStatus") not in (None, "OPERATIONAL"):
                 continue
             phone = (place.get("nationalPhoneNumber") or "").strip()
-            if not phone or phone in seen:
+            phone_key = normalize_phone(phone)
+            if not phone or not phone_key or phone_key in seen:
                 continue
             if int(place.get("userRatingCount") or 0) < min_reviews:
                 continue
-            seen.add(phone)
+            seen.add(phone_key)
             record = {
                 "name": (place.get("displayName") or {}).get("text", "").strip(),
                 "phone": phone,
@@ -392,34 +433,39 @@ def collect_leads(
             (with_link if record["website"] else no_link)[phone] = record
         time.sleep(0.5)
 
+    want_none = site_filter in ("all", "none")
+    want_dead = site_filter in ("all", "dead")
+
     # --- Phase 2: verify no-website businesses (parallel) ---
     opportunities: list[dict] = []
-    candidates = list(no_link.values())
-    say(f"Checking {len(candidates)} businesses for hidden websites...")
-    done = 0
-    with ThreadPoolExecutor(max_workers=CHECK_WORKERS) as pool:
-        futures = {pool.submit(_verify_no_site, lead): lead for lead in candidates}
-        for fut in as_completed(futures):
-            done += 1
-            if done % 5 == 0 or done == len(candidates):
-                say(f"Checked {done}/{len(candidates)} no-website businesses")
-            hit = fut.result()
-            if hit:
-                opportunities.append(hit)
+    if want_none:
+        candidates = list(no_link.values())
+        say(f"Checking {len(candidates)} businesses for hidden websites...")
+        done = 0
+        with ThreadPoolExecutor(max_workers=CHECK_WORKERS) as pool:
+            futures = {pool.submit(_verify_no_site, lead): lead for lead in candidates}
+            for fut in as_completed(futures):
+                done += 1
+                if done % 5 == 0 or done == len(candidates):
+                    say(f"Checked {done}/{len(candidates)} no-website businesses")
+                hit = fut.result()
+                if hit:
+                    opportunities.append(hit)
 
     # --- Phase 3: check listed sites for dead/broken ones (parallel) ---
-    listed = list(with_link.values())
-    say(f"Checking {len(listed)} listed websites...")
-    done = 0
-    with ThreadPoolExecutor(max_workers=CHECK_WORKERS) as pool:
-        futures = {pool.submit(_verify_dead_site, lead): lead for lead in listed}
-        for fut in as_completed(futures):
-            done += 1
-            if done % 10 == 0 or done == len(listed):
-                say(f"Checked {done}/{len(listed)} listed sites")
-            hit = fut.result()
-            if hit:
-                opportunities.append(hit)
+    if want_dead:
+        listed = list(with_link.values())
+        say(f"Checking {len(listed)} listed websites...")
+        done = 0
+        with ThreadPoolExecutor(max_workers=CHECK_WORKERS) as pool:
+            futures = {pool.submit(_verify_dead_site, lead): lead for lead in listed}
+            for fut in as_completed(futures):
+                done += 1
+                if done % 10 == 0 or done == len(listed):
+                    say(f"Checked {done}/{len(listed)} listed sites")
+                hit = fut.result()
+                if hit:
+                    opportunities.append(hit)
 
     rows = opportunities
     if not opportunities_only:

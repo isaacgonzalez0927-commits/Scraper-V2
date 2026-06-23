@@ -13,8 +13,10 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 import socket
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -33,10 +35,36 @@ app = Flask(__name__)
 # Optional shared access code to protect the paid /generate endpoint.
 # Set ACCESS_CODE in the environment (or .env) to require it. Empty = open.
 ACCESS_CODE = os.getenv("ACCESS_CODE", "").strip()
+RATE_LIMIT_SECONDS = int(os.getenv("RATE_LIMIT_SECONDS", "600"))
 
 # In-memory job store: job_id -> {status, message, leads, error}
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
+RATE_LOCK = threading.Lock()
+LAST_GENERATE: dict[str, float] = {}
+
+
+def normalize_phone(phone: str) -> str:
+    digits = re.sub(r"\D", "", phone or "")
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
+def rate_limit_key() -> str:
+    code = (request.headers.get("X-Access-Code") or "").strip()
+    return f"{request.remote_addr}:{code}"
+
+
+def check_rate_limit() -> tuple[bool, int]:
+    """Return (allowed, seconds_to_wait)."""
+    key = rate_limit_key()
+    now = time.time()
+    with RATE_LOCK:
+        last = LAST_GENERATE.get(key, 0)
+        wait = int(RATE_LIMIT_SECONDS - (now - last))
+        if wait > 0:
+            return False, wait
+        LAST_GENERATE[key] = now
+        return True, 0
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +77,7 @@ def load_history() -> set[str]:
         return set()
     try:
         data = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
-        return set(data.get("phone_keys", []))
+        return {normalize_phone(p) for p in data.get("phone_keys", []) if normalize_phone(p)}
     except (json.JSONDecodeError, OSError):
         return set()
 
@@ -79,6 +107,8 @@ def run_pipeline(
     job_id: str,
     cities: list[str],
     top_n: int,
+    extra_exclude: set[str],
+    site_filter: str,
 ) -> None:
     def progress(message: str) -> None:
         set_job(job_id, message=message)
@@ -88,7 +118,7 @@ def run_pipeline(
 
         # Same engine the command-line script uses, so results are identical.
         # The engine returns ONLY businesses that need a site (no/dead website).
-        exclude = load_history()
+        exclude = load_history() | extra_exclude
         rows = engine.collect_leads(
             cities,
             max_leads=top_n,
@@ -99,6 +129,7 @@ def run_pipeline(
             exclude_phones=exclude,
             progress=progress,
             opportunities_only=True,
+            site_filter=site_filter,
         )
 
         if not rows:
@@ -111,7 +142,7 @@ def run_pipeline(
             return
 
         # Record these phones so future runs return new businesses.
-        new_phones = {r["phone"] for r in rows if r.get("phone")}
+        new_phones = {normalize_phone(r["phone"]) for r in rows if normalize_phone(r.get("phone", ""))}
         save_history(exclude | new_phones)
 
         payload = [
@@ -125,6 +156,7 @@ def run_pipeline(
                 "score": r["score"],
                 "reason": r["reason"],
                 "address": r["address"],
+                "opener": engine.call_opener(r),
             }
             for r in rows
         ]
@@ -171,9 +203,20 @@ def generate():
         if supplied != ACCESS_CODE:
             return jsonify({"error": "unauthorized"}), 401
 
+    allowed, wait = check_rate_limit()
+    if not allowed:
+        return jsonify({"error": "rate_limit", "retry_after": wait}), 429
+
     data = request.get_json(silent=True) or {}
     mode = data.get("mode", "random")
     count = max(3, min(int(data.get("count", 20)), 30))
+    site_filter = data.get("site_filter", "all")
+    if site_filter not in ("all", "dead", "none"):
+        site_filter = "all"
+    raw_exclude = data.get("exclude_phones") or []
+    extra_exclude = {
+        normalize_phone(p) for p in raw_exclude if normalize_phone(p)
+    }
 
     if mode == "city" and data.get("city"):
         cities = [data["city"]]
@@ -188,7 +231,7 @@ def generate():
 
     thread = threading.Thread(
         target=run_pipeline,
-        args=(job_id, cities, count),
+        args=(job_id, cities, count, extra_exclude, site_filter),
         daemon=True,
     )
     thread.start()
@@ -268,6 +311,14 @@ border:1px solid var(--border);font-size:.82rem;color:var(--muted);line-height:1
 .steps strong{color:var(--blue-bright);font-weight:700}
 .steps ol{margin:8px 0 0 18px;padding:0}
 .steps li{margin-bottom:4px}
+.cold-note{margin-top:10px;font-size:.78rem;color:var(--muted);font-style:italic}
+.pitch{margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(37,99,235,.08);
+border:1px solid var(--border);text-align:left}
+.pitch summary{cursor:pointer;font-weight:700;color:var(--blue-bright);font-size:.85rem;list-style:none}
+.pitch summary::-webkit-details-marker{display:none}
+.pitch-body{margin-top:10px;font-size:.82rem;color:var(--muted);line-height:1.65}
+.pitch-body p{margin-bottom:8px}
+.pitch-body em{color:var(--text);font-style:normal;font-weight:600}
 
 .panel{background:var(--card);border:1px solid var(--border);border-radius:18px;
 padding:18px;margin-top:18px;backdrop-filter:blur(12px)}
@@ -311,7 +362,13 @@ font-weight:800;font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;cu
 border-radius:100px;padding:0 18px;display:flex;align-items:center;font-weight:700;font-size:.85rem;white-space:nowrap}
 
 .lead{background:var(--card);border:1px solid var(--border);border-radius:16px;
-padding:16px;margin-bottom:12px}
+padding:16px;margin-bottom:12px;transition:opacity .2s}
+.lead.called{opacity:.45}
+.lead-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.markbtn{padding:8px 14px;border-radius:100px;border:1px solid var(--border);
+background:rgba(255,255,255,.04);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer}
+.markbtn.done{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.35);color:#6ee7b7}
+.opener{font-size:.84rem;line-height:1.5;color:var(--blue-bright);margin-bottom:8px;font-style:italic}
 .lead-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
 .lead-name{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:1.05rem;line-height:1.25}
 .score{flex-shrink:0;width:46px;height:46px;border-radius:12px;display:flex;align-items:center;
@@ -339,11 +396,20 @@ font-size:.78rem;text-decoration:underline;cursor:pointer}
     <div class="steps">
       <strong>How to use</strong>
       <ol>
-        <li>Pick <strong>Whole Florida</strong> or a city</li>
+        <li>Pick area and lead type below</li>
         <li>Tap <strong>Get My Call List</strong> and wait ~1–2 min</li>
-        <li>Tap any <strong>phone number</strong> to call · use <strong>Copy list</strong> for notes</li>
+        <li>Tap a <strong>phone number</strong> to call · tap <strong>Mark called</strong> when done</li>
       </ol>
+      <div class="cold-note">First load of the day may take up to a minute — server is waking up.</div>
     </div>
+    <details class="pitch">
+      <summary>Your pitch script (tap to open)</summary>
+      <div class="pitch-body">
+        <p><em>Opener:</em> Use the line under each business — it's written for their situation.</p>
+        <p><em>Then:</em> "We build modern websites for HVAC companies — design, hosting, and monthly maintenance. You don't have to do much; we pull your info from what's already online."</p>
+        <p><em>Close:</em> "Would it be okay if I sent you a quick example of what your site could look like?"</p>
+      </div>
+    </details>
   </header>
 
   <div class="panel">
@@ -362,6 +428,14 @@ font-size:.78rem;text-decoration:underline;cursor:pointer}
     </div>
 
     <div class="row" style="margin-top:12px">
+      <div class="field">
+        <label>Lead type</label>
+        <select id="siteFilter">
+          <option value="all" selected>All (dead + no website)</option>
+          <option value="dead">Dead websites only</option>
+          <option value="none">No website only</option>
+        </select>
+      </div>
       <div class="field">
         <label>How many to call today</label>
         <select id="count">
@@ -397,6 +471,43 @@ let mode = "random";
 let lastLeads = [];
 const REQUIRE_CODE = {{ 'true' if require_code else 'false' }};
 
+function historyKey(){
+  const code = getCode();
+  return code ? "acsend_used_" + code : "acsend_used_phones";
+}
+function calledKey(){
+  const code = getCode();
+  return code ? "acsend_called_" + code : "acsend_called_phones";
+}
+function normPhone(p){
+  const d = (p||"").replace(/\D/g,"");
+  return d.length >= 10 ? d.slice(-10) : d;
+}
+function loadUsedPhones(){
+  try { return JSON.parse(localStorage.getItem(historyKey()) || "[]"); }
+  catch(e){ return []; }
+}
+function saveUsedPhones(arr){
+  localStorage.setItem(historyKey(), JSON.stringify(arr));
+}
+function loadCalledPhones(){
+  try { return JSON.parse(localStorage.getItem(calledKey()) || "[]"); }
+  catch(e){ return []; }
+}
+function saveCalledPhones(arr){
+  localStorage.setItem(calledKey(), JSON.stringify(arr));
+}
+function isCalled(phone){
+  return loadCalledPhones().includes(normPhone(phone));
+}
+function markCalled(phone){
+  const key = normPhone(phone);
+  if(!key) return;
+  const set = new Set(loadCalledPhones());
+  set.add(key);
+  saveCalledPhones([...set]);
+}
+
 function getCode(){ return localStorage.getItem("acsend_code") || ""; }
 function askCode(){
   const c = prompt("Enter your access code (ask your manager if you don't have one):");
@@ -431,10 +542,12 @@ genBtn.addEventListener("click", async () => {
     mode,
     city: document.getElementById("city").value,
     count: parseInt(document.getElementById("count").value, 10),
+    site_filter: document.getElementById("siteFilter").value,
+    exclude_phones: loadUsedPhones(),
   };
 
   let code = getCode();
-  if(REQUIRE_CODE && !code){ code = askCode(); }
+  if(REQUIRE_CODE && !code){ code = askCode(); if(!code){ resetBtnState(); statusEl.classList.remove("show"); return; } }
 
   try {
     const res = await fetch("/generate", {
@@ -445,15 +558,22 @@ genBtn.addEventListener("click", async () => {
     if(res.status === 401){
       localStorage.removeItem("acsend_code");
       statusEl.classList.remove("show");
-      statusMsg.textContent = "Wrong access code.";
-      list.innerHTML = '<div class="empty">Access code incorrect. Tap Generate to try again.</div>';
+      list.innerHTML = '<div class="empty">Access code incorrect. Tap to try again.</div>';
+      resetBtnState();
+      return;
+    }
+    if(res.status === 429){
+      const data = await res.json();
+      const mins = Math.ceil((data.retry_after || 600) / 60);
+      statusEl.classList.remove("show");
+      list.innerHTML = '<div class="empty">Please wait ~'+mins+' min before generating another list (protects API limits).</div>';
       resetBtnState();
       return;
     }
     const { job_id } = await res.json();
     poll(job_id);
   } catch (err) {
-    statusMsg.textContent = "Could not start. Is the server running?";
+    statusMsg.textContent = "Could not start — if this is the first load today, wait a minute and try again.";
     resetBtnState();
   }
 });
@@ -471,7 +591,11 @@ async function poll(jobId){
 
     if(job.status === "done"){
       statusEl.classList.remove("show");
-      render(job.leads || []);
+      const leads = job.leads || [];
+      const used = new Set(loadUsedPhones());
+      leads.forEach(l => { const k = normPhone(l.phone); if(k) used.add(k); });
+      saveUsedPhones([...used]);
+      render(leads);
       resetBtnState();
       return;
     }
@@ -490,46 +614,65 @@ async function poll(jobId){
 function render(leads){
   lastLeads = leads;
   if(!leads.length){
-    list.innerHTML = '<div class="empty">No new businesses this round. Try another city or clear your history below.</div>';
+    list.innerHTML = '<div class="empty">No new businesses this round. Try another city, lead type, or clear history below.</div>';
     return;
   }
-  document.getElementById("countPill").textContent = leads.length + " to call";
+  const uncalled = leads.filter(l => !isCalled(l.phone)).length;
+  document.getElementById("countPill").textContent = uncalled + " to call";
   resultsBar.classList.add("show");
 
   const statusText = {none: "NO WEBSITE", dead: "DEAD WEBSITE", working: "has website"};
-  list.innerHTML = leads.map(l => {
+  list.innerHTML = leads.map((l, idx) => {
     const hot = l.score >= 60 ? "hot" : "";
     const rating = l.rating ? l.rating.toFixed(1) + " (" + l.reviews + ")" : l.reviews + " reviews";
     const status = statusText[l.site_status] || l.site_status || "";
     const site = l.website ? ' &middot; <a href="'+l.website+'" target="_blank">'+shortUrl(l.website)+'</a>' : "";
-    return `<div class="lead">
+    const called = isCalled(l.phone);
+    const opener = l.opener || "";
+    return `<div class="lead ${called ? "called" : ""}" data-idx="${idx}">
       <div class="lead-top">
         <div class="lead-name">${esc(l.name)}</div>
         <div class="score ${hot}">${l.score}</div>
       </div>
       <a class="phone" href="tel:${l.phone.replace(/[^0-9]/g,'')}">${esc(l.phone)}</a>
       <div class="meta"><b>${status}</b> &middot; ${rating}${site}</div>
+      ${opener ? '<div class="opener">"'+esc(opener)+'"</div>' : ""}
       <div class="angle">${esc(l.reason||"")}</div>
+      <div class="lead-actions">
+        <button type="button" class="markbtn ${called ? "done" : ""}" data-phone="${esc(l.phone)}">${called ? "✓ Called" : "Mark called"}</button>
+      </div>
     </div>`;
   }).join("");
+
+  list.querySelectorAll(".markbtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      markCalled(btn.dataset.phone);
+      const card = btn.closest(".lead");
+      card.classList.add("called");
+      btn.classList.add("done");
+      btn.textContent = "✓ Called";
+      const left = lastLeads.filter(l => !isCalled(l.phone)).length;
+      document.getElementById("countPill").textContent = left + " to call";
+    });
+  });
 }
 
 function shortUrl(u){ try{ return new URL(u).hostname.replace(/^www\./,""); }catch(e){ return u; } }
-function esc(s){ return (s||"").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function esc(s){ return (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 document.getElementById("copyBtn").addEventListener("click", () => {
   if(!lastLeads.length) return;
   const today = new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"});
   let txt = "MY CALL LIST — " + today + "\n";
-  txt += "Pitch: modern website + hosting + monthly maintenance\n\n";
+  txt += "Package: website build + hosting + monthly maintenance\n\n";
   const statusText = {none: "NO WEBSITE", dead: "DEAD WEBSITE", working: "has website"};
   lastLeads.forEach((l,i) => {
     const rating = l.rating ? l.rating.toFixed(1)+" stars ("+l.reviews+" reviews)" : l.reviews+" reviews";
     txt += (i+1)+") "+l.name+"  [score "+l.score+"]\n";
     txt += "   Phone: "+l.phone+"\n";
-    txt += "   "+(statusText[l.site_status]||"")+" \u00b7 "+rating+"\n";
-    if(l.website) txt += "   Site: "+l.website+"\n";
-    if(l.reason) txt += "   Why: "+l.reason+"\n";
+    txt += "   "+(statusText[l.site_status]||"")+" · "+rating+"\n";
+    if(l.opener) txt += "   Say: \""+l.opener+"\"\n";
+    if(l.reason) txt += "   Notes: "+l.reason+"\n";
     txt += "\n";
   });
 
@@ -551,6 +694,8 @@ function fallbackCopy(text, done){
 
 document.getElementById("resetBtn").addEventListener("click", async () => {
   await fetch("/reset-history",{method:"POST"});
+  localStorage.removeItem(historyKey());
+  localStorage.removeItem(calledKey());
   document.getElementById("resetBtn").textContent = "History cleared";
   setTimeout(()=>{document.getElementById("resetBtn").textContent="Clear my history (show businesses again)";},1800);
 });
