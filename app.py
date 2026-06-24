@@ -394,19 +394,7 @@ header{padding:calc(30px + env(safe-area-inset-top)) 0 16px;text-align:center}
 .logo span{background:linear-gradient(135deg,var(--purple-light),var(--purple-bright));
 -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .tag{color:var(--muted);font-size:.85rem;margin-top:4px;line-height:1.45}
-.steps{margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(124,58,237,.1);
-border:1px solid var(--border);font-size:.82rem;color:var(--muted);line-height:1.6}
-.steps strong{color:var(--purple-bright);font-weight:700}
-.steps ol{margin:8px 0 0 18px;padding:0}
-.steps li{margin-bottom:4px}
 .cold-note{margin-top:10px;font-size:.78rem;color:var(--muted);font-style:italic}
-.pitch{margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(124,58,237,.1);
-border:1px solid var(--border);text-align:left}
-.pitch summary{cursor:pointer;font-weight:700;color:var(--purple-bright);font-size:.85rem;list-style:none}
-.pitch summary::-webkit-details-marker{display:none}
-.pitch-body{margin-top:10px;font-size:.82rem;color:var(--muted);line-height:1.65}
-.pitch-body p{margin-bottom:8px}
-.pitch-body em{color:var(--text);font-style:normal;font-weight:600}
 
 .panel{background:var(--card);border:1px solid var(--border);border-radius:18px;
 padding:18px;margin-top:18px;backdrop-filter:blur(12px)}
@@ -486,23 +474,6 @@ font-size:.78rem;text-decoration:underline;cursor:pointer}
   <header>
     <div class="logo"><span>Nexus</span></div>
     <div class="tag">Your dial list · HVAC shops with no website or a dead site</div>
-    <div class="steps">
-      <strong>How to use</strong>
-      <ol>
-        <li>Pick area and lead type below</li>
-        <li>Tap <strong>Get My Call List</strong> and wait ~1–2 min</li>
-        <li>Tap a <strong>phone number</strong> to call · tap an <strong>outcome</strong> when done</li>
-      </ol>
-      <div class="cold-note">First load of the day may take up to a minute — server is waking up.</div>
-    </div>
-    <details class="pitch">
-      <summary>Your pitch script (tap to open)</summary>
-      <div class="pitch-body">
-        <p><em>Opener:</em> Use the line under each business — it's written for their situation.</p>
-        <p><em>Then:</em> "We build modern websites for HVAC companies — design, hosting, and monthly maintenance. You don't have to do much; we pull your info from what's already online."</p>
-        <p><em>Close:</em> "Would it be okay if I sent you a quick example of what your site could look like?"</p>
-      </div>
-    </details>
   </header>
 
   <div class="panel">
