@@ -25,10 +25,10 @@ import simple_scraper as engine
 import tracking
 from florida_cities import FLORIDA_CITIES
 from nexus_icons import NEXUS_ICON_LINKS, NEXUS_MANIFEST_ICONS
+from nexus_theme import NEXUS_BASE_CSS, NEXUS_CALLER_CSS, NEXUS_VIEWPORT
 from owner_pages import (
     DASHBOARD_PAGE,
     HISTORY_PAGE,
-    NEXUS_NAV_CSS,
     NEXUS_SHELL,
     REPORTS_PAGE,
     STATS_PAGE,
@@ -398,111 +398,25 @@ PAGE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+""" + NEXUS_VIEWPORT + """
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Nexus">
 <meta name="theme-color" content="#f8f9fb">
 <title>Nexus</title>
 <link rel="manifest" href="/manifest.webmanifest">
 """ + NEXUS_ICON_LINKS + """
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
---bg:#f8f9fb;--bg2:#fff;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
---accent:#7c3aed;--accent-hover:#6d28d9;--accent-subtle:#f3e8ff;
---green:#059669;--green-bg:#ecfdf5;--red:#dc2626;--radius:8px;--shadow:0 1px 2px rgba(0,0,0,.05)
-}
-[data-theme="dark"]{
---bg:#111827;--bg2:#1f2937;--card:#1f2937;--text:#f9fafb;--muted:#9ca3af;--border:#374151;
---accent:#a78bfa;--accent-hover:#c4b5fd;--accent-subtle:rgba(124,58,237,.18);
---green-bg:rgba(5,150,105,.15);--shadow:none
-}
-html{scroll-behavior:smooth}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
-background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
-min-height:100vh;padding:0 0 80px;font-size:15px;line-height:1.5}
-.wrap{max-width:560px;margin:0 auto;padding:0 16px}
-.page-intro{padding:calc(20px + env(safe-area-inset-top)) 0 16px}
-.logo{font-weight:600;font-size:1.125rem;color:var(--text)}
-.tag{color:var(--muted);font-size:.875rem;margin-top:4px;line-height:1.45}
-.theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--muted);
-font-family:inherit;font-size:.75rem;font-weight:500;padding:7px 10px;border-radius:var(--radius);cursor:pointer;white-space:nowrap}
-.theme-toggle:hover{color:var(--text)}
-.theme-switch{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2px;gap:2px;flex-shrink:0}
-.theme-switch button{flex:1;border:none;background:transparent;color:var(--muted);font-family:inherit;
-font-size:.75rem;font-weight:500;padding:6px 10px;border-radius:6px;cursor:pointer;min-width:52px}
-.theme-switch button.active{background:var(--card);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
-.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-padding:16px;margin-top:16px;box-shadow:var(--shadow)}
-.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.field{flex:1;min-width:130px}
-label{display:block;font-size:.8125rem;font-weight:500;color:var(--text);margin-bottom:5px}
-select,input{width:100%;padding:10px 12px;border-radius:var(--radius);border:1px solid var(--border);
-background:var(--card);color:var(--text);font-family:inherit;font-size:.9375rem;
-appearance:none;-webkit-appearance:none}
-select:focus,input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-subtle)}
-.seg{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:3px;gap:3px}
-.seg button{flex:1;padding:9px;border:none;background:transparent;color:var(--muted);
-font-family:inherit;font-weight:500;font-size:.8125rem;border-radius:6px;cursor:pointer}
-.seg button.active{background:var(--card);color:var(--accent);font-weight:600;box-shadow:var(--shadow)}
-.generate{width:100%;margin-top:6px;padding:12px;border:1px solid var(--accent);border-radius:var(--radius);
-background:var(--accent);color:#fff;font-family:inherit;font-weight:500;font-size:.9375rem;cursor:pointer}
-.generate:active{opacity:.9}
-.generate:disabled{opacity:.5;cursor:not-allowed}
-.status{display:none;margin-top:16px;align-items:center;gap:12px;
-background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
-.status.show{display:flex}
-.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);
-border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
-@keyframes spin{to{transform:rotate(360deg)}}
-.status .msg{font-size:.875rem;color:var(--muted)}
-.results{margin-top:16px}
-.results-bar{display:none;gap:8px;margin-bottom:12px}
-.results-bar.show{display:flex}
-.copybtn{flex:1;padding:12px;border:1px solid var(--border);border-radius:var(--radius);
-background:var(--card);color:var(--text);font-weight:500;font-family:inherit;font-size:.875rem;cursor:pointer}
-.copybtn:hover{background:var(--bg)}
-.copybtn.copied{background:var(--green-bg);border-color:var(--green);color:var(--green)}
-.count-pill{background:var(--bg);border:1px solid var(--border);color:var(--muted);
-border-radius:var(--radius);padding:0 14px;display:flex;align-items:center;font-weight:500;font-size:.8125rem;white-space:nowrap}
-.lead{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
-.lead.called{opacity:.55}
-.lead-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-.markbtn{padding:6px 12px;border-radius:var(--radius);border:1px solid var(--border);
-background:var(--card);color:var(--muted);font-size:.75rem;font-weight:500;cursor:pointer}
-.markbtn.done{background:var(--green-bg);border-color:var(--green);color:var(--green)}
-.outcome-btn{padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border);
-background:var(--card);color:var(--muted);font-size:.75rem;font-weight:500;cursor:pointer}
-.outcome-btn.picked{background:var(--green-bg);border-color:var(--green);color:var(--green)}
-.outcome-btn.client-pick{background:var(--accent-subtle);border-color:var(--accent);color:var(--accent)}
-.opener{font-size:.8125rem;line-height:1.5;color:var(--muted);margin-bottom:8px}
-.lead-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px}
-.lead-name{font-weight:600;font-size:.9375rem;line-height:1.3}
-.score{flex-shrink:0;min-width:40px;height:40px;border-radius:var(--radius);display:flex;align-items:center;
-justify-content:center;font-weight:600;font-size:.9375rem;background:var(--bg);border:1px solid var(--border)}
-.score.hot{background:var(--accent);color:#fff;border-color:var(--accent)}
-.meta{font-size:.8125rem;color:var(--muted);margin-bottom:8px}
-.meta a{color:var(--accent)}
-.phone{display:inline-block;font-weight:600;color:var(--text);font-size:.9375rem;margin-bottom:6px}
-.angle{font-size:.875rem;line-height:1.5;margin-bottom:6px}
-.gaps{display:flex;flex-wrap:wrap;gap:6px}
-.gap{font-size:.75rem;background:#fef2f2;border:1px solid #fecaca;color:var(--red);
-border-radius:4px;padding:2px 8px}
-.empty{text-align:center;color:var(--muted);padding:32px 10px;font-size:.875rem}
-.reset{display:block;width:100%;margin-top:16px;background:none;border:none;color:var(--muted);
-font-size:.8125rem;text-decoration:underline;cursor:pointer}
-""" + NEXUS_NAV_CSS + """
+""" + NEXUS_BASE_CSS + NEXUS_CALLER_CSS + """
 </style>
 </head>
 <body>
 """ + NEXUS_SHELL + """
-<div class="wrap">
-  <div class="page-intro">
-    <div class="logo">Nexus</div>
-    <div class="tag">Call list for HVAC businesses without a working website</div>
+<main class="main">
+  <div class="page-header">
+    <h1 class="hide-mobile">Nexus</h1>
+    <p class="tag">Call list for HVAC businesses without a working website</p>
   </div>
 
   <div class="panel">
@@ -557,7 +471,7 @@ font-size:.8125rem;text-decoration:underline;cursor:pointer}
   </div>
 
   <button class="reset" id="resetBtn">Clear my history (show businesses again)</button>
-</div>
+</main>
 
 <script>
 let mode = "random";
