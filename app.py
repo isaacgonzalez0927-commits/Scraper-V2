@@ -212,11 +212,7 @@ def manifest():
         "orientation": "portrait",
         "background_color": "#f8f9fb",
         "theme_color": "#f8f9fb",
-        "icons": [
-            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
-        ],
+        "icons": NEXUS_MANIFEST_ICONS,
     })
 
 
@@ -232,23 +228,23 @@ def manifest_owner():
         "orientation": "portrait",
         "background_color": "#f8f9fb",
         "theme_color": "#f8f9fb",
-        "icons": [
-            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
-        ],
+        "icons": NEXUS_MANIFEST_ICONS,
     })
 
 
 @app.route("/apple-touch-icon.png")
 @app.route("/apple-touch-icon-precomposed.png")
 def apple_touch_icon():
-    return send_from_directory(app.static_folder, "apple-touch-icon.png")
+    pref = (request.headers.get("Sec-CH-Prefers-Color-Scheme") or "").lower()
+    name = "apple-touch-icon-dark.png" if pref == "dark" else "apple-touch-icon-light.png"
+    return send_from_directory(app.static_folder, name)
 
 
 @app.route("/favicon.ico")
 def favicon():
-    return send_from_directory(app.static_folder, "icon-192.png")
+    pref = (request.headers.get("Sec-CH-Prefers-Color-Scheme") or "").lower()
+    name = "icon-192-dark.png" if pref == "dark" else "icon-192-light.png"
+    return send_from_directory(app.static_folder, name)
 
 
 @app.route("/generate", methods=["POST"])
@@ -410,9 +406,7 @@ PAGE = r"""<!DOCTYPE html>
 <meta name="theme-color" content="#f8f9fb">
 <title>Nexus</title>
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+""" + NEXUS_ICON_LINKS + """
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
