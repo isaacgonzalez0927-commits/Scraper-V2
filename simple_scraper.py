@@ -380,9 +380,16 @@ def compute_lead_score(lead: dict) -> tuple[int, str]:
 
 
 def score_all_leads(leads: list[dict]) -> None:
-    """Apply the rubric to every lead in-place."""
+    """Apply the rubric to every lead in-place; Atlas V1 adjusts when enabled."""
     for lead in leads:
         lead["score"], lead["reason"] = compute_lead_score(lead)
+    try:
+        from atlas import apply_atlas
+
+        for lead in leads:
+            apply_atlas(lead)
+    except ImportError:
+        pass
 
 
 def call_opener(lead: dict) -> str:

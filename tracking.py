@@ -20,13 +20,20 @@ DB_PATH = Path(__file__).parent / "data" / "calls.db"
 _DB_LOCK = threading.Lock()
 
 OUTCOMES = (
-    "called",
+    "no_answer",
     "interested",
     "callback",
     "client",
     "not_interested",
-    "no_answer",
 )
+
+OUTCOME_LABELS = {
+    "no_answer": "No answer",
+    "interested": "Interested",
+    "callback": "Callback",
+    "client": "Client",
+    "not_interested": "Not interested",
+}
 
 INTEREST_OUTCOMES = {"interested", "callback", "client"}
 CLOSE_OUTCOMES = {"client"}
@@ -414,6 +421,7 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         else "No Website" if d.get("site_status") == "none"
         else d.get("site_status", "")
     )
+    d["outcome_label"] = OUTCOME_LABELS.get(d.get("outcome", ""), d.get("outcome", ""))
     d["date_called"] = (d.get("logged_at") or "")[:10]
     return d
 

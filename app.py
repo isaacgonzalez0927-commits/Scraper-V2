@@ -394,7 +394,6 @@ header{padding:calc(30px + env(safe-area-inset-top)) 0 16px;text-align:center}
 .logo span{background:linear-gradient(135deg,var(--purple-light),var(--purple-bright));
 -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .tag{color:var(--muted);font-size:.85rem;margin-top:4px;line-height:1.45}
-.cold-note{margin-top:10px;font-size:.78rem;color:var(--muted);font-style:italic}
 
 .panel{background:var(--card);border:1px solid var(--border);border-radius:18px;
 padding:18px;margin-top:18px;backdrop-filter:blur(12px)}
@@ -687,8 +686,8 @@ function render(leads){
 
   const statusText = {none: "NO WEBSITE", dead: "DEAD WEBSITE", working: "has website"};
   const outcomes = [
-    ["called","Called"],["interested","Interested"],["callback","Callback"],
-    ["client","Client"],["not_interested","No"],["no_answer","No ans"]
+    ["no_answer","No answer"],["interested","Interested"],["callback","Callback"],
+    ["client","Client"],["not_interested","Not interested"]
   ];
   list.innerHTML = leads.map((l, idx) => {
     const hot = l.score >= 60 ? "hot" : "";

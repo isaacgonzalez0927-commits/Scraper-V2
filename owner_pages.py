@@ -115,7 +115,8 @@ async function load(){{
   ).join("") || "<p class=sub>No city data yet.</p>";
   document.getElementById("recent").innerHTML = (d.recent||[]).map(r=>`
     <tr><td>${{(r.logged_at||"").slice(0,16).replace("T"," ")}}</td>
-    <td>${{r.business_name}}</td><td>${{r.lead_type}}</td><td>${{r.outcome}}</td>
+    <td>${{r.business_name}}</td><td>${{r.lead_type}}</td>
+    <td>${{r.outcome_label || r.outcome}}</td>
     <td>${{r.score??"—"}}</td><td>${{r.caller_id}}</td></tr>`).join("");
 }}
 load(); setInterval(load, 30000);
@@ -171,9 +172,9 @@ HISTORY_PAGE = f"""<!DOCTYPE html>
 <div class="filters">
   <select id="fSite"><option value="">All types</option><option value="dead">Dead Website</option><option value="none">No Website</option></select>
   <select id="fOutcome"><option value="">All outcomes</option>
-    <option value="called">Called</option><option value="interested">Interested</option>
+    <option value="no_answer">No answer</option><option value="interested">Interested</option>
     <option value="callback">Callback</option><option value="client">Client</option>
-    <option value="not_interested">Not interested</option><option value="no_answer">No answer</option>
+    <option value="not_interested">Not interested</option>
   </select>
   <input id="fCity" placeholder="Filter city..." style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text)">
   <button onclick="load()" style="padding:10px 16px;border-radius:10px;border:none;background:var(--purple);color:#fff;font-weight:700;cursor:pointer">Apply</button>
@@ -191,7 +192,7 @@ async function load(){{
   const rows = await ownerFetch("/api/history?"+q);
   document.getElementById("rows").innerHTML = rows.map(r=>`
     <tr><td>${{r.business_name}}</td><td>${{r.score??"—"}}</td><td>${{r.lead_type}}</td>
-    <td>${{r.outcome}}</td><td>${{r.city||"—"}}</td><td>${{r.date_called}}</td></tr>`
+    <td>${{r.outcome_label || r.outcome}}</td><td>${{r.city||"—"}}</td><td>${{r.date_called}}</td></tr>`
   ).join("") || "<tr><td colspan=6>No calls match filters.</td></tr>";
 }}
 load();
