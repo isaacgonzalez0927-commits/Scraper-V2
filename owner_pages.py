@@ -1,6 +1,8 @@
 """Owner-facing pages: dashboard, reports, history, statistics."""
 
-OWNER_HEAD = """
+from nexus_icons import NEXUS_ICON_LINKS, NEXUS_MANIFEST_ICONS
+
+OWNER_HEAD = f"""
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f8f9fb">
@@ -8,10 +10,7 @@ OWNER_HEAD = """
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Nexus">
 <link rel="manifest" href="/manifest-owner.webmanifest">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
+{NEXUS_ICON_LINKS}
 """
 
 THEME_JS = """
@@ -53,20 +52,6 @@ OWNER_STYLES = """
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
 background:var(--bg);color:var(--text);padding:20px;max-width:1080px;margin:0 auto;line-height:1.5;font-size:15px}
 a{color:var(--accent);text-decoration:none}
-.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
-margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-nav{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-nav a{padding:7px 12px;border-radius:var(--radius);border:1px solid var(--border);
-font-size:.8125rem;font-weight:500;color:var(--muted);background:var(--card)}
-nav a:hover{color:var(--text)}
-nav a.active{background:var(--accent-subtle);border-color:var(--accent-subtle);color:var(--accent);font-weight:600}
-.theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--muted);
-font-family:inherit;font-size:.8125rem;font-weight:500;padding:7px 12px;border-radius:var(--radius);cursor:pointer}
-.theme-toggle:hover{color:var(--text)}
-.theme-switch{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2px;gap:2px}
-.theme-switch button{flex:1;border:none;background:transparent;color:var(--muted);font-family:inherit;
-font-size:.75rem;font-weight:500;padding:6px 10px;border-radius:6px;cursor:pointer}
-.theme-switch button.active{background:var(--card);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
 h1{font-size:1.375rem;font-weight:600;margin-bottom:4px}
 .brand{font-size:.8125rem;font-weight:500;color:var(--muted);margin-bottom:16px}
 .sub{color:var(--muted);font-size:.875rem;margin-bottom:20px}
@@ -97,14 +82,57 @@ background:var(--card);color:var(--text);margin:12px 0;font-size:1rem}
 color:#fff;font-weight:500;cursor:pointer;font-family:inherit}
 """
 
-OWNER_NAV = """
-<div class="topbar">
-<nav>
-  <a href="/dashboard" id="nav-dash">Dashboard</a>
-  <a href="/reports" id="nav-reports">Reports</a>
-  <a href="/history" id="nav-history">History</a>
-  <a href="/stats" id="nav-stats">Statistics</a>
-  <a href="/">Caller app</a>
+NEXUS_NAV_CSS = """
+:root{--bottom-nav-h:56px;--mobile-header-h:48px;--safe-bottom:env(safe-area-inset-bottom,0px);--safe-top:env(safe-area-inset-top,0px)}
+.mobile-header,.bottom-nav{display:none}
+.desktop-topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.desktop-nav{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.desktop-nav a{padding:7px 12px;border-radius:var(--radius);border:1px solid var(--border);
+font-size:.8125rem;font-weight:500;color:var(--muted);background:var(--card)}
+.desktop-nav a:hover{color:var(--text)}
+.desktop-nav a.active{background:var(--accent-subtle);border-color:var(--accent-subtle);color:var(--accent);font-weight:600}
+.bottom-nav a.active{color:var(--accent);font-weight:600}
+.theme-switch{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2px;gap:2px;flex-shrink:0}
+.theme-switch button{flex:1;border:none;background:transparent;color:var(--muted);font-family:inherit;
+font-size:.75rem;font-weight:500;padding:6px 10px;border-radius:6px;cursor:pointer;min-width:44px}
+.theme-switch button.active{background:var(--card);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
+.mobile-header{align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;
+height:calc(var(--mobile-header-h) + var(--safe-top));padding:var(--safe-top) 14px 0;background:var(--bg2);
+border-bottom:1px solid var(--border);z-index:90}
+.mobile-brand{font-size:1rem;font-weight:600}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--bottom-nav-h) + var(--safe-bottom));
+padding-bottom:var(--safe-bottom);background:var(--bg2);border-top:1px solid var(--border);z-index:90}
+.bottom-nav a{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);
+font-size:.6875rem;font-weight:500;padding:8px 4px;text-align:center;line-height:1.2}
+@media(max-width:768px){
+body{padding:calc(var(--mobile-header-h) + var(--safe-top) + 8px) 0 calc(var(--bottom-nav-h) + var(--safe-bottom) + 16px)!important;max-width:none!important}
+.mobile-header,.bottom-nav{display:flex}
+.desktop-topbar{display:none}
+.page-intro{padding-top:8px}
+.page-intro .logo{display:none}
+.wrap{padding:0 16px}
+}
+"""
+
+NEXUS_MOBILE_HEADER = """
+<header class="mobile-header">
+  <div class="mobile-brand">Nexus</div>
+  <div class="theme-switch" role="group" aria-label="Appearance">
+    <button type="button" data-theme-opt="light" aria-pressed="true">Light</button>
+    <button type="button" data-theme-opt="dark" aria-pressed="false">Dark</button>
+  </div>
+</header>
+"""
+
+NEXUS_DESKTOP_TOPBAR = """
+<div class="desktop-topbar">
+<nav class="desktop-nav">
+  <a href="/" data-nav="calls">Call list</a>
+  <a href="/dashboard" data-nav="dash">Dashboard</a>
+  <a href="/reports" data-nav="reports">Reports</a>
+  <a href="/history" data-nav="history">History</a>
+  <a href="/stats" data-nav="stats">Statistics</a>
 </nav>
 <div class="theme-switch" role="group" aria-label="Appearance">
   <button type="button" data-theme-opt="light" aria-pressed="true">Light</button>
@@ -112,6 +140,20 @@ OWNER_NAV = """
 </div>
 </div>
 """
+
+NEXUS_BOTTOM_NAV = """
+<nav class="bottom-nav">
+  <a href="/" data-nav="calls">Calls</a>
+  <a href="/dashboard" data-nav="dash">Home</a>
+  <a href="/reports" data-nav="reports">Reports</a>
+  <a href="/history" data-nav="history">History</a>
+  <a href="/stats" data-nav="stats">Stats</a>
+</nav>
+"""
+
+NEXUS_SHELL = NEXUS_MOBILE_HEADER + NEXUS_DESKTOP_TOPBAR + NEXUS_BOTTOM_NAV
+
+OWNER_NAV = NEXUS_SHELL
 
 OWNER_AUTH_JS = """
 function ownerCode(){ return localStorage.getItem("nexus_owner_code") || ""; }
@@ -135,9 +177,10 @@ async function ownerFetch(url){
   }
   return res.json();
 }
-function setActiveNav(id){
-  const el = document.getElementById(id);
-  if(el) el.classList.add("active");
+function setActiveNav(key){
+  document.querySelectorAll('[data-nav="'+key+'"]').forEach(function(el){
+    el.classList.add('active');
+  });
 }
 """
 
@@ -145,7 +188,7 @@ DASHBOARD_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 {OWNER_HEAD}
 <title>Nexus — Dashboard</title>
-<style>{OWNER_STYLES}</style></head><body>
+<style>{OWNER_STYLES}{NEXUS_NAV_CSS}</style></head><body>
 {OWNER_NAV}
 <div class="brand">Nexus</div>
 <h1>Dashboard</h1>
@@ -159,7 +202,7 @@ DASHBOARD_PAGE = f"""<!DOCTYPE html>
 <table><thead><tr><th>When</th><th>Business</th><th>Type</th><th>Outcome</th><th>Score</th><th>Caller</th></tr></thead>
 <tbody id="recent"></tbody></table>
 <script>{OWNER_AUTH_JS}
-setActiveNav("nav-dash");
+setActiveNav("dash");
 async function load(){{
   const d = await ownerFetch("/api/dashboard");
   const m = [
@@ -189,14 +232,14 @@ REPORTS_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 {OWNER_HEAD}
 <title>Nexus — Reports</title>
-<style>{OWNER_STYLES}</style></head><body>
+<style>{OWNER_STYLES}{NEXUS_NAV_CSS}</style></head><body>
 {OWNER_NAV}
 <div class="brand">Nexus</div>
 <h1>Reports</h1>
 <p class="sub">Auto-generated every 100 logged calls. Saved permanently.</p>
 <div id="list"></div>
 <script>{OWNER_AUTH_JS}
-setActiveNav("nav-reports");
+setActiveNav("reports");
 async function load(){{
   const reports = await ownerFetch("/api/reports");
   if(!reports.length){{
@@ -225,7 +268,7 @@ HISTORY_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 {OWNER_HEAD}
 <title>Nexus — Call History</title>
-<style>{OWNER_STYLES}</style></head><body>
+<style>{OWNER_STYLES}{NEXUS_NAV_CSS}</style></head><body>
 {OWNER_NAV}
 <div class="brand">Nexus</div>
 <h1>Call History</h1>
@@ -243,7 +286,7 @@ HISTORY_PAGE = f"""<!DOCTYPE html>
 <table><thead><tr><th>Business</th><th>Score</th><th>Type</th><th>Outcome</th><th>City</th><th>Date</th></tr></thead>
 <tbody id="rows"></tbody></table>
 <script>{OWNER_AUTH_JS}
-setActiveNav("nav-history");
+setActiveNav("history");
 async function load(){{
   const q = new URLSearchParams({{
     site_status: document.getElementById("fSite").value,
@@ -263,7 +306,7 @@ STATS_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 {OWNER_HEAD}
 <title>Nexus — Statistics</title>
-<style>{OWNER_STYLES}</style></head><body>
+<style>{OWNER_STYLES}{NEXUS_NAV_CSS}</style></head><body>
 {OWNER_NAV}
 <div class="brand">Nexus</div>
 <h1>Statistics</h1>
@@ -274,7 +317,7 @@ STATS_PAGE = f"""<!DOCTYPE html>
 <h2 style="font-size:1.1rem;margin:20px 0 12px">Top 10 cities — close rate</h2>
 <div id="topClose"></div>
 <script>{OWNER_AUTH_JS}
-setActiveNav("nav-stats");
+setActiveNav("stats");
 async function load(){{
   const s = await ownerFetch("/api/stats");
   document.getElementById("summary").innerHTML = `

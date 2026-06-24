@@ -24,7 +24,16 @@ from flask import Flask, jsonify, render_template_string, request, send_from_dir
 import simple_scraper as engine
 import tracking
 from florida_cities import FLORIDA_CITIES
-from owner_pages import DASHBOARD_PAGE, HISTORY_PAGE, REPORTS_PAGE, STATS_PAGE, THEME_JS
+from nexus_icons import NEXUS_ICON_LINKS, NEXUS_MANIFEST_ICONS
+from owner_pages import (
+    DASHBOARD_PAGE,
+    HISTORY_PAGE,
+    NEXUS_NAV_CSS,
+    NEXUS_SHELL,
+    REPORTS_PAGE,
+    STATS_PAGE,
+    THEME_JS,
+)
 
 HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
@@ -407,12 +416,12 @@ PAGE = r"""<!DOCTYPE html>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg:#f8f9fb;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
+--bg:#f8f9fb;--bg2:#fff;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
 --accent:#7c3aed;--accent-hover:#6d28d9;--accent-subtle:#f3e8ff;
 --green:#059669;--green-bg:#ecfdf5;--red:#dc2626;--radius:8px;--shadow:0 1px 2px rgba(0,0,0,.05)
 }
 [data-theme="dark"]{
---bg:#111827;--card:#1f2937;--text:#f9fafb;--muted:#9ca3af;--border:#374151;
+--bg:#111827;--bg2:#1f2937;--card:#1f2937;--text:#f9fafb;--muted:#9ca3af;--border:#374151;
 --accent:#a78bfa;--accent-hover:#c4b5fd;--accent-subtle:rgba(124,58,237,.18);
 --green-bg:rgba(5,150,105,.15);--shadow:none
 }
@@ -421,9 +430,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
 min-height:100vh;padding:0 0 80px;font-size:15px;line-height:1.5}
 .wrap{max-width:560px;margin:0 auto;padding:0 16px}
-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
-padding:calc(20px + env(safe-area-inset-top)) 0 16px}
-.header-text{flex:1}
+.page-intro{padding:calc(20px + env(safe-area-inset-top)) 0 16px}
 .logo{font-weight:600;font-size:1.125rem;color:var(--text)}
 .tag{color:var(--muted);font-size:.875rem;margin-top:4px;line-height:1.45}
 .theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--muted);
@@ -493,20 +500,16 @@ border-radius:4px;padding:2px 8px}
 .empty{text-align:center;color:var(--muted);padding:32px 10px;font-size:.875rem}
 .reset{display:block;width:100%;margin-top:16px;background:none;border:none;color:var(--muted);
 font-size:.8125rem;text-decoration:underline;cursor:pointer}
+""" + NEXUS_NAV_CSS + """
 </style>
 </head>
 <body>
+""" + NEXUS_SHELL + """
 <div class="wrap">
-  <header>
-    <div class="header-text">
-      <div class="logo">Nexus</div>
-      <div class="tag">Call list for HVAC businesses without a working website</div>
-    </div>
-    <div class="theme-switch" role="group" aria-label="Appearance">
-      <button type="button" data-theme-opt="light" aria-pressed="true">Light</button>
-      <button type="button" data-theme-opt="dark" aria-pressed="false">Dark</button>
-    </div>
-  </header>
+  <div class="page-intro">
+    <div class="logo">Nexus</div>
+    <div class="tag">Call list for HVAC businesses without a working website</div>
+  </div>
 
   <div class="panel">
     <div class="seg" id="seg">
@@ -827,7 +830,12 @@ document.getElementById("resetBtn").addEventListener("click", async () => {
 </body>
 </html>"""
 
-PAGE = PAGE.replace("</body>", f"<script>{THEME_JS}</script></body>", 1)
+PAGE = PAGE.replace(
+    "</body>",
+    '<script>document.querySelectorAll(\'[data-nav="calls"]\').forEach(function(el){el.classList.add("active");});</script>'
+    f"<script>{THEME_JS}</script></body>",
+    1,
+)
 
 
 if __name__ == "__main__":
