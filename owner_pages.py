@@ -1,5 +1,19 @@
 """Owner-facing pages: dashboard, reports, history, statistics."""
 
+OWNER_HEAD = """
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f8f9fb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<link rel="manifest" href="/manifest-owner.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
+"""
+
 THEME_JS = """
 (function(){
   const KEY='ascend_theme';
@@ -28,12 +42,12 @@ OWNER_STYLES = """
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
 --bg:#f8f9fb;--bg2:#fff;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
---accent:#1d4ed8;--accent-subtle:#eff6ff;--green:#059669;--green-bg:#ecfdf5;
+--accent:#7c3aed;--accent-subtle:#f3e8ff;--green:#059669;--green-bg:#ecfdf5;
 --red:#dc2626;--amber:#b45309;--amber-bg:#fffbeb;--radius:8px;--shadow:0 1px 2px rgba(0,0,0,.05)
 }
 [data-theme="dark"]{
 --bg:#111827;--bg2:#1f2937;--card:#1f2937;--text:#f9fafb;--muted:#9ca3af;--border:#374151;
---accent:#3b82f6;--accent-subtle:rgba(59,130,246,.12);--green-bg:rgba(5,150,105,.15);
+--accent:#a78bfa;--accent-subtle:rgba(124,58,237,.18);--green-bg:rgba(5,150,105,.15);
 --amber-bg:rgba(180,83,9,.15);--shadow:none
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
@@ -129,8 +143,7 @@ function setActiveNav(id){
 
 DASHBOARD_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f8f9fb">
+{OWNER_HEAD}
 <title>Nexus — Dashboard</title>
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
@@ -174,8 +187,7 @@ load(); setInterval(load, 30000);
 
 REPORTS_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f8f9fb">
+{OWNER_HEAD}
 <title>Nexus — Reports</title>
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
@@ -211,8 +223,7 @@ load();
 
 HISTORY_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f8f9fb">
+{OWNER_HEAD}
 <title>Nexus — Call History</title>
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
@@ -250,8 +261,7 @@ load();
 
 STATS_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f8f9fb">
+{OWNER_HEAD}
 <title>Nexus — Statistics</title>
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}

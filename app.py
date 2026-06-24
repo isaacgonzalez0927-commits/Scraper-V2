@@ -19,7 +19,7 @@ import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, jsonify, render_template_string, request, send_from_directory
 
 import simple_scraper as engine
 import tracking
@@ -204,10 +204,42 @@ def manifest():
         "background_color": "#f8f9fb",
         "theme_color": "#f8f9fb",
         "icons": [
-            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
         ],
     })
+
+
+@app.route("/manifest-owner.webmanifest")
+def manifest_owner():
+    return jsonify({
+        "name": "Nexus Dashboard",
+        "short_name": "Nexus",
+        "description": "Nexus owner dashboard — call tracking and reports.",
+        "start_url": "/dashboard",
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#f8f9fb",
+        "theme_color": "#f8f9fb",
+        "icons": [
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+    })
+
+
+@app.route("/apple-touch-icon.png")
+@app.route("/apple-touch-icon-precomposed.png")
+def apple_touch_icon():
+    return send_from_directory(app.static_folder, "apple-touch-icon.png")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(app.static_folder, "icon-192.png")
 
 
 @app.route("/generate", methods=["POST"])
@@ -369,18 +401,19 @@ PAGE = r"""<!DOCTYPE html>
 <meta name="theme-color" content="#f8f9fb">
 <title>Nexus</title>
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<link rel="icon" type="image/png" href="/static/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
 --bg:#f8f9fb;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
---accent:#1d4ed8;--accent-hover:#1e40af;--accent-subtle:#eff6ff;
+--accent:#7c3aed;--accent-hover:#6d28d9;--accent-subtle:#f3e8ff;
 --green:#059669;--green-bg:#ecfdf5;--red:#dc2626;--radius:8px;--shadow:0 1px 2px rgba(0,0,0,.05)
 }
 [data-theme="dark"]{
 --bg:#111827;--card:#1f2937;--text:#f9fafb;--muted:#9ca3af;--border:#374151;
---accent:#3b82f6;--accent-hover:#60a5fa;--accent-subtle:rgba(59,130,246,.12);
+--accent:#a78bfa;--accent-hover:#c4b5fd;--accent-subtle:rgba(124,58,237,.18);
 --green-bg:rgba(5,150,105,.15);--shadow:none
 }
 html{scroll-behavior:smooth}
