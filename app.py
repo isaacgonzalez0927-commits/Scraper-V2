@@ -443,7 +443,7 @@ PAGE = r"""<!DOCTYPE html>
 </style>
 </head>
 <body>
-""" + NEXUS_SHELL + """
+""" + NEXUS_SHELL + r"""
 <main class="main">
   <div class="page-header">
     <h1 class="hide-mobile">Nexus</h1>
