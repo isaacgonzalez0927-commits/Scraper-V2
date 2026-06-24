@@ -24,7 +24,7 @@ from flask import Flask, jsonify, render_template_string, request
 import simple_scraper as engine
 import tracking
 from florida_cities import FLORIDA_CITIES
-from owner_pages import DASHBOARD_PAGE, HISTORY_PAGE, REPORTS_PAGE, STATS_PAGE
+from owner_pages import DASHBOARD_PAGE, HISTORY_PAGE, REPORTS_PAGE, STATS_PAGE, THEME_JS
 
 HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
@@ -201,8 +201,8 @@ def manifest():
         "scope": "/",
         "display": "standalone",
         "orientation": "portrait",
-        "background_color": "#0a0612",
-        "theme_color": "#0a0612",
+        "background_color": "#f8f9fb",
+        "theme_color": "#f8f9fb",
         "icons": [
             {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
             {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
@@ -366,113 +366,108 @@ PAGE = r"""<!DOCTYPE html>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Nexus">
-<meta name="theme-color" content="#0a0612">
+<meta name="theme-color" content="#f8f9fb">
 <title>Nexus</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="/static/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg:#0a0612;--bg2:#120a1f;--card:rgba(18,10,32,.88);
---purple:#7c3aed;--purple-light:#a78bfa;--purple-bright:#c4b5fd;--purple-dark:#5b21b6;
---border:rgba(167,139,250,.16);--text:#f8fafc;--muted:#a8a3b8;--glow:rgba(124,58,237,.4);
+--bg:#f8f9fb;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
+--accent:#1d4ed8;--accent-hover:#1e40af;--accent-subtle:#eff6ff;
+--green:#059669;--green-bg:#ecfdf5;--red:#dc2626;--radius:8px;--shadow:0 1px 2px rgba(0,0,0,.05)
+}
+[data-theme="dark"]{
+--bg:#111827;--card:#1f2937;--text:#f9fafb;--muted:#9ca3af;--border:#374151;
+--accent:#3b82f6;--accent-hover:#60a5fa;--accent-subtle:rgba(59,130,246,.12);
+--green-bg:rgba(5,150,105,.15);--shadow:none
 }
 html{scroll-behavior:smooth}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);
--webkit-font-smoothing:antialiased;min-height:100vh;padding:0 0 120px}
-.bgglow{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
-.bgglow span{position:absolute;border-radius:50%;filter:blur(90px)}
-.bgglow span:nth-child(1){width:380px;height:380px;background:rgba(124,58,237,.2);top:-120px;right:-80px}
-.bgglow span:nth-child(2){width:320px;height:320px;background:rgba(91,33,182,.18);bottom:5%;left:-120px}
-.wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:0 18px}
-header{padding:calc(30px + env(safe-area-inset-top)) 0 16px;text-align:center}
-.logo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.6rem;letter-spacing:-.03em}
-.logo span{background:linear-gradient(135deg,var(--purple-light),var(--purple-bright));
--webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.tag{color:var(--muted);font-size:.85rem;margin-top:4px;line-height:1.45}
-
-.panel{background:var(--card);border:1px solid var(--border);border-radius:18px;
-padding:18px;margin-top:18px;backdrop-filter:blur(12px)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
+min-height:100vh;padding:0 0 80px;font-size:15px;line-height:1.5}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+padding:calc(20px + env(safe-area-inset-top)) 0 16px}
+.header-text{flex:1}
+.logo{font-weight:600;font-size:1.125rem;color:var(--text)}
+.tag{color:var(--muted);font-size:.875rem;margin-top:4px;line-height:1.45}
+.theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--muted);
+font-family:inherit;font-size:.75rem;font-weight:500;padding:7px 10px;border-radius:var(--radius);cursor:pointer;white-space:nowrap}
+.theme-toggle:hover{color:var(--text)}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+padding:16px;margin-top:16px;box-shadow:var(--shadow)}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .field{flex:1;min-width:130px}
-label{display:block;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-color:var(--purple-light);margin-bottom:6px}
-select,input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--border);
-background:rgba(255,255,255,.04);color:var(--text);font-family:inherit;font-size:.95rem;
+label{display:block;font-size:.8125rem;font-weight:500;color:var(--text);margin-bottom:5px}
+select,input{width:100%;padding:10px 12px;border-radius:var(--radius);border:1px solid var(--border);
+background:var(--card);color:var(--text);font-family:inherit;font-size:.9375rem;
 appearance:none;-webkit-appearance:none}
-select:focus,input:focus{outline:none;border-color:var(--purple-light)}
-.seg{display:flex;background:rgba(255,255,255,.04);border:1px solid var(--border);
-border-radius:12px;padding:4px;gap:4px}
-.seg button{flex:1;padding:10px;border:none;background:transparent;color:var(--muted);
-font-family:inherit;font-weight:700;font-size:.85rem;border-radius:9px;cursor:pointer}
-.seg button.active{background:linear-gradient(135deg,var(--purple),var(--purple-dark));color:#fff}
-
-.generate{width:100%;margin-top:6px;padding:18px;border:none;border-radius:100px;
-background:linear-gradient(135deg,var(--purple),var(--purple-dark));color:#fff;
-font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:-.01em;
-box-shadow:0 6px 30px var(--glow);cursor:pointer;transition:transform .15s,box-shadow .15s}
-.generate:active{transform:scale(.98)}
-.generate:disabled{opacity:.55;box-shadow:none}
-
-.status{display:none;margin-top:18px;align-items:center;gap:12px;
-background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+select:focus,input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-subtle)}
+.seg{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:3px;gap:3px}
+.seg button{flex:1;padding:9px;border:none;background:transparent;color:var(--muted);
+font-family:inherit;font-weight:500;font-size:.8125rem;border-radius:6px;cursor:pointer}
+.seg button.active{background:var(--card);color:var(--accent);font-weight:600;box-shadow:var(--shadow)}
+.generate{width:100%;margin-top:6px;padding:12px;border:1px solid var(--accent);border-radius:var(--radius);
+background:var(--accent);color:#fff;font-family:inherit;font-weight:500;font-size:.9375rem;cursor:pointer}
+.generate:active{opacity:.9}
+.generate:disabled{opacity:.5;cursor:not-allowed}
+.status{display:none;margin-top:16px;align-items:center;gap:12px;
+background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
 .status.show{display:flex}
-.spinner{width:22px;height:22px;border:3px solid rgba(167,139,250,.25);border-top-color:var(--purple-light);
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);
 border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
-.status .msg{font-size:.9rem;color:var(--muted)}
-
-.results{margin-top:18px}
-.results-bar{display:none;gap:10px;margin-bottom:14px}
+.status .msg{font-size:.875rem;color:var(--muted)}
+.results{margin-top:16px}
+.results-bar{display:none;gap:8px;margin-bottom:12px}
 .results-bar.show{display:flex}
-.copybtn{flex:1;padding:15px;border:none;border-radius:100px;
-background:linear-gradient(135deg,var(--purple-light),var(--purple));color:#04060d;
-font-weight:800;font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;cursor:pointer}
-.copybtn.copied{background:linear-gradient(135deg,#34d399,#10b981);color:#04221a}
-.count-pill{background:rgba(124,58,237,.18);border:1px solid var(--border);color:var(--purple-bright);
-border-radius:100px;padding:0 18px;display:flex;align-items:center;font-weight:700;font-size:.85rem;white-space:nowrap}
-
-.lead{background:var(--card);border:1px solid var(--border);border-radius:16px;
-padding:16px;margin-bottom:12px;transition:opacity .2s}
-.lead.called{opacity:.45}
-.lead-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.markbtn{padding:8px 14px;border-radius:100px;border:1px solid var(--border);
-background:rgba(255,255,255,.04);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer}
-.markbtn.done{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.35);color:#6ee7b7}
-.outcome-btn{padding:7px 10px;border-radius:100px;border:1px solid var(--border);
-background:rgba(255,255,255,.04);color:var(--muted);font-size:.7rem;font-weight:700;cursor:pointer}
-.outcome-btn:active{transform:scale(.97)}
-.outcome-btn.picked{background:rgba(52,211,153,.2);border-color:rgba(52,211,153,.4);color:#6ee7b7}
-.outcome-btn.client-pick{background:rgba(124,58,237,.28);border-color:var(--purple-light);color:var(--purple-bright)}
-.opener{font-size:.84rem;line-height:1.5;color:var(--purple-bright);margin-bottom:8px;font-style:italic}
-.lead-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
-.lead-name{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:1.05rem;line-height:1.25}
-.score{flex-shrink:0;width:46px;height:46px;border-radius:12px;display:flex;align-items:center;
-justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.1rem;
-background:rgba(124,58,237,.18);border:1px solid var(--border)}
-.score.hot{background:linear-gradient(135deg,var(--purple),var(--purple-dark));color:#fff;border:none}
-.meta{font-size:.82rem;color:var(--muted);margin-bottom:10px}
-.meta a{color:var(--purple-light)}
-.phone{display:inline-block;font-weight:700;color:var(--text);font-size:1rem;margin-bottom:8px}
-.angle{font-size:.88rem;line-height:1.55;margin-bottom:8px}
+.copybtn{flex:1;padding:12px;border:1px solid var(--border);border-radius:var(--radius);
+background:var(--card);color:var(--text);font-weight:500;font-family:inherit;font-size:.875rem;cursor:pointer}
+.copybtn:hover{background:var(--bg)}
+.copybtn.copied{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.count-pill{background:var(--bg);border:1px solid var(--border);color:var(--muted);
+border-radius:var(--radius);padding:0 14px;display:flex;align-items:center;font-weight:500;font-size:.8125rem;white-space:nowrap}
+.lead{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
+.lead.called{opacity:.55}
+.lead-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.markbtn{padding:6px 12px;border-radius:var(--radius);border:1px solid var(--border);
+background:var(--card);color:var(--muted);font-size:.75rem;font-weight:500;cursor:pointer}
+.markbtn.done{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.outcome-btn{padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border);
+background:var(--card);color:var(--muted);font-size:.75rem;font-weight:500;cursor:pointer}
+.outcome-btn.picked{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.outcome-btn.client-pick{background:var(--accent-subtle);border-color:var(--accent);color:var(--accent)}
+.opener{font-size:.8125rem;line-height:1.5;color:var(--muted);margin-bottom:8px}
+.lead-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px}
+.lead-name{font-weight:600;font-size:.9375rem;line-height:1.3}
+.score{flex-shrink:0;min-width:40px;height:40px;border-radius:var(--radius);display:flex;align-items:center;
+justify-content:center;font-weight:600;font-size:.9375rem;background:var(--bg);border:1px solid var(--border)}
+.score.hot{background:var(--accent);color:#fff;border-color:var(--accent)}
+.meta{font-size:.8125rem;color:var(--muted);margin-bottom:8px}
+.meta a{color:var(--accent)}
+.phone{display:inline-block;font-weight:600;color:var(--text);font-size:.9375rem;margin-bottom:6px}
+.angle{font-size:.875rem;line-height:1.5;margin-bottom:6px}
 .gaps{display:flex;flex-wrap:wrap;gap:6px}
-.gap{font-size:.7rem;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);
-color:#fca5a5;border-radius:100px;padding:4px 10px}
-.empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:.9rem}
-.reset{display:block;width:100%;margin-top:20px;background:none;border:none;color:var(--muted);
-font-size:.78rem;text-decoration:underline;cursor:pointer}
+.gap{font-size:.75rem;background:#fef2f2;border:1px solid #fecaca;color:var(--red);
+border-radius:4px;padding:2px 8px}
+.empty{text-align:center;color:var(--muted);padding:32px 10px;font-size:.875rem}
+.reset{display:block;width:100%;margin-top:16px;background:none;border:none;color:var(--muted);
+font-size:.8125rem;text-decoration:underline;cursor:pointer}
 </style>
 </head>
 <body>
-<div class="bgglow"><span></span><span></span></div>
 <div class="wrap">
   <header>
-    <div class="logo"><span>Nexus</span></div>
-    <div class="tag">Your dial list · HVAC shops with no website or a dead site</div>
+    <div class="header-text">
+      <div class="logo">Nexus</div>
+      <div class="tag">Call list for HVAC businesses without a working website</div>
+    </div>
+    <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle theme">
+      <span data-theme-label>Dark mode</span>
+    </button>
   </header>
 
   <div class="panel">
@@ -793,6 +788,8 @@ document.getElementById("resetBtn").addEventListener("click", async () => {
 </script>
 </body>
 </html>"""
+
+PAGE = PAGE.replace("</body>", f"<script>{THEME_JS}</script></body>", 1)
 
 
 if __name__ == "__main__":
