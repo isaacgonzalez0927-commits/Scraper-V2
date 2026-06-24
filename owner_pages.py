@@ -1,52 +1,102 @@
 """Owner-facing pages: dashboard, reports, history, statistics."""
 
+THEME_JS = """
+(function(){
+  const KEY='ascend_theme';
+  function apply(t){
+    document.documentElement.dataset.theme=t;
+    const m=document.querySelector('meta[name=theme-color]');
+    if(m)m.content=t==='dark'?'#111827':'#f8f9fb';
+    document.querySelectorAll('[data-theme-opt]').forEach(function(btn){
+      var on=btn.getAttribute('data-theme-opt')===t;
+      btn.classList.toggle('active',on);
+      btn.setAttribute('aria-pressed',on?'true':'false');
+    });
+  }
+  var saved=localStorage.getItem(KEY);
+  apply(saved==='dark'?'dark':'light');
+  document.querySelectorAll('[data-theme-opt]').forEach(function(btn){
+    btn.onclick=function(){
+      var theme=btn.getAttribute('data-theme-opt');
+      localStorage.setItem(KEY,theme);apply(theme);
+    };
+  });
+})();
+"""
+
 OWNER_STYLES = """
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0a0612;--card:rgba(18,10,32,.9);--purple:#7c3aed;--purple-l:#a78bfa;
---border:rgba(167,139,250,.16);--text:#f8fafc;--muted:#a8a3b8;--green:#34d399;--red:#f87171}
-body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);
-padding:20px;max-width:1100px;margin:0 auto;line-height:1.5}
-a{color:var(--purple-l);text-decoration:none}
-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-nav a{padding:8px 14px;border-radius:100px;border:1px solid var(--border);font-size:.85rem;font-weight:600}
-nav a.active{background:var(--purple);border-color:var(--purple);color:#fff}
-h1{font-size:1.5rem;margin-bottom:6px}
-.brand{font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-color:var(--purple-l);margin-bottom:4px}
-.sub{color:var(--muted);font-size:.9rem;margin-bottom:20px}
+:root{
+--bg:#f8f9fb;--bg2:#fff;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
+--accent:#1d4ed8;--accent-subtle:#eff6ff;--green:#059669;--green-bg:#ecfdf5;
+--red:#dc2626;--amber:#b45309;--amber-bg:#fffbeb;--radius:8px;--shadow:0 1px 2px rgba(0,0,0,.05)
+}
+[data-theme="dark"]{
+--bg:#111827;--bg2:#1f2937;--card:#1f2937;--text:#f9fafb;--muted:#9ca3af;--border:#374151;
+--accent:#3b82f6;--accent-subtle:rgba(59,130,246,.12);--green-bg:rgba(5,150,105,.15);
+--amber-bg:rgba(180,83,9,.15);--shadow:none
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+background:var(--bg);color:var(--text);padding:20px;max-width:1080px;margin:0 auto;line-height:1.5;font-size:15px}
+a{color:var(--accent);text-decoration:none}
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+nav{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+nav a{padding:7px 12px;border-radius:var(--radius);border:1px solid var(--border);
+font-size:.8125rem;font-weight:500;color:var(--muted);background:var(--card)}
+nav a:hover{color:var(--text)}
+nav a.active{background:var(--accent-subtle);border-color:var(--accent-subtle);color:var(--accent);font-weight:600}
+.theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--muted);
+font-family:inherit;font-size:.8125rem;font-weight:500;padding:7px 12px;border-radius:var(--radius);cursor:pointer}
+.theme-toggle:hover{color:var(--text)}
+.theme-switch{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2px;gap:2px}
+.theme-switch button{flex:1;border:none;background:transparent;color:var(--muted);font-family:inherit;
+font-size:.75rem;font-weight:500;padding:6px 10px;border-radius:6px;cursor:pointer}
+.theme-switch button.active{background:var(--card);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
+h1{font-size:1.375rem;font-weight:600;margin-bottom:4px}
+.brand{font-size:.8125rem;font-weight:500;color:var(--muted);margin-bottom:16px}
+.sub{color:var(--muted);font-size:.875rem;margin-bottom:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
-.card .num{font-size:1.6rem;font-weight:800;color:var(--purple-l)}
-.card .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.card .num{font-size:1.5rem;font-weight:600;color:var(--text)}
+.card .lbl{font-size:.75rem;color:var(--muted);margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:.875rem}
 th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--border)}
-th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
-.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
-.filters select{padding:10px 12px;border-radius:10px;border:1px solid var(--border);
-background:rgba(255,255,255,.04);color:var(--text)}
-.report-box{background:var(--card);border:1px solid var(--border);border-radius:14px;
-padding:18px;margin-bottom:14px}
-.report-box h3{margin-bottom:8px}
-.badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:.72rem;font-weight:700}
-.badge.dead{background:rgba(239,68,68,.15);color:#fca5a5}
-.badge.none{background:rgba(251,191,36,.15);color:#fcd34d}
-.badge.client{background:rgba(52,211,153,.15);color:#6ee7b7}
-.badge.interested{background:rgba(167,139,250,.18);color:#c4b5fd}
+th{color:var(--muted);font-size:.75rem;font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.filters select,.filters input{padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border);
+background:var(--card);color:var(--text);font-family:inherit;font-size:.875rem}
+.filters button{padding:9px 16px;border-radius:var(--radius);border:none;background:var(--accent);
+color:#fff;font-weight:500;cursor:pointer;font-family:inherit}
+.report-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.report-box h3{margin-bottom:6px;font-size:.9375rem;font-weight:600}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:500}
+.badge.dead{background:#fef2f2;color:var(--red)}
+.badge.none{background:var(--amber-bg);color:var(--amber)}
+.badge.client{background:var(--green-bg);color:var(--green)}
+.badge.interested{background:var(--accent-subtle);color:var(--accent)}
 .login{max-width:360px;margin:80px auto;text-align:center}
-.login input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);
-background:rgba(255,255,255,.04);color:var(--text);margin:12px 0}
-.login button{width:100%;padding:14px;border:none;border-radius:100px;background:var(--purple);
-color:#fff;font-weight:700;cursor:pointer}
+.login input{width:100%;padding:12px;border-radius:var(--radius);border:1px solid var(--border);
+background:var(--card);color:var(--text);margin:12px 0;font-size:1rem}
+.login button{width:100%;padding:12px;border:none;border-radius:var(--radius);background:var(--accent);
+color:#fff;font-weight:500;cursor:pointer;font-family:inherit}
 """
 
 OWNER_NAV = """
+<div class="topbar">
 <nav>
   <a href="/dashboard" id="nav-dash">Dashboard</a>
   <a href="/reports" id="nav-reports">Reports</a>
-  <a href="/history" id="nav-history">Call History</a>
+  <a href="/history" id="nav-history">History</a>
   <a href="/stats" id="nav-stats">Statistics</a>
-  <a href="/">Caller App</a>
+  <a href="/">Caller app</a>
 </nav>
+<div class="theme-switch" role="group" aria-label="Appearance">
+  <button type="button" data-theme-opt="light" aria-pressed="true">Light</button>
+  <button type="button" data-theme-opt="dark" aria-pressed="false">Dark</button>
+</div>
+</div>
 """
 
 OWNER_AUTH_JS = """
@@ -80,8 +130,8 @@ function setActiveNav(id){
 DASHBOARD_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f8f9fb">
 <title>Nexus — Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
 <div class="brand">Nexus</div>
@@ -120,13 +170,13 @@ async function load(){{
     <td>${{r.score??"—"}}</td><td>${{r.caller_id}}</td></tr>`).join("");
 }}
 load(); setInterval(load, 30000);
-</script></body></html>"""
+</script><script>{THEME_JS}</script></body></html>"""
 
 REPORTS_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f8f9fb">
 <title>Nexus — Reports</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
 <div class="brand">Nexus</div>
@@ -157,13 +207,13 @@ async function load(){{
     </div>`).join("");
 }}
 load();
-</script></body></html>"""
+</script><script>{THEME_JS}</script></body></html>"""
 
 HISTORY_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f8f9fb">
 <title>Nexus — Call History</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
 <div class="brand">Nexus</div>
@@ -176,8 +226,8 @@ HISTORY_PAGE = f"""<!DOCTYPE html>
     <option value="callback">Callback</option><option value="client">Client</option>
     <option value="not_interested">Not interested</option>
   </select>
-  <input id="fCity" placeholder="Filter city..." style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text)">
-  <button onclick="load()" style="padding:10px 16px;border-radius:10px;border:none;background:var(--purple);color:#fff;font-weight:700;cursor:pointer">Apply</button>
+  <input id="fCity" placeholder="Filter city..." style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-family:inherit">
+  <button onclick="load()" style="padding:9px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:500;cursor:pointer;font-family:inherit">Apply</button>
 </div>
 <table><thead><tr><th>Business</th><th>Score</th><th>Type</th><th>Outcome</th><th>City</th><th>Date</th></tr></thead>
 <tbody id="rows"></tbody></table>
@@ -196,13 +246,13 @@ async function load(){{
   ).join("") || "<tr><td colspan=6>No calls match filters.</td></tr>";
 }}
 load();
-</script></body></html>"""
+</script><script>{THEME_JS}</script></body></html>"""
 
 STATS_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f8f9fb">
 <title>Nexus — Statistics</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
 <div class="brand">Nexus</div>
@@ -229,4 +279,4 @@ async function load(){{
   document.getElementById("topClose").innerHTML = (s.top_cities_close||[]).map(row).join("") || "<p class=sub>Need 3+ calls per city.</p>";
 }}
 load();
-</script></body></html>"""
+</script><script>{THEME_JS}</script></body></html>"""

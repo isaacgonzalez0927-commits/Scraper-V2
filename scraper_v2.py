@@ -32,6 +32,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -60,10 +61,45 @@ PLACES_FIELD_MASK = (
     "places.types,nextPageToken"
 )
 
+# Place Details (New) — used to read review dates as a business-age signal
+DETAILS_URL = "https://places.googleapis.com/v1/places/"
+DETAILS_FIELD_MASK = "reviews.publishTime"
+
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 DEFAULT_MODEL = "gpt-4o-mini"
 
+# Web search used to verify a business truly has NO website, since Google Places
+# only reports the site LINKED on the profile (often missing). We use the public
+# DuckDuckGo HTML endpoint — no API key, account, or billing required.
+SEARCH_URL = "https://html.duckduckgo.com/html/"
+
+# Hostnames that are directories / social / manufacturer locators — NOT a
+# business's own website. If only these show up, the business has no real site.
+DIRECTORY_DOMAINS = (
+    "facebook.", "instagram.", "yelp.", "yellowpages.", "bbb.org", "mapquest.",
+    "angi.", "angieslist.", "nextdoor.", "thumbtack.", "homeadvisor.", "manta.",
+    "indeed.", "linkedin.", "tiktok.", "youtube.", "google.", "pinterest.",
+    "twitter.", "x.com", "wikipedia.", "reddit.", "justdial.", "bark.com",
+    "businessyab.", "chamberofcommerce.", "buildzoom.", "porch.com", "houzz.",
+    "expertise.", "birdeye.", "foursquare.", "cylex", "superpages.", "dexknows.",
+    "citysearch.", "merchantcircle.", "hotfrog.", "brownbook.", "ezlocal.",
+    "yellowbook.", "opendi.", "networx.", "fixr.", "trustpilot.", "glassdoor.",
+    "ziprecruiter.", "local.com", "n49.", "apple.com", "amazon.", "trane.com",
+    "carrier.com", "lennox.com", "goodman", "rheem.", "bryant.", "fieldroutes.",
+    "getjobber.", "gaf.com", "mapcarta.", "loc8nearme.", "zaubacorp.",
+)
+
+# Generic HVAC words that don't help match a business to its domain.
+_GENERIC_NAME_WORDS = {
+    "air", "conditioning", "conditioner", "heating", "cooling", "hvac", "ac",
+    "llc", "inc", "co", "company", "corp", "services", "service", "the", "and",
+    "of", "fl", "florida", "repair", "refrigeration", "mechanical", "solutions",
+    "systems", "comfort", "climate", "control", "professional", "quality",
+    "best", "all", "pro", "experts", "expert", "guys", "team", "home",
+}
+
 REQUEST_DELAY_SEC = 2.0
+MAX_PAGES_PER_QUERY = 3  # Text Search (New) returns up to ~60 results (3 pages)
 WEBSITE_TIMEOUT_SEC = 12
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -118,6 +154,10 @@ class Lead:
     modern_design_score: int = 0
     website_quality_score: int = 0
     analysis_notes: str = ""
+
+    # Business age (estimated from earliest visible Google review)
+    age_years: float | None = None
+    first_review_date: str = ""
 
     # AI qualification
     score: int = 0
@@ -189,6 +229,147 @@ def places_search(query: str, api_key: str, page_token: str | None = None) -> di
     return resp.json()
 
 
+def estimate_age_years(place_id: str, api_key: str) -> tuple[float | None, str]:
+    """Estimate how long a business has existed from its earliest visible review.
+
+    Place Details (New) returns up to 5 of the most-relevant reviews. The oldest
+    review timestamp is a *lower bound* on age: the business is at least that old.
+    Returns (age_in_years, iso_date) or (None, "") when no review data is found.
+    """
+    if not place_id:
+        return None, ""
+    headers = {
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": DETAILS_FIELD_MASK,
+    }
+    try:
+        resp = requests.get(DETAILS_URL + place_id, headers=headers, timeout=20)
+        if not resp.ok:
+            return None, ""
+        reviews = resp.json().get("reviews") or []
+    except (requests.RequestException, ValueError):
+        return None, ""
+
+    earliest: datetime | None = None
+    for review in reviews:
+        stamp = review.get("publishTime")
+        if not stamp:
+            continue
+        try:
+            dt = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if earliest is None or dt < earliest:
+            earliest = dt
+
+    if earliest is None:
+        return None, ""
+    age = (datetime.now(timezone.utc) - earliest).days / 365.25
+    return round(age, 1), earliest.date().isoformat()
+
+
+# ---------------------------------------------------------------------------
+# Website verification (Custom Search) — confirm "no website" is really true
+# ---------------------------------------------------------------------------
+
+
+def _distinctive_tokens(name: str) -> list[str]:
+    """Pull the non-generic words from a business name to match against a domain.
+
+    e.g. "Seacoast Air Conditioning" -> ["seacoast"]; the HVAC words are dropped.
+    """
+    toks = re.findall(r"[a-z]+", name.lower())
+    return [t for t in toks if len(t) >= 3 and t not in _GENERIC_NAME_WORDS]
+
+
+def _locality(address: str) -> str:
+    """Extract a 'City, ST' style hint from a formatted address for the query."""
+    parts = [p.strip() for p in address.split(",") if p.strip()]
+    # Typical: "123 Main St, Stuart, FL 34994, USA" -> use the middle pieces.
+    if len(parts) >= 3:
+        return f"{parts[-3]}, {parts[-2]}"
+    return address.strip()
+
+
+def _ddg_search(query: str, max_results: int = 12) -> list[str]:
+    """Run a keyless web search via DuckDuckGo's HTML endpoint.
+
+    Returns a list of result URLs. DuckDuckGo wraps each result link as
+    /l/?uddg=<url-encoded-target>, so we extract and decode those targets.
+    """
+    headers = {"User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
+    try:
+        resp = requests.post(
+            SEARCH_URL, data={"q": query}, headers=headers, timeout=20
+        )
+        if not resp.ok:
+            return []
+        html = resp.text
+    except requests.RequestException:
+        return []
+
+    urls: list[str] = []
+    for match in re.finditer(r"uddg=([^&\"']+)", html):
+        decoded = urllib.parse.unquote(match.group(1))
+        if decoded.startswith("http"):
+            urls.append(decoded)
+        if len(urls) >= max_results:
+            break
+    return urls
+
+
+def find_real_website(name: str, address: str) -> tuple[bool, str]:
+    """Search the web to see if a business has its OWN website.
+
+    Returns (has_website, url). Directory/social results don't count. We match a
+    result domain to the business by looking for a distinctive name token in the
+    hostname. Fail-safe: on any error or ambiguity, returns (False, "") so the
+    lead is kept rather than wrongly dropped.
+    """
+    tokens = _distinctive_tokens(name)
+    if not tokens:
+        return False, ""
+
+    query = f"{name} {_locality(address)}".strip()
+    for url in _ddg_search(query):
+        host = urllib.parse.urlparse(url).netloc.lower()
+        if host.startswith("www."):
+            host = host[4:]
+        if not host or any(d in host for d in DIRECTORY_DOMAINS):
+            continue
+        # Merge the hostname into a single comparable string (drop dots/hyphens).
+        core = host.replace("-", "").replace(".", "")
+        if any(tok in core for tok in tokens):
+            return True, url
+
+    return False, ""
+
+
+def keep_verified_no_website(
+    leads: list[Lead],
+    top_n: int,
+    progress=None,
+) -> list[Lead]:
+    """Filter a ranked list down to leads with a verified absence of a website.
+
+    Walks the ranked list (best first) and runs one web search per lead, dropping
+    any that actually have their own site, until top_n remain.
+    """
+    kept: list[Lead] = []
+    for i, lead in enumerate(leads, 1):
+        if len(kept) >= top_n:
+            break
+        _emit(progress, f"Verifying no website {i}/{len(leads)}: {lead.name}")
+        has_site, url = find_real_website(lead.name, lead.address)
+        if has_site:
+            print(f"  x dropped {lead.name} — found a real site: {url}")
+            continue
+        kept.append(lead)
+        time.sleep(1.0)  # be gentle on the keyless endpoint
+
+    return kept[:top_n]
+
+
 def collect_businesses(
     cities: list[str],
     api_key: str,
@@ -197,10 +378,14 @@ def collect_businesses(
     exclude_keys: set[str] | None = None,
     progress=None,
     require_no_website: bool = False,
+    max_reviews: int | None = None,
+    min_age_years: float | None = None,
+    max_age_years: float | None = None,
 ) -> list[Lead]:
     leads: dict[str, Lead] = {}
     exclude_keys = exclude_keys or set()
     queries = [f"{term} {city}" for city in cities for term in SEARCH_TERMS]
+    check_age = min_age_years is not None or max_age_years is not None
 
     _emit(progress, f"Searching {len(queries)} queries across {len(cities)} cities")
     print(f"Step 1: searching {len(queries)} queries across {len(cities)} cities\n")
@@ -210,46 +395,75 @@ def collect_businesses(
             break
         print(f"  [{i}/{len(queries)}] {query}")
         _emit(progress, f"Searching: {query}  ({len(leads)}/{max_leads} found)")
-        try:
-            data = places_search(query, api_key)
-        except RuntimeError as exc:
-            print(f"    ! {exc}")
-            _emit(progress, f"Search stopped: {exc}")
-            break
 
-        for place in data.get("places", []):
+        page_token: str | None = None
+        for _page in range(MAX_PAGES_PER_QUERY):
             if len(leads) >= max_leads:
                 break
-            if place.get("businessStatus") and place["businessStatus"] != "OPERATIONAL":
-                continue
+            try:
+                data = places_search(query, api_key, page_token)
+            except RuntimeError as exc:
+                print(f"    ! {exc}")
+                _emit(progress, f"Search stopped: {exc}")
+                return list(leads.values())
 
-            phone_raw = (place.get("nationalPhoneNumber") or "").strip()
-            if not phone_raw:
-                continue
+            for place in data.get("places", []):
+                if len(leads) >= max_leads:
+                    break
+                if place.get("businessStatus") and place["businessStatus"] != "OPERATIONAL":
+                    continue
 
-            key = phone_key(normalize_phone(phone_raw))
-            if not key or key in leads or key in exclude_keys:
-                continue
+                phone_raw = (place.get("nationalPhoneNumber") or "").strip()
+                if not phone_raw:
+                    continue
 
-            if require_no_website and (place.get("websiteUri") or "").strip():
-                continue
+                key = phone_key(normalize_phone(phone_raw))
+                if not key or key in leads or key in exclude_keys:
+                    continue
 
-            review_count = int(place.get("userRatingCount") or 0)
-            if review_count < min_reviews:
-                continue
+                if require_no_website and (place.get("websiteUri") or "").strip():
+                    continue
 
-            rating = place.get("rating")
-            leads[key] = Lead(
-                name=(place.get("displayName") or {}).get("text", "").strip(),
-                phone=normalize_phone(phone_raw),
-                website=(place.get("websiteUri") or "").strip(),
-                rating=float(rating) if rating is not None else None,
-                review_count=review_count,
-                address=(place.get("formattedAddress") or "").strip(),
-                profile_url=(place.get("googleMapsUri") or "").strip(),
-                place_id=place.get("id", ""),
-                types=list(place.get("types") or []),
-            )
+                review_count = int(place.get("userRatingCount") or 0)
+                if review_count < min_reviews:
+                    continue
+                if max_reviews is not None and review_count > max_reviews:
+                    continue
+
+                age_years: float | None = None
+                first_review_date = ""
+                if check_age:
+                    age_years, first_review_date = estimate_age_years(
+                        place.get("id", ""), api_key
+                    )
+                    # Only exclude when we actually have a date to judge by.
+                    # No review data -> keep the lead (review-count band still applies).
+                    if age_years is not None:
+                        if min_age_years is not None and age_years < min_age_years:
+                            continue
+                        if max_age_years is not None and age_years > max_age_years:
+                            continue
+
+                rating = place.get("rating")
+                leads[key] = Lead(
+                    name=(place.get("displayName") or {}).get("text", "").strip(),
+                    phone=normalize_phone(phone_raw),
+                    website=(place.get("websiteUri") or "").strip(),
+                    rating=float(rating) if rating is not None else None,
+                    review_count=review_count,
+                    address=(place.get("formattedAddress") or "").strip(),
+                    profile_url=(place.get("googleMapsUri") or "").strip(),
+                    place_id=place.get("id", ""),
+                    types=list(place.get("types") or []),
+                    age_years=age_years,
+                    first_review_date=first_review_date,
+                )
+
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                break
+            time.sleep(REQUEST_DELAY_SEC)
+
         time.sleep(REQUEST_DELAY_SEC)
 
     print(f"\n  Collected {len(leads)} qualifying businesses (min {min_reviews} reviews)\n")
@@ -415,6 +629,7 @@ def build_user_payload(lead: Lead) -> str:
             "phone": lead.phone,
             "rating": lead.rating,
             "review_count": lead.review_count,
+            "estimated_age_years": lead.age_years,
             "address": lead.address,
             "google_profile_types": lead.types,
             "website": lead.website or None,
@@ -510,6 +725,153 @@ def qualify_all(leads: list[Lead], api_key: str, model: str, skip_ai: bool, prog
 
 
 # ---------------------------------------------------------------------------
+# Step 3b — Batch ranking (research the whole pool, keep the best N)
+# ---------------------------------------------------------------------------
+
+RANK_SYSTEM_PROMPT = """You are a lead-qualification analyst for Acsend Sites.
+
+Acsend builds modern, high-converting websites with built-in AI customer support
+for local HVAC businesses. EVERY business in the list below currently has NO
+website at all — they run entirely off their Google Business Profile, so they
+are losing online customers a competitor could capture.
+
+Your job: review the whole list and pick the BEST businesses to cold-call. The
+ideal prospect is a real, active, well-regarded HVAC company that clearly has
+demand but no website to convert it.
+
+Rank a business HIGHER when it shows:
+- A solid, believable review volume (proves real, ongoing demand)
+- A strong star rating (good reputation we can showcase on a new site)
+- Signs of a legitimate, multi-service HVAC operation
+- Enough scale to afford and clearly benefit from a website
+
+Rank a business LOWER when it shows:
+- Very few reviews (likely brand-new, tiny, or inactive)
+- A weak or low star rating (reputation problems; harder to sell and to help)
+- Signals it may not really be a serious HVAC service business
+
+You are scoring relative to the whole list. Return STRICT JSON only, no prose:
+{
+  "leads": [
+    {
+      "id": <int copied from the input>,
+      "score": <int 0-100>,
+      "confidence": "<low|medium|high>",
+      "reasoning": "<1-2 sentences on why this is or isn't a great call>",
+      "sales_angle": "<one concrete opening pitch for the cold caller>",
+      "weaknesses": ["<gap Acsend can fix>", "<gap>"]
+    }
+  ]
+}
+Include ONLY the best businesses, ranked best first, no more than the number
+requested in the user message."""
+
+
+def build_rank_payload(leads: list[Lead], top_n: int) -> str:
+    businesses = [
+        {
+            "id": i,
+            "name": lead.name,
+            "rating": lead.rating,
+            "review_count": lead.review_count,
+            "address": lead.address,
+            "services": lead.types,
+        }
+        for i, lead in enumerate(leads)
+    ]
+    return json.dumps(
+        {
+            "instruction": (
+                f"From these {len(leads)} HVAC businesses (all with no website), "
+                f"pick the {top_n} best prospects for Acsend to cold-call."
+            ),
+            "businesses": businesses,
+        },
+        ensure_ascii=False,
+    )
+
+
+def rank_with_openai(
+    leads: list[Lead],
+    api_key: str,
+    model: str,
+    top_n: int,
+    progress=None,
+) -> list[Lead]:
+    """Send the whole pool to OpenAI in one call and return the top N leads.
+
+    Falls back to local heuristic ranking if OpenAI is unavailable or fails.
+    """
+    if not leads:
+        return []
+
+    def _fallback() -> list[Lead]:
+        for lead in leads:
+            heuristic_score(lead)
+        leads.sort(key=lambda x: (-x.score, -x.review_count, x.name.lower()))
+        return leads[:top_n]
+
+    if not api_key:
+        print("Step 3: OPENAI_API_KEY missing — using heuristic ranking\n")
+        _emit(progress, "Scoring leads (local heuristic)")
+        return _fallback()
+
+    _emit(progress, f"OpenAI researching {len(leads)} businesses, picking top {top_n}...")
+    print(f"Step 3: ranking {len(leads)} businesses with OpenAI ({model}), keeping {top_n}\n")
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+    }
+    body = {
+        "model": model,
+        "temperature": 0.2,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {"role": "system", "content": RANK_SYSTEM_PROMPT},
+            {"role": "user", "content": build_rank_payload(leads, top_n)},
+        ],
+    }
+
+    try:
+        resp = requests.post(OPENAI_URL, headers=headers, json=body, timeout=120)
+        if not resp.ok:
+            raise RuntimeError(f"OpenAI failed ({resp.status_code}): {resp.text[:300]}")
+        content = resp.json()["choices"][0]["message"]["content"]
+        data = json.loads(content)
+    except (requests.RequestException, RuntimeError, KeyError, json.JSONDecodeError) as exc:
+        print(f"  ! OpenAI ranking failed: {exc} — using heuristic\n")
+        _emit(progress, "OpenAI unavailable — using local ranking")
+        return _fallback()
+
+    chosen: list[Lead] = []
+    seen: set[int] = set()
+    for entry in data.get("leads", []):
+        try:
+            idx = int(entry["id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if idx in seen or not (0 <= idx < len(leads)):
+            continue
+        seen.add(idx)
+        lead = leads[idx]
+        lead.score = int(entry.get("score", 0))
+        lead.confidence = str(entry.get("confidence", "")).strip()
+        lead.reasoning = str(entry.get("reasoning", "")).strip()
+        lead.sales_angle = str(entry.get("sales_angle", "")).strip()
+        weaknesses = entry.get("weaknesses", [])
+        lead.weaknesses = [str(w).strip() for w in weaknesses if str(w).strip()]
+        chosen.append(lead)
+
+    if not chosen:
+        print("  ! OpenAI returned no usable picks — using heuristic\n")
+        return _fallback()
+
+    chosen.sort(key=lambda x: (-x.score, -x.review_count, x.name.lower()))
+    return chosen[:top_n]
+
+
+# ---------------------------------------------------------------------------
 # Step 4 — Ranking + export
 # ---------------------------------------------------------------------------
 
@@ -520,7 +882,7 @@ def export(leads: list[Lead]) -> None:
     with LEADS_CSV.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.writer(fh)
         writer.writerow([
-            "Business Name", "Phone", "Website", "Rating", "Reviews",
+            "Business Name", "Phone", "Website", "Rating", "Reviews", "Est. Age (yrs)",
             "Score", "Confidence", "Sales Angle", "Weaknesses",
             "Website Quality", "Address", "Google Profile",
         ])
@@ -531,6 +893,7 @@ def export(leads: list[Lead]) -> None:
                 lead.website or "NONE",
                 f"{lead.rating:.1f}" if lead.rating is not None else "",
                 lead.review_count,
+                lead.age_years if lead.age_years is not None else "",
                 lead.score,
                 lead.confidence,
                 lead.sales_angle,

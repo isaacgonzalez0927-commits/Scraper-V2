@@ -396,6 +396,10 @@ padding:calc(20px + env(safe-area-inset-top)) 0 16px}
 .theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--muted);
 font-family:inherit;font-size:.75rem;font-weight:500;padding:7px 10px;border-radius:var(--radius);cursor:pointer;white-space:nowrap}
 .theme-toggle:hover{color:var(--text)}
+.theme-switch{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2px;gap:2px;flex-shrink:0}
+.theme-switch button{flex:1;border:none;background:transparent;color:var(--muted);font-family:inherit;
+font-size:.75rem;font-weight:500;padding:6px 10px;border-radius:6px;cursor:pointer;min-width:52px}
+.theme-switch button.active{background:var(--card);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
 .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
 padding:16px;margin-top:16px;box-shadow:var(--shadow)}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
@@ -465,9 +469,10 @@ font-size:.8125rem;text-decoration:underline;cursor:pointer}
       <div class="logo">Nexus</div>
       <div class="tag">Call list for HVAC businesses without a working website</div>
     </div>
-    <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle theme">
-      <span data-theme-label>Dark mode</span>
-    </button>
+    <div class="theme-switch" role="group" aria-label="Appearance">
+      <button type="button" data-theme-opt="light" aria-pressed="true">Light</button>
+      <button type="button" data-theme-opt="dark" aria-pressed="false">Dark</button>
+    </div>
   </header>
 
   <div class="panel">
