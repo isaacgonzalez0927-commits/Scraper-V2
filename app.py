@@ -38,6 +38,8 @@ from owner_pages import (
 HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
 HISTORY_FILE = HERE / "generated_history.json"
+JOBS_DIR = HERE / "data" / "jobs"
+JOBS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 
@@ -120,6 +122,28 @@ def set_job(job_id: str, **fields) -> None:
     with JOBS_LOCK:
         JOBS.setdefault(job_id, {})
         JOBS[job_id].update(fields)
+        try:
+            (JOBS_DIR / f"{job_id}.json").write_text(
+                json.dumps(JOBS[job_id]), encoding="utf-8"
+            )
+        except OSError:
+            pass
+
+
+def get_job(job_id: str) -> dict | None:
+    with JOBS_LOCK:
+        if job_id in JOBS:
+            return JOBS[job_id]
+    path = JOBS_DIR / f"{job_id}.json"
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        with JOBS_LOCK:
+            JOBS[job_id] = data
+        return data
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 # Skip businesses with fewer reviews than this (filters out dead/empty profiles).
@@ -184,8 +208,10 @@ def run_pipeline(
             for r in rows
         ]
         set_job(job_id, status="done", message=f"Ready — {len(payload)} businesses to call.", leads=payload)
-    except Exception as exc:  # noqa: BLE001 - surface any failure to the UI
-        set_job(job_id, status="error", error=str(exc), message=f"Error: {exc}")
+    except BaseException as exc:
+        if isinstance(exc, (KeyboardInterrupt, SystemExit)):
+            raise
+        set_job(job_id, status="error", error=str(exc), message=str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +280,12 @@ def generate():
         if supplied != ACCESS_CODE:
             return jsonify({"error": "unauthorized"}), 401
 
+    if not os.getenv("GOOGLE_MAPS_API_KEY", "").strip():
+        return jsonify({
+            "error": "missing_api_key",
+            "message": "Google Maps API key is not configured on the server.",
+        }), 503
+
     allowed, wait = check_rate_limit()
     if not allowed:
         return jsonify({"error": "rate_limit", "retry_after": wait}), 429
@@ -292,11 +324,10 @@ def generate():
 
 @app.route("/status/<job_id>")
 def status(job_id: str):
-    with JOBS_LOCK:
-        job = JOBS.get(job_id)
-        if not job:
-            return jsonify({"status": "unknown"}), 404
-        return jsonify(job)
+    job = get_job(job_id)
+    if not job:
+        return jsonify({"status": "unknown"}), 404
+    return jsonify(job)
 
 
 @app.route("/reset-history", methods=["POST"])
@@ -569,6 +600,13 @@ genBtn.addEventListener("click", async () => {
       resetBtnState();
       return;
     }
+    if(res.status === 503){
+      const data = await res.json().catch(() => ({}));
+      statusEl.classList.remove("show");
+      list.innerHTML = '<div class="empty">'+(data.message||"Server is missing the Google Maps API key.")+'</div>';
+      resetBtnState();
+      return;
+    }
     if(res.status === 429){
       const data = await res.json();
       const mins = Math.ceil((data.retry_after || 600) / 60);
@@ -590,11 +628,22 @@ function resetBtnState(){
   genBtn.textContent = "Get My Call List";
 }
 
-async function poll(jobId){
+async function poll(jobId, tries=0){
   try {
     const res = await fetch("/status/" + jobId);
-    const job = await res.json();
+    const job = await res.json().catch(() => ({}));
     if(job.message) statusMsg.textContent = job.message;
+
+    if(res.status === 404 || job.status === "unknown"){
+      if(tries < 8){
+        setTimeout(() => poll(jobId, tries + 1), 2000);
+        return;
+      }
+      statusEl.classList.remove("show");
+      list.innerHTML = '<div class="empty">Lost connection to the server. Tap Get My Call List again.</div>';
+      resetBtnState();
+      return;
+    }
 
     if(job.status === "done"){
       statusEl.classList.remove("show");
@@ -608,13 +657,25 @@ async function poll(jobId){
     }
     if(job.status === "error"){
       statusEl.classList.remove("show");
-      list.innerHTML = '<div class="empty">'+(job.message||"Something went wrong.")+'</div>';
+      list.innerHTML = '<div class="empty">'+(job.message||job.error||"Something went wrong.")+'</div>';
       resetBtnState();
       return;
     }
-    setTimeout(() => poll(jobId), 1500);
+    if(tries > 200){
+      statusEl.classList.remove("show");
+      list.innerHTML = '<div class="empty">This is taking too long. Try again in a minute.</div>';
+      resetBtnState();
+      return;
+    }
+    setTimeout(() => poll(jobId, tries + 1), 1500);
   } catch (err){
-    setTimeout(() => poll(jobId), 2500);
+    if(tries < 12){
+      setTimeout(() => poll(jobId, tries + 1), 2500);
+      return;
+    }
+    statusEl.classList.remove("show");
+    list.innerHTML = '<div class="empty">Network error — check your connection and try again.</div>';
+    resetBtnState();
   }
 }
 

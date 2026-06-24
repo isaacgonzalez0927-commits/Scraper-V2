@@ -8,4 +8,5 @@ leads.csv
 leads_v2.json
 generated_history.json
 data/calls.db
+data/jobs/
 hvac_leads_data.json

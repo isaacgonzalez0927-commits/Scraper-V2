@@ -82,7 +82,9 @@ def load_keys() -> tuple[str, str]:
     google = os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
     openai = os.getenv("OPENAI_API_KEY", "").strip()
     if not google:
-        raise SystemExit("Missing GOOGLE_MAPS_API_KEY in .env")
+        raise RuntimeError(
+            "Missing GOOGLE_MAPS_API_KEY — set it in Render environment variables."
+        )
     return google, openai
 
 
@@ -445,12 +447,9 @@ def collect_leads(
 ) -> list[dict]:
     """Find HVAC leads and return the best ones as a list of dicts.
 
-    1. Pull up to `pool_size` businesses from Google Places.
-    2. Keep only real opportunities (no website or dead website).
-    3. Score every opportunity with the rubric (site + reviews + rating + legitimacy).
-    4. Return up to `max_leads` with score >= `min_score` (best first).
-
-    Shared engine for both the command line and the phone app.
+    Scans Google Places across the city list, verifies site status, scores
+    with the rubric, and returns up to `max_leads` at or above `min_score`.
+    Keeps scanning until the target is met or the scan budget is exhausted.
     """
     google_key, _openai_key = load_keys()
     exclude_phones = {normalize_phone(p) for p in (exclude_phones or set()) if normalize_phone(p)}
@@ -460,21 +459,56 @@ def collect_leads(
         if progress is not None:
             progress(msg)
 
-    # --- Phase 1: gather a large pool from Google Places ---
-    say(f"Searching Google Places (scanning up to {pool_size} businesses)...")
-    no_link: dict[str, dict] = {}   # no website on their Google profile
-    with_link: dict[str, dict] = {}  # has a website listed
+    scan_budget = min(max(pool_size, len(exclude_phones) + max_leads * 12, 120), 500)
+    say(f"Searching Google Places (scan budget up to {scan_budget} businesses)...")
+
+    no_link: dict[str, dict] = {}
+    with_link: dict[str, dict] = {}
     seen = set(exclude_phones)
     queries = [f"{term} {city}" for city in cities for term in SEARCH_TERMS]
+    want_none = site_filter in ("all", "none")
+    want_dead = site_filter in ("all", "dead")
+
+    def verify_pool() -> list[dict]:
+        opportunities: list[dict] = []
+        if want_none:
+            candidates = list(no_link.values())
+            if candidates:
+                say(f"Checking {len(candidates)} businesses for hidden websites...")
+                done = 0
+                with ThreadPoolExecutor(max_workers=CHECK_WORKERS) as pool:
+                    futures = {pool.submit(_verify_no_site, lead): lead for lead in candidates}
+                    for fut in as_completed(futures):
+                        done += 1
+                        if done % 5 == 0 or done == len(candidates):
+                            say(f"Checked {done}/{len(candidates)} no-website businesses")
+                        hit = fut.result()
+                        if hit:
+                            opportunities.append(hit)
+        if want_dead:
+            listed = list(with_link.values())
+            if listed:
+                say(f"Checking {len(listed)} listed websites...")
+                done = 0
+                with ThreadPoolExecutor(max_workers=CHECK_WORKERS) as pool:
+                    futures = {pool.submit(_verify_dead_site, lead): lead for lead in listed}
+                    for fut in as_completed(futures):
+                        done += 1
+                        if done % 10 == 0 or done == len(listed):
+                            say(f"Checked {done}/{len(listed)} listed sites")
+                        hit = fut.result()
+                        if hit:
+                            opportunities.append(hit)
+        return opportunities
 
     for query in queries:
         total = len(no_link) + len(with_link)
-        if total >= pool_size:
+        if total >= scan_budget:
             break
-        say(f"Searching: {query}  ({total}/{pool_size} scanned)")
+        say(f"Searching: {query}  ({total}/{scan_budget} scanned)")
         for place in search_places(query, google_key, max_pages=3):
             total = len(no_link) + len(with_link)
-            if total >= pool_size:
+            if total >= scan_budget:
                 break
             if place.get("businessStatus") not in (None, "OPERATIONAL"):
                 continue
@@ -496,50 +530,9 @@ def collect_leads(
             (with_link if record["website"] else no_link)[phone] = record
         time.sleep(0.5)
 
-    want_none = site_filter in ("all", "none")
-    want_dead = site_filter in ("all", "dead")
-
-    # --- Phase 2: verify no-website businesses (parallel) ---
-    opportunities: list[dict] = []
-    if want_none:
-        candidates = list(no_link.values())
-        say(f"Checking {len(candidates)} businesses for hidden websites...")
-        done = 0
-        with ThreadPoolExecutor(max_workers=CHECK_WORKERS) as pool:
-            futures = {pool.submit(_verify_no_site, lead): lead for lead in candidates}
-            for fut in as_completed(futures):
-                done += 1
-                if done % 5 == 0 or done == len(candidates):
-                    say(f"Checked {done}/{len(candidates)} no-website businesses")
-                hit = fut.result()
-                if hit:
-                    opportunities.append(hit)
-
-    # --- Phase 3: check listed sites for dead/broken ones (parallel) ---
-    if want_dead:
-        listed = list(with_link.values())
-        say(f"Checking {len(listed)} listed websites...")
-        done = 0
-        with ThreadPoolExecutor(max_workers=CHECK_WORKERS) as pool:
-            futures = {pool.submit(_verify_dead_site, lead): lead for lead in listed}
-            for fut in as_completed(futures):
-                done += 1
-                if done % 10 == 0 or done == len(listed):
-                    say(f"Checked {done}/{len(listed)} listed sites")
-                hit = fut.result()
-                if hit:
-                    opportunities.append(hit)
-
-    rows = opportunities
-    if not opportunities_only:
-        kept_phones = {r["phone"] for r in rows}
-        for lead in with_link.values():
-            if lead["phone"] not in kept_phones:
-                lead["has_website"] = website_works(lead["website"])
-                lead["site_status"] = "working" if lead["has_website"] else "dead"
-                rows.append(lead)
-
+    rows = verify_pool()
     if not rows:
+        say("No website opportunities found in this scan — try again or clear history.")
         return []
 
     say(f"Scoring {len(rows)} opportunities...")
@@ -551,12 +544,15 @@ def collect_leads(
     if picked:
         say(f"Kept {len(picked)} leads scoring {min_score}+ (from {len(rows)} opportunities)")
     else:
-        say(f"No leads scored {min_score}+ — try more cities or lower MIN_SCORE")
+        say(f"No leads scored {min_score}+ — try more cities or clear history")
     return picked
 
 
 def main() -> None:
-    rows = collect_leads(CITIES, max_leads=MAX_LEADS, use_openai=USE_OPENAI)
+    try:
+        rows = collect_leads(CITIES, max_leads=MAX_LEADS, use_openai=USE_OPENAI)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
 
     print(f"\nStep 4 — saving {len(rows)} leads to {OUTPUT_CSV.name}")
     with OUTPUT_CSV.open("w", newline="", encoding="utf-8") as fh:
