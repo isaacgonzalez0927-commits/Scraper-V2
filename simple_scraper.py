@@ -116,20 +116,73 @@ def search_places(query: str, api_key: str, max_pages: int = 2) -> list[dict]:
     return out
 
 
-def website_works(url: str) -> bool:
-    """Open the website link to confirm it's a real, live site (not dead)."""
+def _url_variants(url: str) -> list[str]:
+    """Return URL plus http/https alternates to try."""
+    url = url.strip()
     if not url:
+        return []
+    variants = [url]
+    if url.startswith("https://"):
+        variants.append("http://" + url[8:])
+    elif url.startswith("http://"):
+        variants.append("https://" + url[7:])
+    else:
+        variants.extend([f"https://{url}", f"http://{url}"])
+    seen: set[str] = set()
+    out: list[str] = []
+    for v in variants:
+        if v not in seen:
+            seen.add(v)
+            out.append(v)
+    return out
+
+
+def _page_looks_live(status: int, body: bytes) -> bool:
+    """Decide if a response is a real page (not a hard failure)."""
+    if status < 400:
+        return True
+    # Many hosts block bots with 403/401 but still return a real HTML page.
+    if status in (401, 403, 405, 406) and len(body) > 400:
+        text = body[:2000].lower()
+        if b"<html" in text or b"<!doctype" in text:
+            return True
+    return False
+
+
+def _fetch_liveness(url: str) -> bool:
+    """GET a URL and decide if it hosts a live site."""
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    try:
+        resp = requests.get(
+            url, headers=headers, timeout=10, allow_redirects=True, stream=True,
+        )
+        chunk = b""
+        for part in resp.iter_content(8192):
+            chunk += part
+            if len(chunk) >= 8192:
+                break
+        resp.close()
+        return _page_looks_live(resp.status_code, chunk)
+    except requests.exceptions.SSLError:
+        # Bad cert on https — caller may try http variant next.
         return False
-    headers = {"User-Agent": USER_AGENT}
-    for method in (requests.head, requests.get):
-        try:
-            resp = method(
-                url, headers=headers, timeout=5, allow_redirects=True,
-            )
-            if resp.status_code < 400:
-                return True
-        except requests.RequestException:
-            continue
+    except requests.RequestException:
+        return False
+
+
+def website_works(url: str) -> bool:
+    """Return True if the URL appears to host a live website.
+
+    Uses GET (not HEAD — many sites block HEAD), tries http/https variants,
+    and treats bot-wall 403 pages with HTML as live.
+    """
+    for try_url in _url_variants(url):
+        if _fetch_liveness(try_url):
+            return True
     return False
 
 
@@ -355,8 +408,11 @@ def _verify_no_site(lead: dict) -> dict | None:
 
 
 def _verify_dead_site(lead: dict) -> dict | None:
-    """Return lead if website is dead, else None."""
+    """Return lead only if Google's website link is truly dead/broken."""
     if website_works(lead["website"]):
+        return None
+    # Google link may be stale — if they have a working site elsewhere, skip.
+    if find_unlinked_website(lead["name"], lead["phone"], lead.get("address", "")):
         return None
     lead["has_website"] = False
     lead["site_status"] = "dead"
