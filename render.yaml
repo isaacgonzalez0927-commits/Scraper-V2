@@ -10,5 +10,9 @@ services:
         sync: false
       - key: ACCESS_CODE
         sync: false
+      - key: OWNER_CODE
+        sync: false
+      - key: CALLER_NAME
+        value: sebastien
       - key: PYTHON_VERSION
         value: "3.12.6"

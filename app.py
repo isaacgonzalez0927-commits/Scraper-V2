@@ -24,7 +24,9 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template_string, request
 
 import simple_scraper as engine
+import tracking
 from florida_cities import FLORIDA_CITIES
+from owner_pages import DASHBOARD_PAGE, HISTORY_PAGE, REPORTS_PAGE, STATS_PAGE
 
 HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
@@ -35,6 +37,8 @@ app = Flask(__name__)
 # Optional shared access code to protect the paid /generate endpoint.
 # Set ACCESS_CODE in the environment (or .env) to require it. Empty = open.
 ACCESS_CODE = os.getenv("ACCESS_CODE", "").strip()
+OWNER_CODE = os.getenv("OWNER_CODE", "").strip()
+CALLER_NAME = os.getenv("CALLER_NAME", "sebastien").strip()
 RATE_LIMIT_SECONDS = int(os.getenv("RATE_LIMIT_SECONDS", "600"))
 
 # In-memory job store: job_id -> {status, message, leads, error}
@@ -65,6 +69,18 @@ def check_rate_limit() -> tuple[bool, int]:
             return False, wait
         LAST_GENERATE[key] = now
         return True, 0
+
+
+def check_owner() -> bool:
+    if not OWNER_CODE:
+        return True
+    return (request.headers.get("X-Owner-Code") or "").strip() == OWNER_CODE
+
+
+def check_caller() -> bool:
+    if not ACCESS_CODE:
+        return True
+    return (request.headers.get("X-Access-Code") or "").strip() == ACCESS_CODE
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +270,80 @@ def reset_history():
     return jsonify({"ok": True})
 
 
+@app.route("/api/log-call", methods=["POST"])
+def api_log_call():
+    if not check_caller():
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    outcome = (data.get("outcome") or "").strip().lower()
+    try:
+        result = tracking.log_call(
+            caller_id=CALLER_NAME,
+            business_name=data.get("business_name", ""),
+            phone=data.get("phone", ""),
+            score=data.get("score"),
+            site_status=data.get("site_status", ""),
+            address=data.get("address", ""),
+            outcome=outcome,
+            notes=data.get("notes", ""),
+        )
+        return jsonify({"ok": True, **result})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/dashboard")
+def dashboard_page():
+    return DASHBOARD_PAGE
+
+
+@app.route("/reports")
+def reports_page():
+    return REPORTS_PAGE
+
+
+@app.route("/history")
+def history_page():
+    return HISTORY_PAGE
+
+
+@app.route("/stats")
+def stats_page():
+    return STATS_PAGE
+
+
+@app.route("/api/dashboard")
+def api_dashboard():
+    if not check_owner():
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(tracking.dashboard_stats())
+
+
+@app.route("/api/reports")
+def api_reports():
+    if not check_owner():
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(tracking.get_all_reports())
+
+
+@app.route("/api/history")
+def api_history():
+    if not check_owner():
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(tracking.call_history(
+        site_status=request.args.get("site_status", ""),
+        outcome=request.args.get("outcome", ""),
+        city=request.args.get("city", ""),
+    ))
+
+
+@app.route("/api/stats")
+def api_stats():
+    if not check_owner():
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(tracking.statistics_page())
+
+
 def local_ip() -> str:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -368,6 +458,11 @@ padding:16px;margin-bottom:12px;transition:opacity .2s}
 .markbtn{padding:8px 14px;border-radius:100px;border:1px solid var(--border);
 background:rgba(255,255,255,.04);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer}
 .markbtn.done{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.35);color:#6ee7b7}
+.outcome-btn{padding:7px 10px;border-radius:100px;border:1px solid var(--border);
+background:rgba(255,255,255,.04);color:var(--muted);font-size:.7rem;font-weight:700;cursor:pointer}
+.outcome-btn:active{transform:scale(.97)}
+.outcome-btn.picked{background:rgba(52,211,153,.2);border-color:rgba(52,211,153,.4);color:#6ee7b7}
+.outcome-btn.client-pick{background:rgba(37,99,235,.25);border-color:var(--blue-light);color:var(--blue-bright)}
 .opener{font-size:.84rem;line-height:1.5;color:var(--blue-bright);margin-bottom:8px;font-style:italic}
 .lead-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
 .lead-name{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:1.05rem;line-height:1.25}
@@ -398,7 +493,7 @@ font-size:.78rem;text-decoration:underline;cursor:pointer}
       <ol>
         <li>Pick area and lead type below</li>
         <li>Tap <strong>Get My Call List</strong> and wait ~1–2 min</li>
-        <li>Tap a <strong>phone number</strong> to call · tap <strong>Mark called</strong> when done</li>
+        <li>Tap a <strong>phone number</strong> to call · tap an <strong>outcome</strong> when done</li>
       </ol>
       <div class="cold-note">First load of the day may take up to a minute — server is waking up.</div>
     </div>
@@ -622,6 +717,10 @@ function render(leads){
   resultsBar.classList.add("show");
 
   const statusText = {none: "NO WEBSITE", dead: "DEAD WEBSITE", working: "has website"};
+  const outcomes = [
+    ["called","Called"],["interested","Interested"],["callback","Callback"],
+    ["client","Client"],["not_interested","No"],["no_answer","No ans"]
+  ];
   list.innerHTML = leads.map((l, idx) => {
     const hot = l.score >= 60 ? "hot" : "";
     const rating = l.rating ? l.rating.toFixed(1) + " (" + l.reviews + ")" : l.reviews + " reviews";
@@ -629,6 +728,9 @@ function render(leads){
     const site = l.website ? ' &middot; <a href="'+l.website+'" target="_blank">'+shortUrl(l.website)+'</a>' : "";
     const called = isCalled(l.phone);
     const opener = l.opener || "";
+    const btns = outcomes.map(([k, label]) =>
+      `<button type="button" class="outcome-btn" data-outcome="${k}" data-idx="${idx}">${label}</button>`
+    ).join("");
     return `<div class="lead ${called ? "called" : ""}" data-idx="${idx}">
       <div class="lead-top">
         <div class="lead-name">${esc(l.name)}</div>
@@ -638,23 +740,44 @@ function render(leads){
       <div class="meta"><b>${status}</b> &middot; ${rating}${site}</div>
       ${opener ? '<div class="opener">"'+esc(opener)+'"</div>' : ""}
       <div class="angle">${esc(l.reason||"")}</div>
-      <div class="lead-actions">
-        <button type="button" class="markbtn ${called ? "done" : ""}" data-phone="${esc(l.phone)}">${called ? "✓ Called" : "Mark called"}</button>
-      </div>
+      <div class="lead-actions">${btns}</div>
     </div>`;
   }).join("");
 
-  list.querySelectorAll(".markbtn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      markCalled(btn.dataset.phone);
-      const card = btn.closest(".lead");
-      card.classList.add("called");
-      btn.classList.add("done");
-      btn.textContent = "✓ Called";
-      const left = lastLeads.filter(l => !isCalled(l.phone)).length;
-      document.getElementById("countPill").textContent = left + " to call";
-    });
+  list.querySelectorAll(".outcome-btn").forEach(btn => {
+    btn.addEventListener("click", () => logOutcome(parseInt(btn.dataset.idx, 10), btn.dataset.outcome, btn));
   });
+}
+
+async function logOutcome(idx, outcome, btn){
+  const lead = lastLeads[idx];
+  if(!lead) return;
+  const code = getCode();
+  btn.disabled = true;
+  try {
+    await fetch("/api/log-call", {
+      method:"POST",
+      headers:{"Content-Type":"application/json", "X-Access-Code": code},
+      body: JSON.stringify({
+        business_name: lead.name,
+        phone: lead.phone,
+        score: lead.score,
+        site_status: lead.site_status,
+        address: lead.address || "",
+        outcome: outcome
+      })
+    });
+    markCalled(lead.phone);
+    const card = btn.closest(".lead");
+    card.classList.add("called");
+    card.querySelectorAll(".outcome-btn").forEach(b => b.classList.remove("picked","client-pick"));
+    btn.classList.add(outcome === "client" ? "client-pick" : "picked");
+    const left = lastLeads.filter(l => !isCalled(l.phone)).length;
+    document.getElementById("countPill").textContent = left + " to call";
+  } catch(e) {
+    btn.disabled = false;
+    alert("Could not save outcome — check connection and try again.");
+  }
 }
 
 function shortUrl(u){ try{ return new URL(u).hostname.replace(/^www\./,""); }catch(e){ return u; } }
@@ -714,5 +837,9 @@ if __name__ == "__main__":
     print(f"  On your phone    : http://{ip}:{port}   (same Wi-Fi)")
     if ACCESS_CODE:
         print("  Access code      : ENABLED (ACCESS_CODE set)")
+    if OWNER_CODE:
+        print(f"  Owner dashboard  : http://127.0.0.1:{port}/dashboard")
+    else:
+        print("  Owner dashboard  : set OWNER_CODE in .env to secure /dashboard")
     print("=" * 60)
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

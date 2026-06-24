@@ -56,4 +56,19 @@ In Render → Settings → Custom Domains, point something like `leads.acsendsit
 |----------|----------|---------|
 | `GOOGLE_MAPS_API_KEY` | Yes | Google Places search |
 | `ACCESS_CODE` | Recommended | Password so random people can't use your API credits |
+| `OWNER_CODE` | **Required for you** | Your private code to view `/dashboard`, `/reports`, `/history`, `/stats` |
+| `CALLER_NAME` | Optional | Label for who logged calls (default: `sebastien`) |
 | `PORT` | Auto on Render | Local dev only |
+
+## Owner dashboard (Isaac)
+
+After deploy, open:
+
+- **Dashboard:** `https://your-app.onrender.com/dashboard`
+- **Reports:** `/reports` (auto every 100 calls)
+- **Call history:** `/history`
+- **Statistics:** `/stats`
+
+Set `OWNER_CODE` in Render env vars. Enter it once when prompted — Isaac sees all data Sebastien logs, live.
+
+Call data is stored in `data/calls.db` on the server (SQLite). For permanent retention on Render, enable a **persistent disk** and mount it at `data/`.
