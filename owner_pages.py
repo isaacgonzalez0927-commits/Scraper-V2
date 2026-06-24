@@ -2,19 +2,21 @@
 
 OWNER_STYLES = """
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#04060d;--card:rgba(12,20,36,.9);--blue:#2563eb;--blue-l:#60a5fa;
---border:rgba(96,165,250,.14);--text:#f8fafc;--muted:#94a3b8;--green:#34d399;--red:#f87171}
+:root{--bg:#0a0612;--card:rgba(18,10,32,.9);--purple:#7c3aed;--purple-l:#a78bfa;
+--border:rgba(167,139,250,.16);--text:#f8fafc;--muted:#a8a3b8;--green:#34d399;--red:#f87171}
 body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);
 padding:20px;max-width:1100px;margin:0 auto;line-height:1.5}
-a{color:var(--blue-l);text-decoration:none}
+a{color:var(--purple-l);text-decoration:none}
 nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
 nav a{padding:8px 14px;border-radius:100px;border:1px solid var(--border);font-size:.85rem;font-weight:600}
-nav a.active{background:var(--blue);border-color:var(--blue);color:#fff}
+nav a.active{background:var(--purple);border-color:var(--purple);color:#fff}
 h1{font-size:1.5rem;margin-bottom:6px}
+.brand{font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+color:var(--purple-l);margin-bottom:4px}
 .sub{color:var(--muted);font-size:.9rem;margin-bottom:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
-.card .num{font-size:1.6rem;font-weight:800;color:var(--blue-l)}
+.card .num{font-size:1.6rem;font-weight:800;color:var(--purple-l)}
 .card .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
 th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--border)}
@@ -29,11 +31,11 @@ padding:18px;margin-bottom:14px}
 .badge.dead{background:rgba(239,68,68,.15);color:#fca5a5}
 .badge.none{background:rgba(251,191,36,.15);color:#fcd34d}
 .badge.client{background:rgba(52,211,153,.15);color:#6ee7b7}
-.badge.interested{background:rgba(96,165,250,.15);color:#93c5fd}
+.badge.interested{background:rgba(167,139,250,.18);color:#c4b5fd}
 .login{max-width:360px;margin:80px auto;text-align:center}
 .login input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);
 background:rgba(255,255,255,.04);color:var(--text);margin:12px 0}
-.login button{width:100%;padding:14px;border:none;border-radius:100px;background:var(--blue);
+.login button{width:100%;padding:14px;border:none;border-radius:100px;background:var(--purple);
 color:#fff;font-weight:700;cursor:pointer}
 """
 
@@ -48,21 +50,21 @@ OWNER_NAV = """
 """
 
 OWNER_AUTH_JS = """
-function ownerCode(){ return localStorage.getItem("owner_code") || ""; }
-function setOwnerCode(c){ localStorage.setItem("owner_code", c); }
+function ownerCode(){ return localStorage.getItem("nexus_owner_code") || ""; }
+function setOwnerCode(c){ localStorage.setItem("nexus_owner_code", c); }
 function ownerHeaders(){
   return {"X-Owner-Code": ownerCode(), "Content-Type": "application/json"};
 }
 async function ownerFetch(url){
   const code = ownerCode();
   if(!code){
-    const c = prompt("Owner access code:");
+    const c = prompt("Nexus owner access code:");
     if(!c) throw new Error("no code");
     setOwnerCode(c.trim());
   }
   const res = await fetch(url, {headers: ownerHeaders()});
   if(res.status === 401){
-    localStorage.removeItem("owner_code");
+    localStorage.removeItem("nexus_owner_code");
     alert("Wrong owner code");
     location.reload();
     throw new Error("unauthorized");
@@ -78,10 +80,11 @@ function setActiveNav(id){
 DASHBOARD_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Owner Dashboard — Acsend</title>
+<title>Nexus — Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
+<div class="brand">Nexus</div>
 <h1>Dashboard</h1>
 <p class="sub">Live view of all calls Sebastien (and any caller) logs.</p>
 <div class="grid" id="metrics"></div>
@@ -121,10 +124,11 @@ load(); setInterval(load, 30000);
 REPORTS_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Reports — Acsend</title>
+<title>Nexus — Reports</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
+<div class="brand">Nexus</div>
 <h1>Reports</h1>
 <p class="sub">Auto-generated every 100 logged calls. Saved permanently.</p>
 <div id="list"></div>
@@ -157,10 +161,11 @@ load();
 HISTORY_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Call History — Acsend</title>
+<title>Nexus — Call History</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
+<div class="brand">Nexus</div>
 <h1>Call History</h1>
 <p class="sub">Every outcome Sebastien enters appears here instantly.</p>
 <div class="filters">
@@ -171,7 +176,7 @@ HISTORY_PAGE = f"""<!DOCTYPE html>
     <option value="not_interested">Not interested</option><option value="no_answer">No answer</option>
   </select>
   <input id="fCity" placeholder="Filter city..." style="padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text)">
-  <button onclick="load()" style="padding:10px 16px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-weight:700;cursor:pointer">Apply</button>
+  <button onclick="load()" style="padding:10px 16px;border-radius:10px;border:none;background:var(--purple);color:#fff;font-weight:700;cursor:pointer">Apply</button>
 </div>
 <table><thead><tr><th>Business</th><th>Score</th><th>Type</th><th>Outcome</th><th>City</th><th>Date</th></tr></thead>
 <tbody id="rows"></tbody></table>
@@ -195,10 +200,11 @@ load();
 STATS_PAGE = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Statistics — Acsend</title>
+<title>Nexus — Statistics</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{OWNER_STYLES}</style></head><body>
 {OWNER_NAV}
+<div class="brand">Nexus</div>
 <h1>Statistics</h1>
 <p class="sub">Conversion insights across cities and lead types.</p>
 <div class="grid" id="summary"></div>

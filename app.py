@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-Acsend Leads — mobile web app for cold callers.
+Nexus — mobile call-list app for cold callers.
 
 Your caller opens this on their phone, taps "Get My Call List", and gets
 HVAC businesses with no website (or a dead one) ready to dial.
-
-Deploy on Render (see README) so they don't need your Wi-Fi.
 """
 
 from __future__ import annotations
@@ -196,15 +194,15 @@ def index():
 @app.route("/manifest.webmanifest")
 def manifest():
     return jsonify({
-        "name": "Acsend Call List",
-        "short_name": "Call List",
-        "description": "Build your HVAC call list — businesses that need a website.",
+        "name": "Nexus",
+        "short_name": "Nexus",
+        "description": "Nexus — HVAC call lists for businesses that need a website.",
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
         "orientation": "portrait",
-        "background_color": "#04060d",
-        "theme_color": "#04060d",
+        "background_color": "#0a0612",
+        "theme_color": "#0a0612",
         "icons": [
             {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
             {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
@@ -367,9 +365,9 @@ PAGE = r"""<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Call List">
-<meta name="theme-color" content="#04060d">
-<title>Acsend Call List</title>
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<meta name="theme-color" content="#0a0612">
+<title>Nexus</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="/static/icon-192.png">
@@ -379,32 +377,32 @@ PAGE = r"""<!DOCTYPE html>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg:#04060d;--bg2:#080e1a;--card:rgba(12,20,36,.85);
---blue:#2563eb;--blue-light:#60a5fa;--blue-bright:#93c5fd;--blue-dark:#1d4ed8;
---border:rgba(96,165,250,.14);--text:#f8fafc;--muted:#94a3b8;--glow:rgba(37,99,235,.35);
+--bg:#0a0612;--bg2:#120a1f;--card:rgba(18,10,32,.88);
+--purple:#7c3aed;--purple-light:#a78bfa;--purple-bright:#c4b5fd;--purple-dark:#5b21b6;
+--border:rgba(167,139,250,.16);--text:#f8fafc;--muted:#a8a3b8;--glow:rgba(124,58,237,.4);
 }
 html{scroll-behavior:smooth}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);
 -webkit-font-smoothing:antialiased;min-height:100vh;padding:0 0 120px}
 .bgglow{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
 .bgglow span{position:absolute;border-radius:50%;filter:blur(90px)}
-.bgglow span:nth-child(1){width:380px;height:380px;background:rgba(37,99,235,.18);top:-120px;right:-80px}
-.bgglow span:nth-child(2){width:320px;height:320px;background:rgba(29,78,216,.13);bottom:5%;left:-120px}
+.bgglow span:nth-child(1){width:380px;height:380px;background:rgba(124,58,237,.2);top:-120px;right:-80px}
+.bgglow span:nth-child(2){width:320px;height:320px;background:rgba(91,33,182,.18);bottom:5%;left:-120px}
 .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:0 18px}
 header{padding:calc(30px + env(safe-area-inset-top)) 0 16px;text-align:center}
 .logo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.6rem;letter-spacing:-.03em}
-.logo span{background:linear-gradient(135deg,var(--blue-light),var(--blue-bright));
+.logo span{background:linear-gradient(135deg,var(--purple-light),var(--purple-bright));
 -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .tag{color:var(--muted);font-size:.85rem;margin-top:4px;line-height:1.45}
-.steps{margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(37,99,235,.08);
+.steps{margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(124,58,237,.1);
 border:1px solid var(--border);font-size:.82rem;color:var(--muted);line-height:1.6}
-.steps strong{color:var(--blue-bright);font-weight:700}
+.steps strong{color:var(--purple-bright);font-weight:700}
 .steps ol{margin:8px 0 0 18px;padding:0}
 .steps li{margin-bottom:4px}
 .cold-note{margin-top:10px;font-size:.78rem;color:var(--muted);font-style:italic}
-.pitch{margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(37,99,235,.08);
+.pitch{margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(124,58,237,.1);
 border:1px solid var(--border);text-align:left}
-.pitch summary{cursor:pointer;font-weight:700;color:var(--blue-bright);font-size:.85rem;list-style:none}
+.pitch summary{cursor:pointer;font-weight:700;color:var(--purple-bright);font-size:.85rem;list-style:none}
 .pitch summary::-webkit-details-marker{display:none}
 .pitch-body{margin-top:10px;font-size:.82rem;color:var(--muted);line-height:1.65}
 .pitch-body p{margin-bottom:8px}
@@ -415,19 +413,19 @@ padding:18px;margin-top:18px;backdrop-filter:blur(12px)}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .field{flex:1;min-width:130px}
 label{display:block;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-color:var(--blue-light);margin-bottom:6px}
+color:var(--purple-light);margin-bottom:6px}
 select,input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--border);
 background:rgba(255,255,255,.04);color:var(--text);font-family:inherit;font-size:.95rem;
 appearance:none;-webkit-appearance:none}
-select:focus,input:focus{outline:none;border-color:var(--blue-light)}
+select:focus,input:focus{outline:none;border-color:var(--purple-light)}
 .seg{display:flex;background:rgba(255,255,255,.04);border:1px solid var(--border);
 border-radius:12px;padding:4px;gap:4px}
 .seg button{flex:1;padding:10px;border:none;background:transparent;color:var(--muted);
 font-family:inherit;font-weight:700;font-size:.85rem;border-radius:9px;cursor:pointer}
-.seg button.active{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff}
+.seg button.active{background:linear-gradient(135deg,var(--purple),var(--purple-dark));color:#fff}
 
 .generate{width:100%;margin-top:6px;padding:18px;border:none;border-radius:100px;
-background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;
+background:linear-gradient(135deg,var(--purple),var(--purple-dark));color:#fff;
 font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:-.01em;
 box-shadow:0 6px 30px var(--glow);cursor:pointer;transition:transform .15s,box-shadow .15s}
 .generate:active{transform:scale(.98)}
@@ -436,7 +434,7 @@ box-shadow:0 6px 30px var(--glow);cursor:pointer;transition:transform .15s,box-s
 .status{display:none;margin-top:18px;align-items:center;gap:12px;
 background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
 .status.show{display:flex}
-.spinner{width:22px;height:22px;border:3px solid rgba(96,165,250,.25);border-top-color:var(--blue-light);
+.spinner{width:22px;height:22px;border:3px solid rgba(167,139,250,.25);border-top-color:var(--purple-light);
 border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 .status .msg{font-size:.9rem;color:var(--muted)}
@@ -445,10 +443,10 @@ border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
 .results-bar{display:none;gap:10px;margin-bottom:14px}
 .results-bar.show{display:flex}
 .copybtn{flex:1;padding:15px;border:none;border-radius:100px;
-background:linear-gradient(135deg,var(--blue-light),var(--blue));color:#04060d;
+background:linear-gradient(135deg,var(--purple-light),var(--purple));color:#04060d;
 font-weight:800;font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;cursor:pointer}
 .copybtn.copied{background:linear-gradient(135deg,#34d399,#10b981);color:#04221a}
-.count-pill{background:rgba(37,99,235,.15);border:1px solid var(--border);color:var(--blue-bright);
+.count-pill{background:rgba(124,58,237,.18);border:1px solid var(--border);color:var(--purple-bright);
 border-radius:100px;padding:0 18px;display:flex;align-items:center;font-weight:700;font-size:.85rem;white-space:nowrap}
 
 .lead{background:var(--card);border:1px solid var(--border);border-radius:16px;
@@ -462,16 +460,16 @@ background:rgba(255,255,255,.04);color:var(--muted);font-size:.78rem;font-weight
 background:rgba(255,255,255,.04);color:var(--muted);font-size:.7rem;font-weight:700;cursor:pointer}
 .outcome-btn:active{transform:scale(.97)}
 .outcome-btn.picked{background:rgba(52,211,153,.2);border-color:rgba(52,211,153,.4);color:#6ee7b7}
-.outcome-btn.client-pick{background:rgba(37,99,235,.25);border-color:var(--blue-light);color:var(--blue-bright)}
-.opener{font-size:.84rem;line-height:1.5;color:var(--blue-bright);margin-bottom:8px;font-style:italic}
+.outcome-btn.client-pick{background:rgba(124,58,237,.28);border-color:var(--purple-light);color:var(--purple-bright)}
+.opener{font-size:.84rem;line-height:1.5;color:var(--purple-bright);margin-bottom:8px;font-style:italic}
 .lead-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
 .lead-name{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:1.05rem;line-height:1.25}
 .score{flex-shrink:0;width:46px;height:46px;border-radius:12px;display:flex;align-items:center;
 justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.1rem;
-background:rgba(37,99,235,.15);border:1px solid var(--border)}
-.score.hot{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;border:none}
+background:rgba(124,58,237,.18);border:1px solid var(--border)}
+.score.hot{background:linear-gradient(135deg,var(--purple),var(--purple-dark));color:#fff;border:none}
 .meta{font-size:.82rem;color:var(--muted);margin-bottom:10px}
-.meta a{color:var(--blue-light)}
+.meta a{color:var(--purple-light)}
 .phone{display:inline-block;font-weight:700;color:var(--text);font-size:1rem;margin-bottom:8px}
 .angle{font-size:.88rem;line-height:1.55;margin-bottom:8px}
 .gaps{display:flex;flex-wrap:wrap;gap:6px}
@@ -486,7 +484,7 @@ font-size:.78rem;text-decoration:underline;cursor:pointer}
 <div class="bgglow"><span></span><span></span></div>
 <div class="wrap">
   <header>
-    <div class="logo">Acsend <span>Call List</span></div>
+    <div class="logo"><span>Nexus</span></div>
     <div class="tag">Your dial list · HVAC shops with no website or a dead site</div>
     <div class="steps">
       <strong>How to use</strong>
@@ -568,11 +566,11 @@ const REQUIRE_CODE = {{ 'true' if require_code else 'false' }};
 
 function historyKey(){
   const code = getCode();
-  return code ? "acsend_used_" + code : "acsend_used_phones";
+  return code ? "nexus_used_" + code : "nexus_used_phones";
 }
 function calledKey(){
   const code = getCode();
-  return code ? "acsend_called_" + code : "acsend_called_phones";
+  return code ? "nexus_called_" + code : "nexus_called_phones";
 }
 function normPhone(p){
   const d = (p||"").replace(/\D/g,"");
@@ -603,10 +601,10 @@ function markCalled(phone){
   saveCalledPhones([...set]);
 }
 
-function getCode(){ return localStorage.getItem("acsend_code") || ""; }
+function getCode(){ return localStorage.getItem("nexus_code") || ""; }
 function askCode(){
   const c = prompt("Enter your access code (ask your manager if you don't have one):");
-  if(c){ localStorage.setItem("acsend_code", c.trim()); return c.trim(); }
+  if(c){ localStorage.setItem("nexus_code", c.trim()); return c.trim(); }
   return "";
 }
 
@@ -651,7 +649,7 @@ genBtn.addEventListener("click", async () => {
       body:JSON.stringify(body)
     });
     if(res.status === 401){
-      localStorage.removeItem("acsend_code");
+      localStorage.removeItem("nexus_code");
       statusEl.classList.remove("show");
       list.innerHTML = '<div class="empty">Access code incorrect. Tap to try again.</div>';
       resetBtnState();
@@ -831,7 +829,7 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))
     ip = local_ip()
     print("=" * 60)
-    print("Acsend Call List — for your cold caller")
+    print("Nexus — call list for your cold caller")
     print("=" * 60)
     print(f"  On this computer : http://127.0.0.1:{port}")
     print(f"  On your phone    : http://{ip}:{port}   (same Wi-Fi)")
