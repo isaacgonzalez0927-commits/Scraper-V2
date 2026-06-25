@@ -18,11 +18,19 @@ services:
         value: sebastien
       - key: NEXUS_LEARN_OPENAI
         value: "1"
+      - key: NEXUS_GITHUB_TOKEN
+        sync: false
+      - key: NEXUS_GITHUB_REPO
+        sync: false
       - key: PYTHON_VERSION
         value: "3.12.6"
 
-# --- TO KEEP DATA FOREVER (recommended once you have real clients) ---
-# Upgrade this service to Starter ($7/mo), then add:
+# Auto-save to GitHub (free — survives Render restarts):
+#   1. Create a PRIVATE repo on GitHub (e.g. nexus-data)
+#   2. Fine-grained PAT → Contents read/write on that repo
+#   3. Set NEXUS_GITHUB_TOKEN and NEXUS_GITHUB_REPO=youruser/nexus-data
+#
+# Or upgrade to Starter + disk (see bottom) instead.
 #
 #   plan: starter
 #   disk:

@@ -119,12 +119,13 @@ DASHBOARD_PAGE = f"""<!DOCTYPE html>
 <p class="sub">Live view of all calls Sebastien (and any caller) logs.</p>
 </div>
 <div class="report-box" id="learnBox" style="margin-bottom:16px">
-  <h3>Learning</h3>
+  <h3>Auto-save</h3>
   <p class="sub" id="learnStatus">Checking...</p>
+  <p class="sub" id="storageStatus" style="margin-top:6px"></p>
 </div>
 <div class="report-box" style="margin-bottom:16px">
   <h3>Data backup</h3>
-  <p class="sub">Download weekly — Render free tier can wipe data when the server restarts.</p>
+  <p class="sub">Auto-saves after every call. Set GitHub env vars on Render so data survives restarts.</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
     <button type="button" id="backupBtn" style="padding:9px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:500;cursor:pointer;font-family:inherit">Download backup</button>
     <label style="padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:.875rem;cursor:pointer">
@@ -147,21 +148,19 @@ setActiveNav("dash");
 async function loadLearning(){{
   try {{
     const s = await ownerFetch("/api/learning");
+    const st = await ownerFetch("/api/storage");
     const el = document.getElementById("learnStatus");
+    const sel = document.getElementById("storageStatus");
     if(!s.active){{
       el.textContent = `Learning activates after ${{s.min_calls}} logged calls (${{s.total_calls}} so far).`;
-      return;
+    }} else {{
+      let txt = `Learning from ${{s.total_calls}} calls — stats adjust every list.`;
+      if(s.openai_enabled && s.total_calls >= s.openai_min_calls)
+        txt += s.openai_cooldown_sec > 0 ? " AI on cooldown." : " AI may refine top leads.";
+      el.textContent = txt;
     }}
-    let txt = `Active — learning from ${{s.total_calls}} calls. Stats adjust every list for free.`;
-    if(s.openai_enabled){{
-      if(s.openai_cooldown_sec > 0)
-        txt += ` AI boost on cooldown (${{Math.ceil(s.openai_cooldown_sec/3600)}}h left, saves API usage).`;
-      else if(s.total_calls >= s.openai_min_calls)
-        txt += " AI may refine top leads (max 1 call per 4 hours).";
-      else
-        txt += ` AI boost after ${{s.openai_min_calls}} calls.`;
-    }}
-    el.textContent = txt;
+    const remote = st.remote === "github" ? "GitHub" : st.remote === "url" ? "URL" : "not set";
+    sel.textContent = `Auto-save: ${{st.calls_in_db}} calls in DB · snapshot ${{st.local_snapshot ? "on" : "off"}} · remote: ${{remote}}`;
   }} catch(e) {{}}
 }}
 document.getElementById("backupBtn").onclick = async () => {{

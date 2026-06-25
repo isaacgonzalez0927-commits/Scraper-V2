@@ -159,6 +159,13 @@ def log_call(
             report = _generate_report(conn, total)
         conn.close()
 
+    try:
+        import storage
+
+        storage.after_change("log_call")
+    except ImportError:
+        pass
+
     return {"id": call_id, "total_calls": total, "report": report}
 
 
@@ -500,6 +507,12 @@ def restore_backup(payload: dict) -> dict:
         conn.commit()
         total = conn.execute("SELECT COUNT(*) FROM calls").fetchone()[0]
         conn.close()
+    try:
+        import storage
+
+        storage.after_change("restore")
+    except ImportError:
+        pass
     return {"restored_calls": total, "restored_reports": len(reports)}
 
 

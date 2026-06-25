@@ -12,5 +12,6 @@ DATA_ROOT.mkdir(parents=True, exist_ok=True)
 HISTORY_FILE = DATA_ROOT / "generated_history.json"
 JOBS_DIR = DATA_ROOT / "jobs"
 LEARN_CACHE_FILE = DATA_ROOT / "learn_cache.json"
+SNAPSHOT_FILE = DATA_ROOT / "nexus_snapshot.json"
 
 JOBS_DIR.mkdir(parents=True, exist_ok=True)

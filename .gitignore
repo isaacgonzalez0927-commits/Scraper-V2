@@ -9,4 +9,6 @@ leads_v2.json
 generated_history.json
 data/calls.db
 data/jobs/
+data/nexus_snapshot.json
+data/atlas_snapshot.json
 hvac_leads_data.json

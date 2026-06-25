@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template_string, request, send_from_directory
 
 import simple_scraper as engine
+import storage
 import tracking
 from florida_cities import FLORIDA_CITIES
 from learning import learning_status
@@ -42,6 +43,13 @@ load_dotenv(HERE / ".env")
 JOBS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
+
+
+@app.before_request
+def _bootstrap_storage():
+    if not getattr(app, "_storage_ready", False):
+        storage.bootstrap()
+        app._storage_ready = True
 
 # Optional shared access code to protect the paid /generate endpoint.
 # Set ACCESS_CODE in the environment (or .env) to require it. Empty = open.
@@ -111,6 +119,7 @@ def save_history(keys: set[str]) -> None:
     HISTORY_FILE.write_text(
         json.dumps({"phone_keys": sorted(keys)}, indent=2), encoding="utf-8"
     )
+    storage.after_change("history")
 
 
 # ---------------------------------------------------------------------------
@@ -401,6 +410,13 @@ def api_history():
         outcome=request.args.get("outcome", ""),
         city=request.args.get("city", ""),
     ))
+
+
+@app.route("/api/storage")
+def api_storage():
+    if not check_owner():
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(storage.status())
 
 
 @app.route("/api/learning")
