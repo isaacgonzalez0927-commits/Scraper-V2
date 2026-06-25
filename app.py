@@ -24,8 +24,10 @@ from flask import Flask, jsonify, render_template_string, request, send_from_dir
 import simple_scraper as engine
 import tracking
 from florida_cities import FLORIDA_CITIES
+from learning import learning_status
 from nexus_icons import NEXUS_ICON_LINKS, NEXUS_MANIFEST_ICONS
 from nexus_theme import NEXUS_BASE_CSS, NEXUS_CALLER_CSS, NEXUS_VIEWPORT
+from paths import HISTORY_FILE, JOBS_DIR
 from owner_pages import (
     DASHBOARD_PAGE,
     HISTORY_PAGE,
@@ -37,8 +39,6 @@ from owner_pages import (
 
 HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
-HISTORY_FILE = HERE / "generated_history.json"
-JOBS_DIR = HERE / "data" / "jobs"
 JOBS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
@@ -401,6 +401,44 @@ def api_history():
         outcome=request.args.get("outcome", ""),
         city=request.args.get("city", ""),
     ))
+
+
+@app.route("/api/learning")
+def api_learning():
+    if not check_owner():
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(learning_status())
+
+
+@app.route("/api/backup")
+def api_backup():
+    if not check_owner():
+        return jsonify({"error": "unauthorized"}), 401
+    from paths import HISTORY_FILE
+    backup = tracking.export_backup()
+    if HISTORY_FILE.exists():
+        try:
+            backup["generated_history"] = json.loads(
+                HISTORY_FILE.read_text(encoding="utf-8")
+            )
+        except (json.JSONDecodeError, OSError):
+            backup["generated_history"] = {"phone_keys": []}
+    else:
+        backup["generated_history"] = {"phone_keys": []}
+    return jsonify(backup)
+
+
+@app.route("/api/restore", methods=["POST"])
+def api_restore():
+    if not check_owner():
+        return jsonify({"error": "unauthorized"}), 401
+    payload = request.get_json(silent=True) or {}
+    result = tracking.restore_backup(payload)
+    hist = payload.get("generated_history")
+    if isinstance(hist, dict):
+        from paths import HISTORY_FILE
+        HISTORY_FILE.write_text(json.dumps(hist, indent=2), encoding="utf-8")
+    return jsonify({"ok": True, **result})
 
 
 @app.route("/api/stats")

@@ -118,6 +118,21 @@ DASHBOARD_PAGE = f"""<!DOCTYPE html>
 <h1 class="hide-mobile">Dashboard</h1>
 <p class="sub">Live view of all calls Sebastien (and any caller) logs.</p>
 </div>
+<div class="report-box" id="learnBox" style="margin-bottom:16px">
+  <h3>Learning</h3>
+  <p class="sub" id="learnStatus">Checking...</p>
+</div>
+<div class="report-box" style="margin-bottom:16px">
+  <h3>Data backup</h3>
+  <p class="sub">Download weekly — Render free tier can wipe data when the server restarts.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    <button type="button" id="backupBtn" style="padding:9px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:500;cursor:pointer;font-family:inherit">Download backup</button>
+    <label style="padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:.875rem;cursor:pointer">
+      Restore backup
+      <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+    </label>
+  </div>
+</div>
 <div class="grid" id="metrics"></div>
 <h2 style="font-size:1.1rem;margin-bottom:12px">Lead type performance</h2>
 <div class="grid" id="typePerf"></div>
@@ -129,6 +144,49 @@ DASHBOARD_PAGE = f"""<!DOCTYPE html>
 </main>
 <script>{OWNER_AUTH_JS}
 setActiveNav("dash");
+async function loadLearning(){{
+  try {{
+    const s = await ownerFetch("/api/learning");
+    const el = document.getElementById("learnStatus");
+    if(!s.active){{
+      el.textContent = `Learning activates after ${{s.min_calls}} logged calls (${{s.total_calls}} so far).`;
+      return;
+    }}
+    let txt = `Active — learning from ${{s.total_calls}} calls. Stats adjust every list for free.`;
+    if(s.openai_enabled){{
+      if(s.openai_cooldown_sec > 0)
+        txt += ` AI boost on cooldown (${{Math.ceil(s.openai_cooldown_sec/3600)}}h left, saves API usage).`;
+      else if(s.total_calls >= s.openai_min_calls)
+        txt += " AI may refine top leads (max 1 call per 4 hours).";
+      else
+        txt += ` AI boost after ${{s.openai_min_calls}} calls.`;
+    }}
+    el.textContent = txt;
+  }} catch(e) {{}}
+}}
+document.getElementById("backupBtn").onclick = async () => {{
+  const data = await ownerFetch("/api/backup");
+  const blob = new Blob([JSON.stringify(data, null, 2)], {{type:"application/json"}});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "nexus-backup-" + new Date().toISOString().slice(0,10) + ".json";
+  a.click();
+}};
+document.getElementById("restoreFile").onchange = async (e) => {{
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!confirm("Replace ALL call data with this backup?")) return;
+  const text = await file.text();
+  const payload = JSON.parse(text);
+  const res = await fetch("/api/restore", {{
+    method:"POST",
+    headers: ownerHeaders(),
+    body: JSON.stringify(payload)
+  }});
+  if(!res.ok){{ alert("Restore failed"); return; }}
+  alert("Backup restored");
+  load(); loadLearning();
+}};
 async function load(){{
   const d = await ownerFetch("/api/dashboard");
   const m = [
@@ -151,7 +209,7 @@ async function load(){{
     <td>${{r.outcome_label || r.outcome}}</td>
     <td>${{r.score??"—"}}</td><td>${{r.caller_id}}</td></tr>`).join("");
 }}
-load(); setInterval(load, 30000);
+load(); loadLearning(); setInterval(load, 30000);
 </script><script>{THEME_JS}</script></body></html>"""
 
 REPORTS_PAGE = f"""<!DOCTYPE html>

@@ -13,9 +13,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).parent
-DATA_DIR = Path(__file__).parent / "data"
-DATA_DIR.mkdir(exist_ok=True)
-DB_PATH = Path(__file__).parent / "data" / "calls.db"
+
+from paths import DATA_ROOT
+
+DB_PATH = DATA_ROOT / "calls.db"
 
 _DB_LOCK = threading.Lock()
 
@@ -412,6 +413,94 @@ def statistics_page() -> dict:
         "no_interest": none_s["interest_rate"],
         "total_calls": len(rows),
     }
+
+
+def all_calls_raw() -> list[dict]:
+    with _DB_LOCK:
+        conn = _conn()
+        rows = conn.execute("SELECT * FROM calls ORDER BY id").fetchall()
+        conn.close()
+    return [dict(r) for r in rows]
+
+
+def export_backup() -> dict:
+    """Full backup of calls + reports for download."""
+    with _DB_LOCK:
+        conn = _conn()
+        calls = [dict(r) for r in conn.execute("SELECT * FROM calls ORDER BY id").fetchall()]
+        reports = [dict(r) for r in conn.execute("SELECT * FROM reports ORDER BY id").fetchall()]
+        conn.close()
+    return {
+        "version": 1,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "calls": calls,
+        "reports": reports,
+    }
+
+
+def restore_backup(payload: dict) -> dict:
+    """Replace all call data from a backup file."""
+    calls = payload.get("calls") or []
+    reports = payload.get("reports") or []
+    with _DB_LOCK:
+        conn = _conn()
+        conn.execute("DELETE FROM calls")
+        conn.execute("DELETE FROM reports")
+        for row in calls:
+            conn.execute(
+                """
+                INSERT INTO calls (
+                    logged_at, caller_id, business_name, phone, phone_key,
+                    score, site_status, city, address, outcome, notes, report_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    row.get("logged_at"),
+                    row.get("caller_id", ""),
+                    row.get("business_name", ""),
+                    row.get("phone", ""),
+                    row.get("phone_key", ""),
+                    row.get("score"),
+                    row.get("site_status", ""),
+                    row.get("city", ""),
+                    row.get("address", ""),
+                    row.get("outcome", ""),
+                    row.get("notes", ""),
+                    row.get("report_id"),
+                ),
+            )
+        for row in reports:
+            conn.execute(
+                """
+                INSERT INTO reports (
+                    report_number, call_range_start, call_range_end,
+                    generated_at, total_calls, interested, callbacks, clients,
+                    interest_rate, close_rate, dead_calls, dead_clients,
+                    no_calls, no_clients, snapshot_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    row.get("report_number"),
+                    row.get("call_range_start"),
+                    row.get("call_range_end"),
+                    row.get("generated_at"),
+                    row.get("total_calls"),
+                    row.get("interested"),
+                    row.get("callbacks"),
+                    row.get("clients"),
+                    row.get("interest_rate"),
+                    row.get("close_rate"),
+                    row.get("dead_calls"),
+                    row.get("dead_clients"),
+                    row.get("no_calls"),
+                    row.get("no_clients"),
+                    row.get("snapshot_json", "{}"),
+                ),
+            )
+        conn.commit()
+        total = conn.execute("SELECT COUNT(*) FROM calls").fetchone()[0]
+        conn.close()
+    return {"restored_calls": total, "restored_reports": len(reports)}
 
 
 def _row_to_dict(row: sqlite3.Row) -> dict:

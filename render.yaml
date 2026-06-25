@@ -8,11 +8,29 @@ services:
     envVars:
       - key: GOOGLE_MAPS_API_KEY
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
       - key: ACCESS_CODE
         sync: false
       - key: OWNER_CODE
         sync: false
       - key: CALLER_NAME
         value: sebastien
+      - key: NEXUS_LEARN_OPENAI
+        value: "1"
       - key: PYTHON_VERSION
         value: "3.12.6"
+
+# --- TO KEEP DATA FOREVER (recommended once you have real clients) ---
+# Upgrade this service to Starter ($7/mo), then add:
+#
+#   plan: starter
+#   disk:
+#     name: nexus-data
+#     mountPath: /data
+#     sizeGB: 1
+#   envVars:
+#     - key: NEXUS_DATA_DIR
+#       value: /data
+#
+# Do the same for Atlas with ATLAS_DB_PATH=/data/atlas.db

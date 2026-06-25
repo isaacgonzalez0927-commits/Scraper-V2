@@ -381,17 +381,16 @@ def compute_lead_score(lead: dict) -> tuple[int, str]:
     return total, reason
 
 
-def score_all_leads(leads: list[dict]) -> None:
-    """Apply the rubric to every lead in-place; Atlas V1 adjusts when enabled."""
+def score_all_leads(leads: list[dict]) -> str:
+    """Apply rubric then learn from logged call history. Returns learning note."""
     for lead in leads:
         lead["score"], lead["reason"] = compute_lead_score(lead)
     try:
-        from atlas import apply_atlas
+        from learning import apply_learning
 
-        for lead in leads:
-            apply_atlas(lead)
+        return apply_learning(leads)
     except ImportError:
-        pass
+        return ""
 
 
 def call_opener(lead: dict) -> str:
@@ -536,13 +535,16 @@ def collect_leads(
         return []
 
     say(f"Scoring {len(rows)} opportunities...")
-    score_all_leads(rows)
+    learn_note = score_all_leads(rows)
 
     rows.sort(key=lambda x: -x["score"])
     high = [r for r in rows if r["score"] >= min_score]
     picked = high[:max_leads]
     if picked:
-        say(f"Kept {len(picked)} leads scoring {min_score}+ (from {len(rows)} opportunities)")
+        msg = f"Kept {len(picked)} leads scoring {min_score}+ (from {len(rows)} opportunities)"
+        if learn_note:
+            msg += f" · {learn_note}"
+        say(msg)
     else:
         say(f"No leads scored {min_score}+ — try more cities or clear history")
     return picked
