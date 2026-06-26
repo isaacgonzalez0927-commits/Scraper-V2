@@ -46,6 +46,7 @@ app = Flask(__name__)
 
 _boot = storage.bootstrap()
 storage.start_periodic_save()
+storage.start_recovery_loop()
 print(f"[nexus] storage bootstrap: {_boot}", flush=True)
 
 

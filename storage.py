@@ -18,13 +18,15 @@ from paths import DATA_ROOT, HISTORY_FILE, LEARN_CACHE_FILE, SNAPSHOT_FILE
 SNAPSHOT_VERSION = 2
 SYNC_DEBOUNCE_SEC = 20
 PERIODIC_SAVE_SEC = 180
-REMOTE_RETRIES = 3
+REMOTE_RETRIES = 5
+RECOVERY_POLL_SEC = 60
 
 _LOCK = threading.Lock()
 _LAST_LOCAL_SAVE = 0.0
 _LAST_REMOTE_SYNC = 0.0
 _BOOTSTRAP_DONE = False
 _LAST_BOOTSTRAP: dict = {}
+_RECOVERY_STARTED = False
 
 # GitHub: create a private repo, add a fine-grained PAT with Contents read/write.
 # Env: NEXUS_GITHUB_TOKEN, NEXUS_GITHUB_REPO (owner/repo), NEXUS_GITHUB_PATH
@@ -308,6 +310,56 @@ def start_periodic_save() -> None:
                 pass
 
     threading.Thread(target=_loop, daemon=True, name="nexus-periodic-save").start()
+
+
+def _db_has_data() -> bool:
+    import tracking
+
+    try:
+        with tracking._DB_LOCK:
+            conn = tracking._conn()
+            count = conn.execute("SELECT COUNT(*) FROM calls").fetchone()[0]
+            conn.close()
+        if count > 0:
+            return True
+    except OSError:
+        pass
+    return _has_data(build_snapshot())
+
+
+def start_recovery_loop() -> None:
+    """If startup restore missed GitHub, keep trying before any partial save clobbers it."""
+    global _RECOVERY_STARTED, _LAST_BOOTSTRAP
+    if _RECOVERY_STARTED:
+        return
+    if not _github_config() and not os.getenv("NEXUS_BACKUP_URL", "").strip():
+        return
+    _RECOVERY_STARTED = True
+
+    def _loop() -> None:
+        while True:
+            time.sleep(RECOVERY_POLL_SEC)
+            try:
+                if _db_has_data():
+                    return
+                remote = fetch_remote_snapshot()
+                if not remote or not _has_data(remote):
+                    continue
+                with _LOCK:
+                    if _db_has_data():
+                        return
+                    apply_snapshot(remote)
+                    save_local_snapshot()
+                    _LAST_BOOTSTRAP = {
+                        "status": "restored",
+                        "source": "recovery_loop",
+                    }
+                print(f"[nexus] storage recovery: {_LAST_BOOTSTRAP}", flush=True)
+                return
+            except Exception:
+                pass
+
+    threading.Thread(target=_loop, daemon=True, name="nexus-recovery").start()
 
 
 def status() -> dict:
