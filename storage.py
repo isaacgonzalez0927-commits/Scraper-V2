@@ -17,11 +17,14 @@ from paths import DATA_ROOT, HISTORY_FILE, LEARN_CACHE_FILE, SNAPSHOT_FILE
 
 SNAPSHOT_VERSION = 2
 SYNC_DEBOUNCE_SEC = 20
+PERIODIC_SAVE_SEC = 180
+REMOTE_RETRIES = 3
 
 _LOCK = threading.Lock()
 _LAST_LOCAL_SAVE = 0.0
 _LAST_REMOTE_SYNC = 0.0
 _BOOTSTRAP_DONE = False
+_LAST_BOOTSTRAP: dict = {}
 
 # GitHub: create a private repo, add a fine-grained PAT with Contents read/write.
 # Env: NEXUS_GITHUB_TOKEN, NEXUS_GITHUB_REPO (owner/repo), NEXUS_GITHUB_PATH
@@ -63,6 +66,13 @@ def build_snapshot() -> dict:
         except (json.JSONDecodeError, OSError):
             pass
     return data
+
+
+def _has_data(snap: dict) -> bool:
+    if snap.get("calls"):
+        return True
+    hist = snap.get("generated_history") or {}
+    return bool(hist.get("phone_keys"))
 
 
 def apply_snapshot(data: dict) -> None:
@@ -110,7 +120,7 @@ def _github_headers(token: str) -> dict:
     }
 
 
-def fetch_remote_snapshot() -> dict | None:
+def _fetch_remote_once() -> dict | None:
     gh = _github_config()
     if gh:
         token, repo, path = gh
@@ -147,7 +157,20 @@ def fetch_remote_snapshot() -> dict | None:
     return None
 
 
+def fetch_remote_snapshot() -> dict | None:
+    for attempt in range(REMOTE_RETRIES):
+        snap = _fetch_remote_once()
+        if snap is not None:
+            return snap
+        if attempt < REMOTE_RETRIES - 1:
+            time.sleep(2 * (attempt + 1))
+    return None
+
+
 def push_remote_snapshot(snap: dict) -> bool:
+    if not _has_data(snap):
+        return False
+
     gh = _github_config()
     body = json.dumps(snap, indent=2)
     if gh:
@@ -198,6 +221,8 @@ def _remote_sync_worker() -> None:
 def maybe_sync_remote(force: bool = False) -> None:
     if not _github_config() and not os.getenv("NEXUS_BACKUP_URL", "").strip():
         return
+    if not _has_data(build_snapshot()):
+        return
     now = time.time()
     if not force and now - _LAST_REMOTE_SYNC < SYNC_DEBOUNCE_SEC:
         return
@@ -207,16 +232,21 @@ def maybe_sync_remote(force: bool = False) -> None:
 def after_change(reason: str = "") -> None:
     """Call after any data mutation."""
     del reason
+    snap = build_snapshot()
+    if not _has_data(snap):
+        return
     with _LOCK:
-        save_local_snapshot()
+        _atomic_write(SNAPSHOT_FILE, json.dumps(snap, indent=2))
+        global _LAST_LOCAL_SAVE
+        _LAST_LOCAL_SAVE = time.time()
         maybe_sync_remote()
 
 
 def bootstrap() -> dict:
     """On startup: restore from local or remote snapshot if DB is empty."""
-    global _BOOTSTRAP_DONE
+    global _BOOTSTRAP_DONE, _LAST_BOOTSTRAP
     if _BOOTSTRAP_DONE:
-        return {"status": "already_bootstrapped"}
+        return _LAST_BOOTSTRAP or {"status": "already_bootstrapped"}
     _BOOTSTRAP_DONE = True
 
     import tracking
@@ -231,29 +261,53 @@ def bootstrap() -> dict:
             count = 0
 
         if count > 0:
-            return {
+            save_local_snapshot()
+            maybe_sync_remote(force=True)
+            _LAST_BOOTSTRAP = {
                 "status": "ok",
                 "source": "local_db",
                 "calls": count,
                 "remote_configured": bool(_github_config() or os.getenv("NEXUS_BACKUP_URL")),
             }
+            return _LAST_BOOTSTRAP
 
         local = load_local_snapshot()
-        if local and (local.get("calls") or local.get("generated_history")):
+        if local and _has_data(local):
             apply_snapshot(local)
+            save_local_snapshot()
             maybe_sync_remote(force=True)
-            return {"status": "restored", "source": "local_snapshot"}
+            _LAST_BOOTSTRAP = {"status": "restored", "source": "local_snapshot"}
+            return _LAST_BOOTSTRAP
 
         remote = fetch_remote_snapshot()
-        if remote and (remote.get("calls") or remote.get("generated_history")):
+        if remote and _has_data(remote):
             apply_snapshot(remote)
             save_local_snapshot()
-            return {"status": "restored", "source": "remote"}
+            maybe_sync_remote(force=True)
+            _LAST_BOOTSTRAP = {"status": "restored", "source": "remote"}
+            return _LAST_BOOTSTRAP
 
-        return {
+        _LAST_BOOTSTRAP = {
             "status": "empty",
             "remote_configured": bool(_github_config() or os.getenv("NEXUS_BACKUP_URL")),
         }
+        return _LAST_BOOTSTRAP
+
+
+def start_periodic_save() -> None:
+    def _loop() -> None:
+        while True:
+            time.sleep(PERIODIC_SAVE_SEC)
+            try:
+                snap = build_snapshot()
+                if _has_data(snap):
+                    with _LOCK:
+                        _atomic_write(SNAPSHOT_FILE, json.dumps(snap, indent=2))
+                    maybe_sync_remote(force=True)
+            except Exception:
+                pass
+
+    threading.Thread(target=_loop, daemon=True, name="nexus-periodic-save").start()
 
 
 def status() -> dict:
@@ -273,6 +327,7 @@ def status() -> dict:
         "local_snapshot_at": _snapshot_mtime(),
         "last_local_save": _LAST_LOCAL_SAVE or None,
         "last_remote_sync": _LAST_REMOTE_SYNC or None,
+        "last_bootstrap": _LAST_BOOTSTRAP,
         "remote": "github" if gh else ("url" if os.getenv("NEXUS_BACKUP_URL") else "none"),
         "data_dir": str(DATA_ROOT),
     }

@@ -44,11 +44,14 @@ JOBS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 
+_boot = storage.bootstrap()
+storage.start_periodic_save()
+print(f"[nexus] storage bootstrap: {_boot}", flush=True)
+
 
 @app.before_request
 def _bootstrap_storage():
     if not getattr(app, "_storage_ready", False):
-        storage.bootstrap()
         app._storage_ready = True
 
 # Optional shared access code to protect the paid /generate endpoint.
