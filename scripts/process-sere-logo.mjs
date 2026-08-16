@@ -71,6 +71,7 @@ console.log(`Icon mark: ${extractW}px wide → ${ICON_OUT} (${side}×${side})`);
 
 /** Home screen / PWA icon framing — slightly larger mark, centered on tile. */
 const MARK_SCALE = 0.8;
+const MARK_LEFT_BIAS = 0.025;
 
 async function onLavender(size, out) {
   const bg = Buffer.from(
@@ -83,7 +84,8 @@ async function onLavender(size, out) {
     .png()
     .toBuffer();
   const m = await sharp(mark).metadata();
-  const left = Math.round((size - m.width) / 2);
+  let left = Math.round((size - m.width) / 2 - size * MARK_LEFT_BIAS);
+  left = Math.max(0, Math.min(left, size - m.width));
   const top = Math.max(0, Math.round((size - m.height) / 2));
   await sharp(bg).composite([{ input: mark, left, top }]).png().toFile(out);
 }
