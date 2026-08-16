@@ -1,4 +1,5 @@
 import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { createClient, type Client } from "@libsql/client";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import * as schema from "./schema";
@@ -7,22 +8,27 @@ let cached: LibSQLDatabase<typeof schema> | null = null;
 let raw: Client | null = null;
 
 export function databaseUrl(): string {
-  return (
-    process.env.TURSO_DATABASE_URL ||
-    process.env.DATABASE_URL ||
-    "file:./data/sere.db"
-  );
+  if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  // Vercel’s app filesystem is read-only. /tmp is the only writable place.
+  if (process.env.VERCEL) return "file:/tmp/sere.db";
+  return "file:./data/sere.db";
+}
+
+function ensureLocalDir(url: string) {
+  if (!url.startsWith("file:")) return;
+  const filePath = url.replace(/^file:\/\//, "").replace(/^file:/, "");
+  const dir = dirname(filePath);
+  if (dir && dir !== ".") mkdirSync(dir, { recursive: true });
 }
 
 export function getClient(): Client {
   if (raw) return raw;
   const url = databaseUrl();
-  if (url.startsWith("file:")) {
-    mkdirSync("./data", { recursive: true });
-  }
+  ensureLocalDir(url);
   raw = createClient({
     url,
-    authToken: process.env.TURSO_AUTH_TOKEN,
+    ...(url.startsWith("file:") ? {} : { authToken: process.env.TURSO_AUTH_TOKEN }),
   });
   return raw;
 }

@@ -28,7 +28,7 @@ export function InvoiceSheet({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <div className="brand" style={{ paddingBottom: 8 }}>
-            <span className="brand-mark">S</span>
+            <img className="brand-mark-image" src="/logo.svg" alt="" />
             <span className="brand-name">{org.name}</span>
           </div>
           <p className="tiny">

@@ -7,10 +7,15 @@ let ready = false;
 
 export async function boot() {
   if (ready) return;
-  await ensureSchema();
-  if (process.env.SERE_AUTO_SEED !== "0") {
-    const existing = await db().select({ id: users.id }).from(users).where(eq(users.email, DEMO_EMAIL)).limit(1);
-    if (!existing.length) await seedHarborAir();
+  try {
+    await ensureSchema();
+    if (process.env.SERE_AUTO_SEED !== "0") {
+      const existing = await db().select({ id: users.id }).from(users).where(eq(users.email, DEMO_EMAIL)).limit(1);
+      if (!existing.length) await seedHarborAir();
+    }
+    ready = true;
+  } catch (error) {
+    console.error("Sere boot failed", error);
+    throw error;
   }
-  ready = true;
 }

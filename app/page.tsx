@@ -5,7 +5,7 @@ export default function LandingPage() {
     <div className="landing">
       <header className="landing-nav">
         <div className="landing-brand">
-          <span className="brand-mark">S</span>
+          <img className="brand-mark-image" src="/logo.svg" alt="" />
           <span className="brand-name">Sere</span>
         </div>
         <nav className="hero-actions">
