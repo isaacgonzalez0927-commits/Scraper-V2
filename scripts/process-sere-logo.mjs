@@ -52,8 +52,7 @@ const zoomedH = Math.round((stripMeta.height ?? 0) * stripZoom);
 const zoomedStrip = await sharp(iconStrip).resize(zoomedW, zoomedH).png().toBuffer();
 const zoomMeta = await sharp(zoomedStrip).metadata();
 const side = Math.max(zoomMeta.width ?? 0, zoomMeta.height ?? 0);
-const iconRightShift = Math.round(side * 0.035);
-const padLeft = Math.floor((side - (zoomMeta.width ?? 0)) / 2) + iconRightShift;
+const padLeft = Math.floor((side - (zoomMeta.width ?? 0)) / 2);
 const padTop = Math.floor((side - (zoomMeta.height ?? 0)) / 2);
 
 await sharp({
@@ -70,9 +69,8 @@ await sharp({
 
 console.log(`Icon mark: ${extractW}px wide → ${ICON_OUT} (${side}×${side})`);
 
-/** Home screen / PWA icon framing — larger mark, nudged right. */
+/** Home screen / PWA icon framing — slightly larger mark, centered on tile. */
 const MARK_SCALE = 0.8;
-const MARK_RIGHT_BIAS = 0.035;
 
 async function onLavender(size, out) {
   const bg = Buffer.from(
@@ -85,8 +83,7 @@ async function onLavender(size, out) {
     .png()
     .toBuffer();
   const m = await sharp(mark).metadata();
-  let left = Math.round((size - m.width) / 2 + size * MARK_RIGHT_BIAS);
-  left = Math.max(0, Math.min(left, size - m.width));
+  const left = Math.round((size - m.width) / 2);
   const top = Math.max(0, Math.round((size - m.height) / 2));
   await sharp(bg).composite([{ input: mark, left, top }]).png().toFile(out);
 }
