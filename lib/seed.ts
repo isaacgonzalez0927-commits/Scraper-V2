@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { hashPassword } from "./auth";
+import { DEMO_PASSWORD_HASH } from "./password";
 import { db, nowISO, token } from "./db";
 import { deriveStatus, totalsFromLines } from "./finance";
 import { formatMoney, lineAmountCents } from "./money";
@@ -37,7 +37,34 @@ function dtOffset(days: number, hour: number): string {
 }
 
 export async function seedHarborAir() {
+  const already = await db().select({ id: users.id }).from(users).where(eq(users.email, DEMO_EMAIL)).limit(1);
+  if (already.length) return;
+
   const created = nowISO();
+  const [existingOrg] = await db()
+    .select()
+    .from(organizations)
+    .where(eq(organizations.slug, "harbor-air"))
+    .limit(1);
+  if (existingOrg) {
+    const [owner] = await db()
+      .insert(users)
+      .values({
+        name: "Elena Vasquez",
+        email: DEMO_EMAIL,
+        passwordHash: DEMO_PASSWORD_HASH,
+        createdAt: created,
+      })
+      .returning();
+    await db().insert(memberships).values({
+      userId: owner.id,
+      organizationId: existingOrg.id,
+      role: "owner",
+      createdAt: created,
+    });
+    return;
+  }
+
   const [org] = await db()
     .insert(organizations)
     .values({
@@ -63,7 +90,7 @@ export async function seedHarborAir() {
     .values({
       name: "Elena Vasquez",
       email: DEMO_EMAIL,
-      passwordHash: await hashPassword(DEMO_PASSWORD),
+      passwordHash: DEMO_PASSWORD_HASH,
       createdAt: created,
     })
     .returning();

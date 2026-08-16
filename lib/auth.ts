@@ -1,4 +1,3 @@
-import { compare, hash } from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -6,18 +5,12 @@ import { and, eq } from "drizzle-orm";
 import { db } from "./db";
 import { memberships, organizations, users } from "./schema";
 
+export { hashPassword, verifyPassword } from "./password";
+
 const COOKIE = "sere_session";
 
 function secret() {
   return new TextEncoder().encode(process.env.SERE_SECRET_KEY || process.env.AUTH_SECRET || "sere-dev-only-change-me");
-}
-
-export async function hashPassword(password: string) {
-  return hash(password, 10);
-}
-
-export async function verifyPassword(passwordHash: string, password: string) {
-  return compare(password, passwordHash);
 }
 
 export async function createSession(userId: number, organizationId: number) {

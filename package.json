@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test tests/money.test.ts tests/invoices.test.ts"
+    "test": "tsx --test tests/money.test.ts tests/invoices.test.ts tests/db.test.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",

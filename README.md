@@ -45,7 +45,7 @@ Money is stored as integer cents. Invoice paid amounts are summed from valid pay
 ## Deploy on Vercel
 
 1. Import this repo in Vercel. Framework preset: Next.js.
-2. Create a [Turso](https://turso.tech) database (Vercel’s filesystem is ephemeral, so local SQLite will not persist).
+2. Create a [Turso](https://turso.tech) database for real data. Without Turso, Sere still boots a demo database in `/tmp` so you can sign in as Harbor Air. That file disappears when the serverless instance goes cold.
 3. Set environment variables:
 
 | Variable | Required | Purpose |
