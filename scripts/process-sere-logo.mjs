@@ -1,23 +1,29 @@
 /**
- * Build favicon / PWA icons from public/sere-logo.png (your lockup PNG).
- * Crops the left icon mark for small icons; keeps full lockup for the app.
+ * Normalize public/sere-logo.png from the uploaded asset, then build favicons.
+ * Accepts public/sere.logo.PNG (GitHub upload) or existing sere-logo.png.
  */
 import sharp from "sharp";
-import { existsSync } from "node:fs";
+import { existsSync, copyFileSync } from "node:fs";
 
-const SRC = "public/sere-logo.png";
+const UPLOAD = "public/sere.logo.PNG";
+const OUT = "public/sere-logo.png";
 
-if (!existsSync(SRC)) {
-  console.error(`Missing ${SRC}. Add your transparent-background lockup PNG there first.`);
+if (existsSync(UPLOAD)) {
+  await sharp(UPLOAD).trim({ threshold: 1 }).png().toFile(OUT);
+  console.log(`Normalized ${UPLOAD} → ${OUT}`);
+} else if (!existsSync(OUT)) {
+  console.error(
+    `Missing logo. Upload your PNG as public/sere.logo.PNG or public/sere-logo.png`
+  );
   process.exit(1);
 }
 
-const meta = await sharp(SRC).metadata();
+const meta = await sharp(OUT).metadata();
 const width = meta.width ?? 0;
 const height = meta.height ?? 0;
 const iconWidth = Math.round(width * 0.42);
 
-const icon = await sharp(SRC)
+const icon = await sharp(OUT)
   .extract({ left: 0, top: 0, width: iconWidth, height })
   .png()
   .toBuffer();
@@ -36,4 +42,4 @@ async function onLavender(size, out) {
 await sharp(icon).resize(32, 32).png().toFile("public/favicon.png");
 await onLavender(192, "public/icon-192.png");
 await onLavender(512, "public/icon-512.png");
-console.log("Processed sere-logo.png → favicon.png, icon-192.png, icon-512.png");
+console.log("Built favicon.png, icon-192.png, icon-512.png");
