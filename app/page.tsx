@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/BrandMark";
 
 export default function LandingPage() {
   return (
     <div className="landing">
       <header className="landing-nav">
         <div className="landing-brand">
-          <img className="brand-mark-image" src="/logo.svg" alt="" />
+          <BrandMark className="brand-mark-image" size={36} />
           <span className="brand-name">Sere</span>
         </div>
         <nav className="hero-actions">
