@@ -534,16 +534,29 @@ table.data a.rowlink:hover { color: var(--accent); }
   }
   .main { padding: 72px 16px 96px; }
   .mobile-top {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     position: fixed;
     top: 0; left: 0; right: 0;
     height: 56px;
     background: var(--bg-warm);
     border-bottom: 1px solid var(--line);
     align-items: center;
-    justify-content: space-between;
     padding: 0 12px;
     z-index: 60;
+  }
+  .mobile-top .menu-toggle {
+    justify-self: start;
+    max-width: 100%;
+  }
+  .mobile-top .brand {
+    justify-self: center;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  .mobile-top > .btn:last-child {
+    justify-self: end;
+    max-width: 100%;
   }
   .bottom-nav {
     display: flex;
@@ -606,8 +619,11 @@ body {
 }
 .brand { padding: 2px 10px 32px; gap: 11px; }
 .brand-mark-image {
+  flex-shrink: 0;
   width: 34px;
   height: 34px;
+  min-width: 34px;
+  min-height: 34px;
   display: block;
   object-fit: contain;
 }
@@ -782,7 +798,7 @@ table.data a.rowlink:hover { color: var(--accent); }
   padding: 34px;
 }
 .auth-card .brand { padding: 0 0 28px; }
-.auth-card .brand-mark-image { width: 40px; height: 40px; }
+.auth-card .brand-mark-image { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
 .auth-card .brand-name { font-size: 26px; }
 .auth-card .page-title { font-size: 29px !important; margin-bottom: 8px; }
 
@@ -793,7 +809,7 @@ table.data a.rowlink:hover { color: var(--accent); }
     #faf9fd;
 }
 .landing-nav { max-width: 1180px; padding: 28px 30px; }
-.landing-brand .brand-mark-image { width: 36px; height: 36px; }
+.landing-brand .brand-mark-image { width: 36px; height: 36px; min-width: 36px; min-height: 36px; }
 .landing-brand .brand-name { font-size: 25px; }
 .landing-nav nav { display: flex; align-items: center; gap: 20px; }
 .landing-nav nav > a:not(.btn) { color: #6d6880; font-size: 13px; font-weight: 550; }
@@ -830,7 +846,7 @@ table.data a.rowlink:hover { color: var(--accent); }
   .main { padding: 78px 16px 96px; }
   .mobile-top { background: rgba(252,252,255,.92); border-bottom-color: #e7e3f0; backdrop-filter: blur(16px); }
   .mobile-top .brand { padding: 0; }
-  .mobile-top .brand-mark-image { width: 27px; height: 27px; }
+  .mobile-top .brand-mark-image { width: 27px; height: 27px; min-width: 27px; min-height: 27px; }
   .mobile-top .brand-name { font-size: 20px; }
   .nav a.active::before { left: 0; }
   .sidebar.open { background: #fbfbff; }

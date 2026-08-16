@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui";
+import { BrandMark } from "@/components/BrandMark";
 import { displayName, formatAddress } from "@/lib/display";
 import { prettyDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
@@ -28,7 +29,7 @@ export function InvoiceSheet({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <div className="brand" style={{ paddingBottom: 8 }}>
-            <img className="brand-mark-image" src="/logo.svg" alt="" />
+            <BrandMark className="brand-mark-image" size={34} />
             <span className="brand-name">{org.name}</span>
           </div>
           <p className="tiny">

@@ -13,7 +13,27 @@
       <stop offset="1" stop-color="#BDA6FF"/>
     </linearGradient>
   </defs>
-  <path d="M51 8h35c5 0 7 5 3 9L65 41c-5 5-9 7-16 7H17c-6 0-8-7-4-11l29-25c3-3 5-4 9-4Z" fill="url(#top)"/>
-  <path d="m14 38 16 15c4 4 5 8 1 12L14 81c-4 4-11 1-9-5l8-32c1-3 0-4 1-6Z" fill="url(#fold)"/>
-  <path d="m40 54 14-12c4-4 9-4 13 0l18 18c4 4 3 9-1 13L64 91c-3 3-6 4-11 4H13c-5 0-7-5-3-9l29-28c3-3 3-3 1-4Z" fill="url(#bottom)"/>
+  <g shape-rendering="geometricPrecision" paint-order="stroke fill">
+    <path
+      d="m40 54 14-12c4-4 9-4 13 0l18 18c4 4 3 9-1 13L64 91c-3 3-6 4-11 4H13c-5 0-7-5-3-9l29-28c3-3 3-3 1-4Z"
+      fill="url(#bottom)"
+      stroke="#4f2fd4"
+      stroke-width="2.5"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M51 8h35c5 0 7 5 3 9L65 41c-5 5-9 7-16 7H17c-6 0-8-7-4-11l29-25c3-3 5-4 9-4Z"
+      fill="url(#top)"
+      stroke="#6d45e8"
+      stroke-width="2.5"
+      stroke-linejoin="round"
+    />
+    <path
+      d="m12 36 18 17c4 4 5 8 1 12L12 83c-4 4-11 1-9-5l8-32c1-3 0-4 1-6Z"
+      fill="url(#fold)"
+      stroke="#d8caff"
+      stroke-width="2.5"
+      stroke-linejoin="round"
+    />
+  </g>
 </svg>

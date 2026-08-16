@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signupAction } from "../actions";
+import { BrandMark } from "@/components/BrandMark";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export default async function SignupPage({
     <div className="auth-shell">
       <div className="auth-card">
         <div className="brand" style={{ paddingBottom: 28 }}>
-          <img className="brand-mark-image" src="/logo.svg" alt="" />
+          <BrandMark className="brand-mark-image" size={40} />
           <span className="brand-name">Sere</span>
         </div>
         <h1 className="page-title" style={{ fontSize: 28 }}>Create your shop</h1>

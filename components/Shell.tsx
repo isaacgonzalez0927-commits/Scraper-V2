@@ -1,4 +1,5 @@
 import { logoutAction } from "@/app/actions";
+import { BrandMark } from "@/components/BrandMark";
 
 const NAV = [
   ["/overview", "Overview", "grid"],
@@ -49,7 +50,7 @@ export function Shell({
     <>
       <aside className="sidebar">
         <a className="brand" href="/overview">
-          <img className="brand-mark-image" src="/logo.svg" alt="" />
+          <BrandMark className="brand-mark-image" size={34} />
           <span className="brand-name">Sere</span>
         </a>
         <nav className="nav">
@@ -73,7 +74,7 @@ export function Shell({
       <header className="mobile-top">
         <button className="btn btn-ghost menu-toggle" type="button" data-toggle-nav>Menu</button>
         <a className="brand" href="/overview">
-          <img className="brand-mark-image" src="/logo.svg" alt="" />
+          <BrandMark className="brand-mark-image" size={34} />
           <span className="brand-name">Sere</span>
         </a>
         <button className="btn btn-ghost" type="button" data-open-search>Search</button>
