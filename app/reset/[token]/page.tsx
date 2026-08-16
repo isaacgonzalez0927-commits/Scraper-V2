@@ -16,7 +16,7 @@ export default async function ResetPage({
     <div className="auth-shell">
       <div className="auth-card">
         <div className="brand" style={{ paddingBottom: 28 }}>
-          <BrandLogo className="brand-lockup" variant="lockup" />
+          <BrandLogo className="brand-lockup" />
         </div>
         <h1 className="page-title" style={{ fontSize: 28 }}>Choose a new password</h1>
         {q.error ? <div className="flash flash-error">{q.error}</div> : null}

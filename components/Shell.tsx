@@ -50,8 +50,7 @@ export function Shell({
     <>
       <aside className="sidebar">
         <a className="brand" href="/overview">
-          <BrandLogo className="brand-mark-image" />
-          <span className="brand-name">Sere</span>
+          <BrandLogo className="brand-lockup" />
         </a>
         <nav className="nav">
           {NAV.map(([href, name, icon]) => (
@@ -74,8 +73,7 @@ export function Shell({
       <header className="mobile-top">
         <button className="btn btn-ghost menu-toggle" type="button" data-toggle-nav>Menu</button>
         <a className="brand" href="/overview">
-          <BrandLogo className="brand-mark-image" />
-          <span className="brand-name">Sere</span>
+          <BrandLogo className="brand-lockup" />
         </a>
         <button className="btn btn-ghost" type="button" data-open-search>Search</button>
       </header>

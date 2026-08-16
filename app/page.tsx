@@ -6,7 +6,7 @@ export default function LandingPage() {
     <div className="landing">
       <header className="landing-nav">
         <div className="landing-brand">
-          <BrandLogo className="brand-lockup" variant="lockup" />
+          <BrandLogo className="brand-lockup" />
         </div>
         <nav className="hero-actions">
           <Link href="/login">Sign in</Link>

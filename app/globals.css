@@ -817,6 +817,11 @@ table.data a.rowlink:hover { color: var(--accent); }
     #faf9fd;
 }
 .landing-nav { max-width: 1180px; padding: 28px 30px; }
+.brand-mark-crop {
+  object-fit: cover;
+  object-position: left center;
+}
+.sidebar .brand-lockup { height: 30px; }
 .landing-brand .brand-lockup { height: 34px; }
 .landing-brand .brand-name { font-size: 25px; }
 .landing-nav nav { display: flex; align-items: center; gap: 20px; }
@@ -854,8 +859,7 @@ table.data a.rowlink:hover { color: var(--accent); }
   .main { padding: 78px 16px 96px; }
   .mobile-top { background: rgba(252,252,255,.92); border-bottom-color: #e7e3f0; backdrop-filter: blur(16px); }
   .mobile-top .brand { padding: 0; }
-  .mobile-top .brand-mark-image { width: 27px; height: 27px; min-width: 27px; min-height: 27px; }
-  .mobile-top .brand-name { font-size: 20px; }
+  .mobile-top .brand-lockup { height: 24px; max-width: 120px; }
   .nav a.active::before { left: 0; }
   .sidebar.open { background: #fbfbff; }
   .topbar { gap: 12px; }
