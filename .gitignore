@@ -11,3 +11,4 @@ data/
 *.db
 .pytest_cache/
 .vercel
+tsconfig.tsbuildinfo
