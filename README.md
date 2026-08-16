@@ -1,74 +1,65 @@
-# Acsend Call List
+# Sere
 
-Mobile web app for your cold caller. They pick a city, tap **Get My Call List**, and dial HVAC businesses that need a website.
+Sere helps HVAC businesses manage jobs, invoices, payments, and cash flow in one simple place.
 
-## Run locally (same Wi-Fi as your phone)
+Primary domain: [sere.cash](https://sere.cash)
+
+This is a **Next.js** app. Deploy it on **Vercel**. There is no Python in this project.
+
+## Run locally
 
 ```bash
-cd lead-finder
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python app.py
+npm install
+npm run dev
 ```
 
-Open the printed URL on the caller's phone.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Deploy online (Render — free tier)
+Demo company (created automatically when the database is empty):
 
-**Why not Netlify?** Netlify hosts static HTML only. This app is Python (Flask) and must run on a server like Render.
+- Email: `owner@sere.cash`
+- Password: `harborair`
+- Company: Harbor Air (Fort Myers)
 
-### 1. Push code to GitHub
+```bash
+npm test
+npm run build
+```
 
-Your repo: `https://github.com/isaacgonzalez0927-commits/Scraper-V2`
+## What Sere does
 
-Make sure `.env` is **not** committed (it's in `.gitignore`).
+- **Overview** — collected cash vs invoiced revenue, overdue balances, jobs, invoice status, recent activity
+- **Customers** — contact info, jobs, invoices, payments, notes, lifetime value
+- **Jobs** — schedule, costs, profit, complete, draft an invoice in one click
+- **Invoices** — line items, tax, discounts, preview / print PDF, public payment link, activity timeline
+- **Payments** — ledger with partial payments; an invoice is never marked paid until the balance is zero
+- **Reports** — money in, outstanding, overdue, expected cash, job profitability
+- **Calendar** — day / week / month of scheduled jobs
+- **Search** — names, phones, emails, addresses, invoice numbers (`⌘K`)
+- **Settings** — company, invoice defaults, payment-provider status, account
 
-### 2. Create a Render web service
+Every business row is scoped by organization. One company’s data cannot appear in another.
 
-1. Go to [render.com](https://render.com) and sign up (free).
-2. **New → Web Service** → connect your GitHub repo `Scraper-V2`.
-3. Settings:
-   - **Root Directory:** `lead-finder` (if the repo root is the parent folder, leave blank if repo IS lead-finder)
-   - **Runtime:** Python
-   - **Build:** `pip install -r requirements.txt`
-   - **Start:** `gunicorn app:app --workers 1 --threads 8 --timeout 180`
-4. **Environment variables** (Environment tab):
-   - `GOOGLE_MAPS_API_KEY` = your Google Places key
-   - `ACCESS_CODE` = a password only your caller knows (e.g. `acsend2026`)
-5. Click **Deploy**.
+Money is stored as integer cents. Invoice paid amounts are summed from valid payments, never incremented.
 
-Render gives you a URL like `https://acsend-leads.onrender.com`.
+## Deploy on Vercel
 
-### 3. Give your caller the link
-
-1. Send them the Render URL.
-2. First time: they enter the **access code** once (saved on their phone).
-3. **Add to Home Screen** (iPhone: Share → Add to Home Screen) so it feels like an app.
-
-### 4. Optional — custom domain
-
-In Render → Settings → Custom Domains, point something like `leads.acsendsites.com` if you own the domain.
-
-## Environment variables
+1. Import this repo in Vercel. Framework preset: Next.js.
+2. Create a [Turso](https://turso.tech) database (Vercel’s filesystem is ephemeral, so local SQLite will not persist).
+3. Set environment variables:
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `GOOGLE_MAPS_API_KEY` | Yes | Google Places search |
-| `ACCESS_CODE` | Recommended | Password so random people can't use your API credits |
-| `OWNER_CODE` | **Required for you** | Your private code to view `/dashboard`, `/reports`, `/history`, `/stats` |
-| `CALLER_NAME` | Optional | Label for who logged calls (default: `sebastien`) |
-| `PORT` | Auto on Render | Local dev only |
+| `SERE_SECRET_KEY` | Production | Session signing |
+| `TURSO_DATABASE_URL` | Production | libSQL / Turso URL |
+| `TURSO_AUTH_TOKEN` | Production | Turso auth token |
+| `SERE_PUBLIC_BASE_URL` | Recommended | Public invoice links (`https://sere.cash`) |
+| `SERE_SMTP_HOST` + related | Optional | Email invoices and password resets |
+| `STRIPE_SECRET_KEY` | Optional | Online card checkout on the public invoice |
+| `SERE_AUTO_SEED` | Optional | Set `0` to skip the Harbor Air demo data |
 
-## Owner dashboard (Isaac)
+Without SMTP, “Mark sent” still marks the invoice sent and shows the shareable link.
 
-After deploy, open:
+Without Stripe, payments are recorded by hand (card, ACH, cash, check).
 
-- **Dashboard:** `https://your-app.onrender.com/dashboard`
-- **Reports:** `/reports` (auto every 100 calls)
-- **Call history:** `/history`
-- **Statistics:** `/stats`
-
-Set `OWNER_CODE` in Render env vars. Enter it once when prompted — Isaac sees all data Sebastien logs, live.
-
-Call data is stored in `data/calls.db` on the server (SQLite). For permanent retention on Render, enable a **persistent disk** and mount it at `data/`.
+Point `sere.cash` at the Vercel project in the Vercel domain settings. No Render, no Python, no gunicorn.
