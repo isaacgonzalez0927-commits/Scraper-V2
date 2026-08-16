@@ -12,6 +12,10 @@ export default async function SignupPage({
   return (
     <div className="auth-shell">
       <div className="auth-card">
+        <div className="brand" style={{ paddingBottom: 28 }}>
+          <img className="brand-mark-image" src="/logo.svg" alt="" />
+          <span className="brand-name">Sere</span>
+        </div>
         <h1 className="page-title" style={{ fontSize: 28 }}>Create your shop</h1>
         {q.error ? <div className="flash flash-error">{q.error}</div> : null}
         <form action={signupAction} className="stack">

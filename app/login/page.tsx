@@ -24,7 +24,7 @@ export default async function LoginPage({
     <div className="auth-shell">
       <div className="auth-card">
         <div className="brand" style={{ paddingBottom: 12 }}>
-          <span className="brand-mark">S</span>
+          <img className="brand-mark-image" src="/logo.svg" alt="" />
           <span className="brand-name">Sere</span>
         </div>
         <h1 className="page-title" style={{ fontSize: 28 }}>Sign in</h1>
