@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { addJobCostAction, addNoteAction, invoiceFromJobAction, updateJobStatusAction } from "@/app/actions";
-import { Badge } from "@/components/ui";
+import { Badge, Blank, Card, KeyValue, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
@@ -38,6 +38,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       return { inv, balance: balanceCents(inv.totalCents, paid, inv.status) };
     }),
   );
+  const address = formatAddress(job.serviceLine1, job.serviceCity, job.serviceState, job.servicePostal);
 
   return (
     <Shell
@@ -47,18 +48,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       sub={
         <p className="page-sub">
           <a href={`/customers/${job.customerId}`}>{displayName(customer)}</a>
-          {" · "}
-          <Badge status={job.status} />
+          {job.scheduledStart ? ` · ${prettyWhen(job.scheduledStart)}` : " · Not scheduled"}
         </p>
       }
       actions={
         <>
+          <Badge status={job.status} />
           <a className="btn btn-secondary" href={`/jobs/${job.id}/edit`}>Edit</a>
           {job.status !== "completed" ? (
             <form action={updateJobStatusAction}>
               <input type="hidden" name="id" value={job.id} />
               <input type="hidden" name="status" value="completed" />
-              <button className="btn" type="submit">Mark complete</button>
+              <button className="btn btn-secondary" type="submit">Mark complete</button>
             </form>
           ) : null}
           <form action={invoiceFromJobAction}>
@@ -69,37 +70,58 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       }
     >
       <div className="grid grid-4">
-        <article className="card"><p className="stat-label">Revenue</p><p className="stat-value money">{formatMoney(revenue)}</p></article>
-        <article className="card"><p className="stat-label">Costs</p><p className="stat-value money">{formatMoney(costTotal)}</p></article>
-        <article className="card"><p className="stat-label">Profit</p><p className="stat-value money">{formatMoney(revenue - costTotal)}</p></article>
-        <article className="card"><p className="stat-label">When</p><p className="stat-value" style={{ fontSize: 20 }}>{prettyWhen(job.scheduledStart)}</p></article>
+        <Stat label="Revenue" value={formatMoney(revenue)} note="Actual if set, otherwise estimated" />
+        <Stat label="Costs" value={formatMoney(costTotal)} note="Materials, labor, and equipment" />
+        <Stat
+          label="Profit"
+          value={formatMoney(revenue - costTotal)}
+          tone={revenue - costTotal >= 0 ? "good" : "bad"}
+        />
+        <Stat
+          label="Scheduled"
+          value={prettyWhen(job.scheduledStart) || "Not scheduled"}
+          small
+          note={job.technicianName ? `Tech: ${job.technicianName}` : "No technician assigned"}
+        />
       </div>
 
-      <div className="grid grid-2" style={{ marginTop: 14 }}>
-        <section className="card">
-          <div className="card-title">Job information</div>
-          <p>{job.description || "No description yet."}</p>
-          <p className="tiny">
-            {formatAddress(job.serviceLine1, job.serviceCity, job.serviceState, job.servicePostal) || "No service address"}
-          </p>
-          <p className="tiny">Tech: {job.technicianName || "Unassigned"}</p>
-          <form action={updateJobStatusAction} style={{ marginTop: 12, display: "flex", gap: 8 }}>
+      <div className="grid grid-2 mt-2">
+        <Card title="Job details">
+          <p>{job.description || <span className="muted">No description yet.</span>}</p>
+          <KeyValue
+            rows={[
+              ["Service address", address || <Blank text="Not set" />],
+              ["Technician", job.technicianName || <Blank text="Unassigned" />],
+              ["Status", label(job.status)],
+            ]}
+          />
+          <form action={updateJobStatusAction} className="row mt-2">
             <input type="hidden" name="id" value={job.id} />
-            <select name="status" defaultValue={job.status}>
+            <select className="input" name="status" defaultValue={job.status}>
               {JOB_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
             </select>
-            <button className="btn btn-secondary btn-sm" type="submit">Update</button>
+            <button className="btn btn-secondary btn-sm" type="submit">Update status</button>
           </form>
-        </section>
-        <section className="card">
-          <div className="card-title">Work performed & costs</div>
-          {costs.length ? costs.map((cost) => (
-            <div key={cost.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span>{cost.description} <span className="tiny">{label(cost.category)}</span></span>
-              <span className="money">{formatMoney(cost.amountCents)}</span>
-            </div>
-          )) : <p className="muted">No costs yet. Add materials or labor so profit is real.</p>}
-          <form action={addJobCostAction} className="form-grid" style={{ marginTop: 12 }}>
+          {job.notes ? <p className="muted mt-2">{job.notes}</p> : null}
+        </Card>
+
+        <Card title="Costs" note="Log parts and labor so the profit number means something.">
+          {costs.length ? (
+            <ul className="list">
+              {costs.map((cost) => (
+                <li key={cost.id}>
+                  <div>
+                    <span>{cost.description}</span>
+                    <div className="tiny">{label(cost.category)}</div>
+                  </div>
+                  <span className="money">{formatMoney(cost.amountCents)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No costs logged yet.</p>
+          )}
+          <form action={addJobCostAction} className="form-grid mt-2">
             <input type="hidden" name="job_id" value={job.id} />
             <div className="field">
               <label>Category</label>
@@ -107,37 +129,59 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 {COST_CATEGORIES.map((c) => <option key={c} value={c}>{label(c)}</option>)}
               </select>
             </div>
-            <div className="field"><label>Amount</label><input name="amount" placeholder="96.00" required /></div>
-            <div className="field full"><label>Description</label><input name="description" placeholder="Two-man install, 8 hours" /></div>
-            <div className="field full"><button className="btn btn-secondary btn-sm" type="submit">Add cost</button></div>
+            <div className="field">
+              <label>Amount</label>
+              <input name="amount" placeholder="96.00" inputMode="decimal" required />
+            </div>
+            <div className="field full">
+              <label>Description</label>
+              <input name="description" placeholder="Two technicians, 8 hours" />
+            </div>
+            <div className="form-actions">
+              <button className="btn btn-secondary btn-sm" type="submit">Add cost</button>
+            </div>
           </form>
-        </section>
+        </Card>
       </div>
 
-      <div className="grid grid-2" style={{ marginTop: 14 }}>
-        <section className="card">
-          <div className="card-title">Invoice</div>
-          {invoiceCards.length ? invoiceCards.map(({ inv, balance }) => (
-            <p key={inv.id}>
-              <a href={`/invoices/${inv.id}`}>{inv.number}</a>{" "}
-              <Badge status={inv.status} />{" "}
-              <span className="money">{formatMoney(inv.totalCents)}</span>{" "}
-              <span className="tiny">Balance {formatMoney(balance)}</span>
-            </p>
-          )) : <p className="muted">No invoice yet. Complete the job, then create one.</p>}
-        </section>
-        <section className="card">
-          <div className="card-title">Notes</div>
+      <div className="grid grid-2 mt-2">
+        <Card title="Invoices">
+          {invoiceCards.length ? (
+            <ul className="list">
+              {invoiceCards.map(({ inv, balance }) => (
+                <li key={inv.id}>
+                  <div>
+                    <a className="rowlink" href={`/invoices/${inv.id}`}>{inv.number}</a>
+                    <div className="tiny">Balance {formatMoney(balance)}</div>
+                  </div>
+                  <div className="row">
+                    <span className="money">{formatMoney(inv.totalCents)}</span>
+                    <Badge status={inv.status} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No invoice yet. Finish the job, then create one.</p>
+          )}
+        </Card>
+
+        <Card title="Notes">
           <form action={addNoteAction}>
             <input type="hidden" name="job_id" value={job.id} />
             <input type="hidden" name="customer_id" value={job.customerId} />
-            <div className="field"><textarea name="body" placeholder="What did you find on site?" /></div>
-            <button className="btn btn-secondary btn-sm" type="submit">Save note</button>
+            <div className="field">
+              <textarea name="body" placeholder="What did you find on site?" />
+            </div>
+            <button className="btn btn-secondary btn-sm mt-1" type="submit">Save note</button>
           </form>
           {noteRows.map((note) => (
-            <p key={note.id}>{note.body}<br /><span className="tiny">{prettyWhen(note.createdAt)}</span></p>
+            <div key={note.id} className="mt-2">
+              <p>{note.body}</p>
+              <p className="tiny">{prettyWhen(note.createdAt)}</p>
+            </div>
           ))}
-        </section>
+        </Card>
       </div>
     </Shell>
   );

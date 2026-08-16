@@ -69,7 +69,7 @@ await sharp({
 
 console.log(`Icon mark: ${extractW}px wide → ${ICON_OUT} (${side}×${side})`);
 
-/** Home screen / PWA icon framing — slightly larger mark, centered on tile. */
+/** Home screen and PWA icon framing: slightly larger mark, centered on the tile. */
 const MARK_SCALE = 0.8;
 const MARK_LEFT_BIAS = 0.025;
 

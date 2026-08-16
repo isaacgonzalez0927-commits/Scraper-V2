@@ -50,22 +50,24 @@ export const LABELS: Record<string, string> = {
   miscellaneous: "Miscellaneous",
 };
 
+/* An unknown value renders as empty text. Callers decide what to show instead. */
+
 export function label(value: string | null | undefined): string {
-  if (!value) return "—";
+  if (!value) return "";
   return LABELS[value] || value.replace(/_/g, " ");
 }
 
 export function prettyDate(value: string | Date | null | undefined): string {
-  if (!value) return "—";
+  if (!value) return "";
   const d = typeof value === "string" ? new Date(value.includes("T") ? value : `${value}T00:00:00`) : value;
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export function prettyWhen(value: string | Date | null | undefined): string {
-  if (!value) return "—";
+  if (!value) return "";
   const d = typeof value === "string" ? new Date(value) : value;
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleString("en-US", {
     month: "short",
     day: "numeric",

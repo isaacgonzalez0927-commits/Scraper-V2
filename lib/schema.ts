@@ -21,6 +21,22 @@ export const organizations = sqliteTable("organizations", {
   createdAt: text("created_at").notNull(),
 });
 
+/** One row per shop per provider. Credentials are encrypted in secret_cipher. */
+export const integrations = sqliteTable(
+  "integrations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    provider: text("provider").notNull(),
+    status: text("status").notNull().default("disconnected"),
+    label: text("label").notNull().default(""),
+    secretCipher: text("secret_cipher").notNull().default(""),
+    updatedAt: text("updated_at").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("integrations_org_provider").on(t.organizationId, t.provider)],
+);
+
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),

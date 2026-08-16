@@ -1,6 +1,6 @@
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { recordPaymentAction } from "@/app/actions";
-import { Flash } from "@/components/ui";
+import { Banner } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -34,13 +34,19 @@ export default async function NewPaymentPage({
   const selected = q.invoiceId ? open.find((r) => r.invoice.id === Number(q.invoiceId)) : undefined;
 
   return (
-    <Shell {...shell} path="/payments" title="Record payment">
-      <Flash error={q.error} />
+    <Shell
+      {...shell}
+      path="/payments"
+      title="Record payment"
+      sub={<p className="page-sub">For money you took in person. Online card payments post themselves.</p>}
+      actions={<a className="btn btn-secondary" href="/payments">Cancel</a>}
+    >
+      <Banner error={q.error} />
       <form action={recordPaymentAction} className="card form-grid">
         <div className="field">
           <label>Customer</label>
           <select name="customer_id" defaultValue={selected?.invoice.customerId || q.customerId || ""} required>
-            <option value="">Choose…</option>
+            <option value="">Choose a customer</option>
             {customerRows.map((c) => (
               <option key={c.id} value={c.id}>{displayName(c)}</option>
             ))}
@@ -49,17 +55,23 @@ export default async function NewPaymentPage({
         <div className="field">
           <label>Invoice</label>
           <select name="invoice_id" defaultValue={q.invoiceId || ""}>
-            <option value="">Unapplied / retainer</option>
+            <option value="">Not tied to an invoice</option>
             {open.filter((r) => r.balance > 0 || r.invoice.status === "draft").map(({ invoice, balance }) => (
               <option key={invoice.id} value={invoice.id}>
-                {invoice.number} — {formatMoney(balance)} remaining
+                {invoice.number}, {formatMoney(balance)} remaining
               </option>
             ))}
           </select>
         </div>
         <div className="field">
           <label>Amount</label>
-          <input name="amount" required placeholder={selected ? (selected.balance / 100).toFixed(2) : "100.00"} />
+          <input
+            name="amount"
+            required
+            inputMode="decimal"
+            defaultValue={selected ? (selected.balance / 100).toFixed(2) : ""}
+            placeholder="100.00"
+          />
         </div>
         <div className="field">
           <label>Paid on</label>
@@ -73,15 +85,17 @@ export default async function NewPaymentPage({
         </div>
         <div className="field">
           <label>Reference</label>
-          <input name="reference" placeholder="Check # or last 4" />
+          <input name="reference" placeholder="Check number or last 4 digits" />
         </div>
         <div className="field full">
           <label>Notes</label>
           <textarea name="notes" />
         </div>
-        <div className="field full">
+        <div className="form-actions">
           <button className="btn" type="submit">Record payment</button>
-          <p className="help">A payment larger than the remaining invoice balance is rejected. Paid means remaining is $0.00.</p>
+          <p className="help">
+            A payment larger than the remaining balance is rejected. Paid means the balance is $0.00.
+          </p>
         </div>
       </form>
     </Shell>

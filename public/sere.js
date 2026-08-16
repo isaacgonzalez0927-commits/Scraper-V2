@@ -2,9 +2,10 @@
   const palette = document.getElementById("search-palette");
   const input = document.getElementById("palette-input");
   const results = document.getElementById("palette-results");
-  const openers = document.querySelectorAll("[data-open-search]");
-  const sidebar = document.querySelector(".sidebar");
-  const menuBtn = document.querySelector("[data-toggle-nav]");
+  const sidebar = document.getElementById("sidebar");
+  const scrim = document.querySelector("[data-close-nav]");
+
+  /* ---------- Search palette ---------- */
 
   function openPalette() {
     if (!palette) return;
@@ -13,53 +14,77 @@
     results.innerHTML = '<div class="palette-group">Type a name, invoice, phone, or address</div>';
     setTimeout(() => input.focus(), 20);
   }
+
   function closePalette() {
-    if (!palette) return;
-    palette.classList.remove("open");
+    if (palette) palette.classList.remove("open");
   }
 
-  openers.forEach((el) => el.addEventListener("click", openPalette));
-  palette && palette.addEventListener("click", (e) => {
-    if (e.target === palette) closePalette();
+  document.querySelectorAll("[data-open-search]").forEach((el) => {
+    el.addEventListener("click", openPalette);
   });
+
+  if (palette) {
+    palette.addEventListener("click", (e) => {
+      if (e.target === palette) closePalette();
+    });
+  }
+
+  let timer = null;
+  if (input) {
+    input.addEventListener("input", () => {
+      clearTimeout(timer);
+      const q = input.value.trim();
+      if (q.length < 2) return;
+      timer = setTimeout(async () => {
+        const res = await fetch("/api/search?q=" + encodeURIComponent(q), {
+          headers: { "X-Requested-With": "fetch" },
+        });
+        const data = await res.json();
+        const groups = [
+          ["Customers", data.customers],
+          ["Jobs", data.jobs],
+          ["Invoices", data.invoices],
+        ];
+        let html = "";
+        groups.forEach(([label, items]) => {
+          if (!items || !items.length) return;
+          html += '<div class="palette-group">' + label + "</div>";
+          items.forEach((item) => {
+            html +=
+              '<a href="' + item.href + '"><strong>' + esc(item.label) + "</strong>" +
+              '<div class="tiny">' + esc(item.meta || "") + "</div></a>";
+          });
+        });
+        results.innerHTML = html || '<div class="palette-group">No matches</div>';
+      }, 120);
+    });
+  }
+
+  /* ---------- Mobile navigation drawer ---------- */
+
+  function setNav(open) {
+    if (!sidebar) return;
+    sidebar.classList.toggle("open", open);
+    if (scrim) scrim.classList.toggle("open", open);
+  }
+
+  document.querySelectorAll("[data-toggle-nav]").forEach((el) => {
+    el.addEventListener("click", () => setNav(!sidebar.classList.contains("open")));
+  });
+  if (scrim) scrim.addEventListener("click", () => setNav(false));
+
   document.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
       e.preventDefault();
       openPalette();
     }
-    if (e.key === "Escape") closePalette();
+    if (e.key === "Escape") {
+      closePalette();
+      setNav(false);
+    }
   });
 
-  let timer = null;
-  input && input.addEventListener("input", () => {
-    clearTimeout(timer);
-    const q = input.value.trim();
-    if (q.length < 2) return;
-    timer = setTimeout(async () => {
-      const res = await fetch("/api/search?q=" + encodeURIComponent(q), {
-        headers: { "X-Requested-With": "fetch" },
-      });
-      const data = await res.json();
-      const groups = [
-        ["Customers", data.customers],
-        ["Jobs", data.jobs],
-        ["Invoices", data.invoices],
-      ];
-      let html = "";
-      groups.forEach(([label, items]) => {
-        if (!items.length) return;
-        html += `<div class="palette-group">${label}</div>`;
-        items.forEach((item) => {
-          html += `<a href="${item.href}"><strong>${esc(item.label)}</strong><div class="tiny">${esc(item.meta || "")}</div></a>`;
-        });
-      });
-      results.innerHTML = html || '<div class="palette-group">No matches</div>';
-    }, 120);
-  });
-
-  menuBtn && menuBtn.addEventListener("click", () => {
-    sidebar && sidebar.classList.toggle("open");
-  });
+  /* ---------- Dependent selects ---------- */
 
   const customerSelect = document.getElementById("customer_id");
   const jobSelect = document.getElementById("job_id");
@@ -69,10 +94,13 @@
       if (!id) return;
       const res = await fetch("/api/jobs-for-customer/" + id);
       const jobs = await res.json();
-      jobSelect.innerHTML = '<option value="">No related job</option>' +
-        jobs.map((j) => `<option value="${j.id}">${esc(j.title)}</option>`).join("");
+      jobSelect.innerHTML =
+        '<option value="">No related job</option>' +
+        jobs.map((j) => '<option value="' + j.id + '">' + esc(j.title) + "</option>").join("");
     });
   }
+
+  /* ---------- Invoice line items ---------- */
 
   const catalog = document.getElementById("service-catalog");
   if (catalog) {
@@ -83,31 +111,45 @@
       catalog.selectedIndex = 0;
     });
   }
+
   const addLineBtn = document.getElementById("add-line");
-  addLineBtn && addLineBtn.addEventListener("click", () => addLine("", ""));
+  if (addLineBtn) addLineBtn.addEventListener("click", () => addLine("", ""));
 
   document.querySelectorAll("[data-remove-line]").forEach((btn) => {
-    btn.addEventListener("click", () => btn.closest("tr").remove());
+    btn.addEventListener("click", () => removeLine(btn));
   });
+
+  function removeLine(btn) {
+    const body = document.getElementById("line-body");
+    const row = btn.closest("tr");
+    if (!body || !row) return;
+    if (body.rows.length > 1) row.remove();
+    else row.querySelectorAll("input").forEach((el) => { el.value = el.name === "line_quantity" ? "1" : ""; });
+  }
 
   function addLine(description, price) {
     const body = document.getElementById("line-body");
     if (!body) return;
     const row = document.createElement("tr");
-    row.innerHTML = `
-      <td><input name="line_description" value="${esc(description)}" required></td>
-      <td><input name="line_quantity" value="1" inputmode="decimal"></td>
-      <td><input name="line_price" value="${esc(price)}" inputmode="decimal"></td>
-      <td><button type="button" class="btn btn-ghost btn-sm" data-remove-line>Remove</button></td>`;
-    row.querySelector("[data-remove-line]").addEventListener("click", () => row.remove());
+    row.innerHTML =
+      '<td><input name="line_description" value="' + esc(description) + '" required></td>' +
+      '<td><input name="line_quantity" value="1" inputmode="decimal"></td>' +
+      '<td><input name="line_price" value="' + esc(price) + '" inputmode="decimal"></td>' +
+      '<td class="right"><button type="button" class="btn btn-ghost btn-sm" data-remove-line>Remove</button></td>';
+    row.querySelector("[data-remove-line]").addEventListener("click", (e) => removeLine(e.currentTarget));
     body.appendChild(row);
+    const first = row.querySelector("input");
+    if (!description && first) first.focus();
   }
+
+  /* ---------- Calendar drag and drop ---------- */
 
   document.querySelectorAll(".cal-event[data-job]").forEach((el) => {
     el.addEventListener("dragstart", (e) => {
       e.dataTransfer.setData("text/plain", el.dataset.job);
     });
   });
+
   document.querySelectorAll(".cal-day[data-date]").forEach((day) => {
     day.addEventListener("dragover", (e) => e.preventDefault());
     day.addEventListener("drop", (e) => {
@@ -117,18 +159,33 @@
       const form = document.createElement("form");
       form.method = "POST";
       form.action = "/api/jobs/" + job + "/reschedule";
-      const input = document.createElement("input");
-      input.name = "scheduled_start";
-      input.value = day.dataset.date + "T09:00";
-      form.appendChild(input);
+      const field = document.createElement("input");
+      field.name = "scheduled_start";
+      field.value = day.dataset.date + "T09:00";
+      form.appendChild(field);
       document.body.appendChild(form);
       form.submit();
     });
   });
 
+  /* ---------- Copy to clipboard ---------- */
+
+  document.querySelectorAll("[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const original = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(() => { btn.textContent = original; }, 1400);
+      } catch (err) {
+        /* Clipboard blocked. The value stays visible on screen. */
+      }
+    });
+  });
+
   function esc(s) {
     return String(s || "").replace(/[&<>"']/g, (c) => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
     }[c]));
   }
 })();

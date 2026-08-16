@@ -1,12 +1,12 @@
 import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { addNoteAction, archiveCustomerAction } from "@/app/actions";
-import { Badge } from "@/components/ui";
+import { Badge, Blank, Card, KeyValue, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
 import { formatMoney } from "@/lib/money";
-import { prettyDate, prettyWhen } from "@/lib/labels";
+import { label, prettyDate, prettyWhen } from "@/lib/labels";
 import { loadApp } from "@/lib/page";
 import { customerBalanceCents, customerLifetimeCents } from "@/lib/queries";
 import { customers, invoices, jobs, notes, payments } from "@/lib/schema";
@@ -36,6 +36,9 @@ export default async function CustomerDetailPage({
       .orderBy(desc(notes.createdAt)),
   ]);
 
+  const billing = formatAddress(customer.billingLine1, customer.billingCity, customer.billingState, customer.billingPostal);
+  const service = formatAddress(customer.serviceLine1, customer.serviceCity, customer.serviceState, customer.servicePostal);
+
   return (
     <Shell
       {...shell}
@@ -49,91 +52,116 @@ export default async function CustomerDetailPage({
       }
       actions={
         <>
+          <a className="btn btn-secondary" href={`/customers/${customer.id}/edit`}>Edit</a>
+          <a className="btn btn-secondary" href={`/invoices/new?customerId=${customer.id}`}>New invoice</a>
           <a className="btn" href={`/jobs/new?customerId=${customer.id}`}>New job</a>
-          <a className="btn btn-secondary" href={`/invoices/new?customerId=${customer.id}`}>Invoice</a>
-          <a className="btn btn-ghost" href={`/customers/${customer.id}/edit`}>Edit</a>
         </>
       }
     >
       <div className="grid grid-3">
-        <article className="card">
-          <p className="stat-label">Lifetime value</p>
-          <p className="stat-value money">{formatMoney(lifetime)}</p>
-          <p className="stat-note">Payments received</p>
-        </article>
-        <article className="card">
-          <p className="stat-label">Outstanding</p>
-          <p className="stat-value money">{formatMoney(balance)}</p>
-        </article>
-        <article className="card">
-          <div className="card-title">Contact</div>
-          <p>{customer.phone || "—"}<br />{customer.email || "—"}</p>
-          <p className="tiny">
-            Billing: {formatAddress(customer.billingLine1, customer.billingCity, customer.billingState, customer.billingPostal) || "—"}
-          </p>
-          <p className="tiny">
-            Service: {formatAddress(customer.serviceLine1, customer.serviceCity, customer.serviceState, customer.servicePostal) || "—"}
-          </p>
-          {customer.notes ? <p>{customer.notes}</p> : null}
-          <form action={archiveCustomerAction}>
-            <input type="hidden" name="id" value={customer.id} />
-            <button className="btn btn-ghost btn-sm" type="submit">
-              {customer.archivedAt ? "Restore" : "Archive"}
-            </button>
-          </form>
-        </article>
+        <Stat label="Paid to date" value={formatMoney(lifetime)} note="Payments received" tone="good" />
+        <Stat
+          label="Outstanding"
+          value={formatMoney(balance)}
+          note="Open invoice balances"
+          tone={balance > 0 ? "bad" : undefined}
+        />
+        <Card title="Contact">
+          <KeyValue
+            rows={[
+              ["Phone", customer.phone || <Blank />],
+              ["Email", customer.email || <Blank />],
+              ["Billing", billing || <Blank />],
+              ["Service", service || <Blank text="Same as billing" />],
+            ]}
+          />
+        </Card>
       </div>
 
-      <div className="grid grid-2" style={{ marginTop: 14 }}>
-        <section className="card">
-          <div className="card-title">Jobs</div>
-          {jobRows.length ? jobRows.map((job) => (
-            <div key={job.id} style={{ padding: "8px 0", borderBottom: "1px solid #f0eeea" }}>
-              <a href={`/jobs/${job.id}`}>{job.title}</a>{" "}
-              <Badge status={job.status} />
-              <div className="tiny">{prettyWhen(job.scheduledStart)}</div>
-            </div>
-          )) : <p className="muted">No jobs yet.</p>}
-        </section>
-        <section className="card">
-          <div className="card-title">Invoices</div>
-          {invoiceRows.length ? invoiceRows.map((inv) => (
-            <div key={inv.id} style={{ padding: "8px 0", borderBottom: "1px solid #f0eeea", display: "flex", justifyContent: "space-between" }}>
-              <div>
-                <a href={`/invoices/${inv.id}`}>{inv.number}</a>{" "}
-                <Badge status={inv.status} />
-              </div>
-              <span className="money">{formatMoney(inv.totalCents)}</span>
-            </div>
-          )) : <p className="muted">No invoices yet.</p>}
-        </section>
+      <div className="grid grid-2 mt-2">
+        <Card title="Jobs" action={<a className="btn btn-secondary btn-sm" href={`/jobs/new?customerId=${customer.id}`}>Add</a>}>
+          {jobRows.length ? (
+            <ul className="list">
+              {jobRows.map((job) => (
+                <li key={job.id}>
+                  <div>
+                    <a className="rowlink" href={`/jobs/${job.id}`}>{job.title}</a>
+                    <div className="tiny">{prettyWhen(job.scheduledStart) || "Not scheduled"}</div>
+                  </div>
+                  <Badge status={job.status} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No jobs yet.</p>
+          )}
+        </Card>
+
+        <Card title="Invoices" action={<a className="btn btn-secondary btn-sm" href={`/invoices/new?customerId=${customer.id}`}>Add</a>}>
+          {invoiceRows.length ? (
+            <ul className="list">
+              {invoiceRows.map((inv) => (
+                <li key={inv.id}>
+                  <div>
+                    <a className="rowlink" href={`/invoices/${inv.id}`}>{inv.number}</a>
+                    <div className="tiny">Due {prettyDate(inv.dueDate)}</div>
+                  </div>
+                  <div className="row">
+                    <span className="money">{formatMoney(inv.totalCents)}</span>
+                    <Badge status={inv.status} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No invoices yet.</p>
+          )}
+        </Card>
       </div>
 
-      <div className="grid grid-2" style={{ marginTop: 14 }}>
-        <section className="card">
-          <div className="card-title">Payments</div>
-          {paymentRows.length ? paymentRows.map((p) => (
-            <div key={p.id} style={{ padding: "8px 0", display: "flex", justifyContent: "space-between" }}>
-              <a href={`/payments/${p.id}`}>{prettyDate(p.paidOn)} · {p.method}</a>
-              <span className="money">{formatMoney(p.amountCents)}</span>
-            </div>
-          )) : <p className="muted">No payments yet.</p>}
-        </section>
-        <section className="card">
-          <div className="card-title">Notes</div>
+      <div className="grid grid-2 mt-2">
+        <Card title="Payments">
+          {paymentRows.length ? (
+            <ul className="list">
+              {paymentRows.map((p) => (
+                <li key={p.id}>
+                  <div>
+                    <a className="rowlink" href={`/payments/${p.id}`}>{prettyDate(p.paidOn)}</a>
+                    <div className="tiny">{label(p.method)}{p.voidedAt ? " · voided" : ""}</div>
+                  </div>
+                  <span className="money">{formatMoney(p.amountCents)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No payments yet.</p>
+          )}
+        </Card>
+
+        <Card title="Notes">
           <form action={addNoteAction}>
             <input type="hidden" name="customer_id" value={customer.id} />
-            <div className="field"><textarea name="body" placeholder="Add a note" /></div>
-            <button className="btn btn-secondary btn-sm" type="submit">Save note</button>
+            <div className="field">
+              <textarea name="body" placeholder="Gate code, equipment model, who to call" />
+            </div>
+            <button className="btn btn-secondary btn-sm mt-1" type="submit">Save note</button>
           </form>
+          {customer.notes ? <p className="muted mt-2">{customer.notes}</p> : null}
           {noteRows.map((note) => (
-            <p key={note.id} style={{ marginTop: 12 }}>
-              {note.body}<br />
-              <span className="tiny">{prettyWhen(note.createdAt)}</span>
-            </p>
+            <div key={note.id} className="mt-2">
+              <p>{note.body}</p>
+              <p className="tiny">{prettyWhen(note.createdAt)}</p>
+            </div>
           ))}
-        </section>
+        </Card>
       </div>
+
+      <form action={archiveCustomerAction} className="mt-2">
+        <input type="hidden" name="id" value={customer.id} />
+        <button className="btn btn-ghost btn-sm" type="submit">
+          {customer.archivedAt ? "Restore this customer" : "Archive this customer"}
+        </button>
+      </form>
     </Shell>
   );
 }

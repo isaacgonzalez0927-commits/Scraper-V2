@@ -188,18 +188,59 @@ export async function applyPayment(opts: {
   await logActivity(
     opts.organizationId,
     "payment_received",
-    `Payment received — ${formatMoney(opts.amountCents)}`,
+    `Payment received, ${formatMoney(opts.amountCents)}`,
     opts.amountCents,
     `/payments/${inserted[0].id}`,
   );
   await notify(
     opts.organizationId,
     "payment_received",
-    `Payment received — ${formatMoney(opts.amountCents)}`,
+    `Payment received, ${formatMoney(opts.amountCents)}`,
     "",
     `/payments/${inserted[0].id}`,
   );
   return inserted[0].id;
+}
+
+/**
+ * Records a payment that came from a payment provider. Stripe can tell us about
+ * the same checkout twice (browser return plus webhook), so the provider
+ * reference is the idempotency key: one reference, one row in the ledger.
+ */
+export async function recordOnlinePayment(opts: {
+  organizationId: number;
+  customerId: number;
+  invoiceId: number;
+  amountCents: number;
+  reference: string;
+  method?: string;
+  notes?: string;
+}): Promise<{ paymentId: number | null; alreadyRecorded: boolean }> {
+  const existing = await db()
+    .select({ id: payments.id })
+    .from(payments)
+    .where(and(eq(payments.organizationId, opts.organizationId), eq(payments.reference, opts.reference)));
+  if (existing.length) return { paymentId: existing[0].id, alreadyRecorded: true };
+
+  await refreshInvoice(opts.invoiceId, opts.organizationId);
+  const [invoice] = await db().select().from(invoices).where(eq(invoices.id, opts.invoiceId));
+  if (!invoice) return { paymentId: null, alreadyRecorded: false };
+  const paid = await amountPaidCents(invoice.id);
+  const remaining = balanceCents(invoice.totalCents, paid, invoice.status);
+  const amount = Math.min(opts.amountCents, remaining);
+  if (amount <= 0) return { paymentId: null, alreadyRecorded: true };
+
+  const paymentId = await applyPayment({
+    organizationId: opts.organizationId,
+    customerId: opts.customerId,
+    invoiceId: opts.invoiceId,
+    amountCents: amount,
+    paidOn: new Date().toISOString().slice(0, 10),
+    method: opts.method || "card",
+    reference: opts.reference,
+    notes: opts.notes || "",
+  });
+  return { paymentId, alreadyRecorded: false };
 }
 
 export async function nextInvoiceNumber(organizationId: number): Promise<string> {

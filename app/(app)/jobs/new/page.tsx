@@ -17,7 +17,13 @@ export default async function NewJobPage({
     .from(customers)
     .where(and(eq(customers.organizationId, org.id), isNull(customers.archivedAt)));
   return (
-    <Shell {...shell} path="/jobs" title="New job">
+    <Shell
+      {...shell}
+      path="/jobs"
+      title="New job"
+      sub={<p className="page-sub">Pick the customer, then say what the work is.</p>}
+      actions={<a className="btn btn-secondary" href="/jobs">Cancel</a>}
+    >
       <JobForm
         customerRows={customerRows}
         error={q.error}

@@ -70,6 +70,17 @@ export async function ensureSchema(): Promise<void> {
       stripe_status TEXT NOT NULL DEFAULT 'not_connected',
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS integrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      provider TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'disconnected',
+      label TEXT NOT NULL DEFAULT '',
+      secret_cipher TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(organization_id, provider)
+    );
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,

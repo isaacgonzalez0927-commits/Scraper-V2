@@ -1,10 +1,10 @@
-import { and, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
-import { Badge, Money } from "@/components/ui";
+import { desc, eq } from "drizzle-orm";
+import { Badge, Card, Money, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
 import { formatMoney } from "@/lib/money";
-import { prettyWhen } from "@/lib/labels";
+import { label, prettyWhen } from "@/lib/labels";
 import { loadApp } from "@/lib/page";
 import {
   collectedCents,
@@ -49,7 +49,6 @@ export default async function OverviewPage() {
   const awaiting = jobRows
     .filter((r) => r.job.status === "scheduled" || r.job.status === "in_progress")
     .slice(0, 6);
-  const recentDone = jobRows.filter((r) => r.job.status === "completed").slice(0, 4);
 
   let profit = 0;
   for (const { job } of jobRows) {
@@ -72,84 +71,75 @@ export default async function OverviewPage() {
       {...shell}
       path="/overview"
       title="Overview"
-      sub={<p className="page-sub">{monthLabel} — what came in, what is still out, and what is on the board.</p>}
+      sub={<p className="page-sub">{monthLabel}. What came in, what is still out, and what is on the board.</p>}
       actions={<a className="btn" href="/jobs/new">New job</a>}
     >
       <section className="grid grid-5">
-        <article className="card">
-          <p className="stat-label">Revenue this month</p>
-          <p className="stat-value money">{formatMoney(revenue)}</p>
-          <p className="stat-note">Invoiced, not necessarily collected</p>
-        </article>
-        <article className="card stat-good">
-          <p className="stat-label">Collected this month</p>
-          <p className="stat-value money">{formatMoney(collected)}</p>
-          <p className="stat-note">Payments actually received</p>
-        </article>
-        <article className="card">
-          <p className="stat-label">Outstanding</p>
-          <p className="stat-value money">{formatMoney(outstanding)}</p>
-          <p className="stat-note">Open invoice balances</p>
-        </article>
-        <article className="card stat-bad">
-          <p className="stat-label">Overdue</p>
-          <p className="stat-value money">{formatMoney(overdue)}</p>
-          <p className="stat-note">Past due and still unpaid</p>
-        </article>
-        <article className="card stat-accent">
-          <p className="stat-label">Estimated profit</p>
-          <p className="stat-value money">{formatMoney(profit)}</p>
-          <p className="stat-note">This month’s jobs, revenue minus costs</p>
-        </article>
+        <Stat
+          label="Collected this month"
+          value={formatMoney(collected)}
+          note="Payments that actually landed"
+          tone="good"
+        />
+        <Stat label="Invoiced this month" value={formatMoney(revenue)} note="Billed, not yet cash" />
+        <Stat label="Outstanding" value={formatMoney(outstanding)} note="Open invoice balances" />
+        <Stat label="Overdue" value={formatMoney(overdue)} note="Past due and unpaid" tone="bad" />
+        <Stat
+          label="Estimated profit"
+          value={formatMoney(profit)}
+          note="This month, revenue less costs"
+          tone="accent"
+        />
       </section>
 
-      <div className="grid grid-2" style={{ marginTop: 14 }}>
-        <section className="card">
-          <div className="card-title">Jobs</div>
+      <div className="grid grid-2 mt-2">
+        <Card
+          title="Jobs on the board"
+          action={<a className="btn btn-secondary btn-sm" href="/jobs">View all</a>}
+        >
           <ul className="list">
-            <li><span>Today</span><strong>{jobsToday.length}</strong></li>
-            <li><span>This week</span><strong>{jobsWeek.length}</strong></li>
+            <li><span className="muted">Today</span><strong>{jobsToday.length}</strong></li>
+            <li><span className="muted">This week</span><strong>{jobsWeek.length}</strong></li>
+            <li><span className="muted">Waiting to finish</span><strong>{awaiting.length}</strong></li>
           </ul>
-          <h3 className="tiny" style={{ margin: "16px 0 8px" }}>Awaiting completion</h3>
+          <p className="section-label mt-2">Next up</p>
           {awaiting.length ? (
             <ul className="list">
               {awaiting.map(({ job, customer }) => (
                 <li key={job.id}>
                   <div>
                     <a className="rowlink" href={`/jobs/${job.id}`}>{job.title}</a>
-                    <div className="tiny">{displayName(customer)} · {job.status.replace("_", " ")}</div>
+                    <div className="tiny">{displayName(customer)}</div>
                   </div>
-                  <span className="tiny">{prettyWhen(job.scheduledStart)}</span>
+                  <div className="row">
+                    <span className="tiny">{prettyWhen(job.scheduledStart)}</span>
+                    <Badge status={job.status} />
+                  </div>
                 </li>
               ))}
             </ul>
           ) : (
             <p className="muted">Nothing waiting. Enjoy the quiet.</p>
           )}
-          <h3 className="tiny" style={{ margin: "16px 0 8px" }}>Recently completed</h3>
-          {recentDone.length ? recentDone.map(({ job, customer }) => (
-            <div className="tiny" key={job.id} style={{ padding: "6px 0" }}>
-              <a href={`/jobs/${job.id}`}>{job.title}</a> — {displayName(customer)}
-            </div>
-          )) : <p className="muted">No completed jobs yet.</p>}
-        </section>
+        </Card>
 
-        <section className="card">
-          <div className="card-title">Invoices</div>
-          <div className="filters">
+        <Card
+          title="Recent activity"
+          action={<a className="btn btn-secondary btn-sm" href="/invoices">Invoices</a>}
+        >
+          <div className="row">
             {Object.entries(invoiceCounts).map(([key, count]) => (
-              <a className="chip" key={key} href={`/invoices?status=${key}`}>
-                {key} · {count}
+              <a className="badge" key={key} href={`/invoices?status=${key}`}>
+                {label(key)} {count}
               </a>
             ))}
           </div>
-          <div className="card-title" style={{ marginTop: 18 }}>Recent activity</div>
           {activity.length ? (
-            <ul className="list">
+            <ul className="list mt-2">
               {activity.map((item) => (
                 <li key={item.id}>
                   <div>
-                    <a href={item.link || "/overview"}>{item.title}</a>
+                    <a className="rowlink" href={item.link || "/overview"}>{item.title}</a>
                     <div className="tiny">{prettyWhen(item.createdAt)}</div>
                   </div>
                   {item.amountCents != null ? <Money cents={item.amountCents} /> : null}
@@ -159,11 +149,11 @@ export default async function OverviewPage() {
           ) : (
             <div className="empty">
               <h3>Your day will show up here</h3>
-              <p>Create a customer, schedule a job, or send an invoice.</p>
+              <p>Add a customer, schedule a job, or send an invoice.</p>
               <a className="btn" href="/customers/new">Add a customer</a>
             </div>
           )}
-        </section>
+        </Card>
       </div>
     </Shell>
   );

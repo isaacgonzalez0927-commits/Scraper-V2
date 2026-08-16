@@ -19,7 +19,12 @@ export default async function EditCustomerPage({
     .where(and(eq(customers.id, Number(id)), eq(customers.organizationId, org.id)));
   if (!customer) notFound();
   return (
-    <Shell {...shell} path="/customers" title="Edit customer">
+    <Shell
+      {...shell}
+      path="/customers"
+      title={`Edit ${customer.name}`}
+      actions={<a className="btn btn-secondary" href={`/customers/${customer.id}`}>Cancel</a>}
+    >
       <CustomerForm customer={customer} />
     </Shell>
   );

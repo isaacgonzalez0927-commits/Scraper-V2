@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { Badge, Empty } from "@/components/ui";
+import { Badge, Empty, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -26,23 +26,22 @@ export default async function InvoicesPage({
     .where(and(...filters));
   const paid = await paidMap(org.id, rows.map((r) => r.invoice.id));
 
+  const tabs = [
+    { key: "", name: "All", href: "/invoices" },
+    ...INVOICE_STATUSES.map((s) => ({ key: s, name: label(s), href: `/invoices?status=${s}` })),
+  ];
+
   return (
     <Shell
       {...shell}
       path="/invoices"
       title="Invoices"
+      sub={<p className="page-sub">An invoice is paid only when the balance reaches zero.</p>}
       actions={<a className="btn" href="/invoices/new">New invoice</a>}
     >
-      <div className="filters">
-        <a className={`chip ${status ? "" : "active"}`} href="/invoices">All</a>
-        {INVOICE_STATUSES.map((s) => (
-          <a key={s} className={`chip ${status === s ? "active" : ""}`} href={`/invoices?status=${s}`}>
-            {label(s)}
-          </a>
-        ))}
-      </div>
+      <Tabs tabs={tabs} active={status || ""} />
       {rows.length ? (
-        <div className="card table-wrap">
+        <div className="card card-flush table-wrap">
           <table className="data">
             <thead>
               <tr>
@@ -75,7 +74,7 @@ export default async function InvoicesPage({
       ) : (
         <Empty
           title="No invoices here"
-          body="Draft one from a completed job, or start from a customer."
+          body="Bill a finished job, or start a fresh invoice for a customer."
           href="/invoices/new"
           action="New invoice"
         />

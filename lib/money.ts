@@ -39,7 +39,7 @@ export function marginBps(revenueCents: number, costCents: number): number | nul
 }
 
 export function formatPercent(bps: number | null | undefined): string {
-  if (bps === null || bps === undefined) return "—";
+  if (bps === null || bps === undefined) return "n/a";
   return `${(bps / 100).toFixed(2)}%`;
 }
 

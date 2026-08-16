@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { Badge, Empty } from "@/components/ui";
+import { Badge, Blank, Empty, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -23,30 +23,29 @@ export default async function JobsPage({
     .innerJoin(customers, eq(customers.id, jobs.customerId))
     .where(and(...filters));
 
+  const tabs = [
+    { key: "", name: "All", href: "/jobs" },
+    ...JOB_STATUSES.map((s) => ({ key: s, name: label(s), href: `/jobs?status=${s}` })),
+  ];
+
   return (
     <Shell
       {...shell}
       path="/jobs"
       title="Jobs"
+      sub={<p className="page-sub">Everything scheduled, in progress, and finished.</p>}
       actions={<a className="btn" href="/jobs/new">New job</a>}
     >
-      <div className="filters">
-        <a className={`chip ${status ? "" : "active"}`} href="/jobs">All</a>
-        {JOB_STATUSES.map((s) => (
-          <a key={s} className={`chip ${status === s ? "active" : ""}`} href={`/jobs?status=${s}`}>
-            {label(s)}
-          </a>
-        ))}
-      </div>
+      <Tabs tabs={tabs} active={status || ""} />
       {rows.length ? (
-        <div className="card table-wrap">
+        <div className="card card-flush table-wrap">
           <table className="data">
             <thead>
               <tr>
                 <th>Job</th>
                 <th>Customer</th>
-                <th>When</th>
-                <th>Tech</th>
+                <th>Scheduled</th>
+                <th>Technician</th>
                 <th>Status</th>
                 <th className="right">Est. revenue</th>
               </tr>
@@ -56,8 +55,8 @@ export default async function JobsPage({
                 <tr key={job.id}>
                   <td><a className="rowlink" href={`/jobs/${job.id}`}>{job.title}</a></td>
                   <td>{displayName(customer)}</td>
-                  <td>{prettyWhen(job.scheduledStart)}</td>
-                  <td>{job.technicianName || "—"}</td>
+                  <td>{prettyWhen(job.scheduledStart) || <Blank text="Unscheduled" />}</td>
+                  <td>{job.technicianName || <Blank text="Unassigned" />}</td>
                   <td><Badge status={job.status} /></td>
                   <td className="right money">{formatMoney(job.estimatedRevenueCents)}</td>
                 </tr>
@@ -68,7 +67,7 @@ export default async function JobsPage({
       ) : (
         <Empty
           title="No jobs on this list"
-          body="Schedule the next call or mark a walk-in as in progress."
+          body="Schedule the next call, or log a walk in as in progress."
           href="/jobs/new"
           action="New job"
         />

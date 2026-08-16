@@ -22,7 +22,13 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
     db().select().from(serviceItems).where(eq(serviceItems.organizationId, org.id)),
   ]);
   return (
-    <Shell {...shell} path="/invoices" title="Edit invoice">
+    <Shell
+      {...shell}
+      path="/invoices"
+      title={`Edit ${invoice.number}`}
+      sub={<p className="page-sub">A paid or void invoice can no longer be edited.</p>}
+      actions={<a className="btn btn-secondary" href={`/invoices/${invoice.id}`}>Cancel</a>}
+    >
       <InvoiceForm
         invoice={invoice}
         lines={lines}

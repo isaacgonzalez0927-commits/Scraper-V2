@@ -1,5 +1,6 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { rescheduleJobAction } from "@/app/actions";
+import { Card, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -55,8 +56,6 @@ export default async function CalendarPage({
     byDay.set(day, list);
   }
   const unscheduled = rows.filter((r) => !r.job.scheduledStart && r.job.status === "unscheduled");
-  const start = days[0];
-  const end = days[days.length - 1];
   const dateParam = isoDate(anchor);
 
   return (
@@ -64,14 +63,21 @@ export default async function CalendarPage({
       {...shell}
       path="/calendar"
       title="Calendar"
-      sub={<p className="page-sub">{prettyDate(isoDate(start))} – {prettyDate(isoDate(end))}</p>}
+      sub={
+        <p className="page-sub">
+          {prettyDate(isoDate(days[0]))} to {prettyDate(isoDate(days[days.length - 1]))}. Drag a job to move it.
+        </p>
+      }
       actions={
         <>
-          {(["day", "week", "month"] as const).map((v) => (
-            <a key={v} className={`chip ${view === v ? "active" : ""}`} href={`/calendar?view=${v}&date=${dateParam}`}>
-              {v[0].toUpperCase() + v.slice(1)}
-            </a>
-          ))}
+          <Tabs
+            tabs={(["day", "week", "month"] as const).map((v) => ({
+              key: v,
+              name: v[0].toUpperCase() + v.slice(1),
+              href: `/calendar?view=${v}&date=${dateParam}`,
+            }))}
+            active={view}
+          />
           <a className="btn" href={`/jobs/new?start=${dateParam}T09:00`}>Schedule job</a>
         </>
       }
@@ -87,7 +93,9 @@ export default async function CalendarPage({
               className={`cal-day ${key === today ? "today" : ""} ${out ? "out" : ""}`}
               data-date={key}
             >
-              <strong>{day.toLocaleDateString("en-US", { weekday: "short", day: "numeric" })}</strong>
+              <span className="cal-date">
+                {day.toLocaleDateString("en-US", { weekday: "short", day: "numeric" })}
+              </span>
               {items.map(({ job }) => (
                 <a
                   key={job.id}
@@ -99,25 +107,27 @@ export default async function CalendarPage({
                   {job.title}
                 </a>
               ))}
-              <a className="tiny" href={`/jobs/new?start=${key}T09:00`}>+ job</a>
+              <a className="cal-add" href={`/jobs/new?start=${key}T09:00`}>Add job</a>
             </div>
           );
         })}
       </div>
+
       {unscheduled.length ? (
-        <section className="card" style={{ marginTop: 14 }}>
-          <div className="card-title">Unscheduled</div>
+        <Card title="Not scheduled yet" note="Pick a time and these move onto the board." className="mt-2">
           {unscheduled.map(({ job, customer }) => (
-            <form action={rescheduleJobAction} key={job.id} style={{ display: "flex", gap: 8, alignItems: "center", margin: "8px 0" }}>
+            <form action={rescheduleJobAction} key={job.id} className="row mt-1">
               <input type="hidden" name="id" value={job.id} />
               <input type="hidden" name="next" value="/calendar" />
-              <a href={`/jobs/${job.id}`}>{job.title}</a>
-              <span className="tiny">{displayName(customer)}</span>
-              <input type="datetime-local" name="scheduled_start" />
+              <a className="grow" href={`/jobs/${job.id}`}>
+                {job.title}
+                <span className="tiny"> {displayName(customer)}</span>
+              </a>
+              <input className="input" type="datetime-local" name="scheduled_start" />
               <button className="btn btn-secondary btn-sm" type="submit">Schedule</button>
             </form>
           ))}
-        </section>
+        </Card>
       ) : null}
     </Shell>
   );
