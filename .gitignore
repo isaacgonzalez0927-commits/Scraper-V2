@@ -1,7 +1,13 @@
 .env
+.env.local
+.env*.local
 venv/
 __pycache__/
 *.pyc
-data/sere.db
-data/uploads/
+node_modules/
+.next/
+out/
+data/
+*.db
 .pytest_cache/
+.vercel
