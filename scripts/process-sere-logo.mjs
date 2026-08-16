@@ -46,9 +46,15 @@ const iconStrip = await sharp(LOCKUP)
   .toBuffer();
 
 const stripMeta = await sharp(iconStrip).metadata();
-const side = Math.max(stripMeta.width ?? 0, stripMeta.height ?? 0);
-const padLeft = Math.floor((side - (stripMeta.width ?? 0)) / 2);
-const padTop = Math.floor((side - (stripMeta.height ?? 0)) / 2);
+const stripZoom = 1.14;
+const zoomedW = Math.round((stripMeta.width ?? 0) * stripZoom);
+const zoomedH = Math.round((stripMeta.height ?? 0) * stripZoom);
+const zoomedStrip = await sharp(iconStrip).resize(zoomedW, zoomedH).png().toBuffer();
+const zoomMeta = await sharp(zoomedStrip).metadata();
+const side = Math.max(zoomMeta.width ?? 0, zoomMeta.height ?? 0);
+const iconRightShift = Math.round(side * 0.11);
+const padLeft = Math.floor((side - (zoomMeta.width ?? 0)) / 2) + iconRightShift;
+const padTop = Math.floor((side - (zoomMeta.height ?? 0)) / 2);
 
 await sharp({
   create: {
@@ -58,24 +64,34 @@ await sharp({
     background: { r: 0, g: 0, b: 0, alpha: 0 },
   },
 })
-  .composite([{ input: iconStrip, left: padLeft, top: padTop }])
+  .composite([{ input: zoomedStrip, left: Math.max(0, padLeft), top: Math.max(0, padTop) }])
   .png()
   .toFile(ICON_OUT);
 
 console.log(`Icon mark: ${extractW}px wide → ${ICON_OUT} (${side}×${side})`);
 
+/** Home screen / PWA icon framing — larger mark, nudged right. */
+const MARK_SCALE = 0.84;
+const MARK_RIGHT_BIAS = 0.1;
+
 async function onLavender(size, out) {
   const bg = Buffer.from(
     `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"><rect width="${size}" height="${size}" rx="${size * 0.23}" fill="#F5F1FF"/></svg>`
   );
-  const mark = await sharp(ICON_OUT).resize(Math.round(size * 0.68)).png().toBuffer();
+  const markMax = Math.round(size * MARK_SCALE);
+  const mark = await sharp(ICON_OUT)
+    .trim({ threshold: 1 })
+    .resize(markMax, markMax, { fit: "inside" })
+    .png()
+    .toBuffer();
   const m = await sharp(mark).metadata();
-  const left = Math.round((size - m.width) / 2);
-  const top = Math.round((size - m.height) / 2);
+  let left = Math.round((size - m.width) / 2 + size * MARK_RIGHT_BIAS);
+  left = Math.max(0, Math.min(left, size - m.width));
+  const top = Math.max(0, Math.round((size - m.height) / 2));
   await sharp(bg).composite([{ input: mark, left, top }]).png().toFile(out);
 }
 
-await sharp(ICON_OUT).resize(32, 32).png().toFile("public/favicon.png");
+await onLavender(32, "public/favicon.png");
 await onLavender(192, "public/icon-192.png");
 await onLavender(512, "public/icon-512.png");
 console.log("Built favicon.png, icon-192.png, icon-512.png (icon mark only)");
