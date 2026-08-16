@@ -46,13 +46,13 @@ const iconStrip = await sharp(LOCKUP)
   .toBuffer();
 
 const stripMeta = await sharp(iconStrip).metadata();
-const stripZoom = 1.14;
+const stripZoom = 1.08;
 const zoomedW = Math.round((stripMeta.width ?? 0) * stripZoom);
 const zoomedH = Math.round((stripMeta.height ?? 0) * stripZoom);
 const zoomedStrip = await sharp(iconStrip).resize(zoomedW, zoomedH).png().toBuffer();
 const zoomMeta = await sharp(zoomedStrip).metadata();
 const side = Math.max(zoomMeta.width ?? 0, zoomMeta.height ?? 0);
-const iconRightShift = Math.round(side * 0.11);
+const iconRightShift = Math.round(side * 0.035);
 const padLeft = Math.floor((side - (zoomMeta.width ?? 0)) / 2) + iconRightShift;
 const padTop = Math.floor((side - (zoomMeta.height ?? 0)) / 2);
 
@@ -71,8 +71,8 @@ await sharp({
 console.log(`Icon mark: ${extractW}px wide → ${ICON_OUT} (${side}×${side})`);
 
 /** Home screen / PWA icon framing — larger mark, nudged right. */
-const MARK_SCALE = 0.84;
-const MARK_RIGHT_BIAS = 0.1;
+const MARK_SCALE = 0.8;
+const MARK_RIGHT_BIAS = 0.035;
 
 async function onLavender(size, out) {
   const bg = Buffer.from(
