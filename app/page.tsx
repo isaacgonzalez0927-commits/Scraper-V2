@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { BrandMark } from "@/components/BrandMark";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default function LandingPage() {
   return (
     <div className="landing">
       <header className="landing-nav">
         <div className="landing-brand">
-          <BrandMark className="brand-mark-image" size={36} />
-          <span className="brand-name">Sere</span>
+          <BrandLogo className="brand-lockup" variant="lockup" />
         </div>
         <nav className="hero-actions">
           <Link href="/login">Sign in</Link>

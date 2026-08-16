@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { loginAction } from "../actions";
-import { BrandMark } from "@/components/BrandMark";
+import { BrandLogo } from "@/components/BrandLogo";
 import { boot } from "@/lib/boot";
 
 export const runtime = "nodejs";
@@ -25,8 +25,7 @@ export default async function LoginPage({
     <div className="auth-shell">
       <div className="auth-card">
         <div className="brand" style={{ paddingBottom: 12 }}>
-          <BrandMark className="brand-mark-image" size={40} />
-          <span className="brand-name">Sere</span>
+          <BrandLogo className="brand-lockup" variant="lockup" />
         </div>
         <h1 className="page-title" style={{ fontSize: 28 }}>Sign in</h1>
         <p className="muted">Harbor Air demo: owner@sere.cash / harborair</p>
