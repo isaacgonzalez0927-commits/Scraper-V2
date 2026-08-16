@@ -25,7 +25,7 @@ export default async function LoginPage({
     <div className="auth-shell">
       <div className="auth-card">
         <div className="brand" style={{ paddingBottom: 12 }}>
-          <BrandLogo className="brand-lockup" variant="lockup" />
+          <BrandLogo className="brand-lockup" />
         </div>
         <h1 className="page-title" style={{ fontSize: 28 }}>Sign in</h1>
         <p className="muted">Harbor Air demo: owner@sere.cash / harborair</p>

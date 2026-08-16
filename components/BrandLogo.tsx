@@ -1,11 +1,17 @@
 type BrandLogoProps = {
   className?: string;
-  /** Icon only, or full icon + wordmark image. */
-  variant?: "mark" | "lockup";
+  /** Full lockup (icon + sere), or cropped icon mark for invoice headers. */
+  crop?: "lockup" | "icon";
 };
 
-/** Raster Sere logo — use the real PNG assets, not reconstructed SVG paths. */
-export function BrandLogo({ className, variant = "mark" }: BrandLogoProps) {
-  const src = variant === "lockup" ? "/logo-lockup.png" : "/logo-mark.png";
-  return <img className={className} src={src} alt={variant === "lockup" ? "Sere" : ""} />;
+/** Your logo file at public/sere-logo.png — not generated, not SVG. */
+export function BrandLogo({ className, crop = "lockup" }: BrandLogoProps) {
+  const classes = [className, crop === "icon" ? "brand-mark-crop" : ""].filter(Boolean).join(" ");
+  return (
+    <img
+      className={classes}
+      src="/sere-logo.png"
+      alt={crop === "lockup" ? "Sere" : ""}
+    />
+  );
 }
