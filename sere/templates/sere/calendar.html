@@ -11,7 +11,7 @@
 {% block content %}
 <div class="cal {{ 'cal-week' if view != 'day' else '' }}">
   {% for day, jobs in by_day.items() %}
-    <div class="cal-day {{ 'today' if day == today }} {{ 'out' if view == 'month' and day.month != anchor.month }}">
+    <div class="cal-day {{ 'today' if day == today }} {{ 'out' if view == 'month' and day.month != anchor.month }}" data-date="{{ day.isoformat() }}">
       <strong>{{ day.strftime('%a %-d') }}</strong>
       {% for job in jobs %}
         <a class="cal-event" href="{{ url_for('sere.job_detail', job_id=job.id) }}" draggable="true" data-job="{{ job.id }}">

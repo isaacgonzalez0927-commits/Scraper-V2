@@ -103,6 +103,29 @@
     body.appendChild(row);
   }
 
+  document.querySelectorAll(".cal-event[data-job]").forEach((el) => {
+    el.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", el.dataset.job);
+    });
+  });
+  document.querySelectorAll(".cal-day[data-date]").forEach((day) => {
+    day.addEventListener("dragover", (e) => e.preventDefault());
+    day.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const job = e.dataTransfer.getData("text/plain");
+      if (!job) return;
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "/jobs/" + job + "/reschedule";
+      const input = document.createElement("input");
+      input.name = "scheduled_start";
+      input.value = day.dataset.date + "T09:00";
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    });
+  });
+
   function esc(s) {
     return String(s || "").replace(/[&<>"']/g, (c) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"

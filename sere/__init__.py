@@ -38,7 +38,7 @@ def create_app(config_class: type = Config, **overrides) -> Flask:
             "current_user": g.get("user"),
             "current_org": g.get("org"),
             "labels": STATUS_LABELS,
-            "now": datetime.utcnow(),
+            "now": datetime.now(),
             "today": date.today(),
         }
 

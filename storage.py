@@ -160,6 +160,8 @@ def _fetch_remote_once() -> dict | None:
 
 
 def fetch_remote_snapshot() -> dict | None:
+    if not _github_config() and not os.getenv("NEXUS_BACKUP_URL", "").strip():
+        return None
     for attempt in range(REMOTE_RETRIES):
         snap = _fetch_remote_once()
         if snap is not None:

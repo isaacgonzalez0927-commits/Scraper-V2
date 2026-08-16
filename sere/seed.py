@@ -579,7 +579,7 @@ def seed_harbor_air() -> Organization:
         InvoiceEvent(organization_id=org.id, invoice_id=inv_1042.id, kind="created", message="INV-1042 created", created_at=now - timedelta(days=14)),
         InvoiceEvent(organization_id=org.id, invoice_id=inv_1042.id, kind="sent", message="Sent to john.smith@example.com", created_at=now - timedelta(days=14, hours=-1)),
         InvoiceEvent(organization_id=org.id, invoice_id=inv_1042.id, kind="viewed", message="Customer viewed invoice", created_at=now - timedelta(days=13)),
-        InvoiceEvent(organization_id=org.id, invoice_id=inv_1042.id, kind="payment", message="$8,947.65 payment received", amount_cents=inv_1042.total_cents, created_at=now - timedelta(days=2)),
+        InvoiceEvent(organization_id=org.id, invoice_id=inv_1042.id, kind="payment", message=f"{format_money(inv_1042.total_cents)} payment received", amount_cents=inv_1042.total_cents, created_at=now - timedelta(days=2)),
         InvoiceEvent(organization_id=org.id, invoice_id=inv_1042.id, kind="paid", message="INV-1042 paid in full", created_at=now - timedelta(days=2)),
         InvoiceEvent(organization_id=org.id, invoice_id=inv_1047.id, kind="created", message="INV-1047 created", created_at=now - timedelta(days=18)),
         InvoiceEvent(organization_id=org.id, invoice_id=inv_1047.id, kind="sent", message="Sent to maria.alvarez@example.com", created_at=now - timedelta(days=18)),

@@ -1318,6 +1318,10 @@ def _fill_job(job: Job) -> None:
     job.actual_revenue_cents = cents_field("actual_revenue")
     job.estimated_cost_cents = cents_field("estimated_cost")
     job.notes = field("notes")
+    if job.status == "completed" and not job.completed_at:
+        job.completed_at = utcnow()
+    if job.status == "cancelled" and not job.cancelled_at:
+        job.cancelled_at = utcnow()
 
 
 def _save_invoice(invoice: Invoice, *, is_new: bool) -> Invoice:

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from decimal import Decimal
+
+from sqlalchemy import func
 
 from sere.extensions import db
 from sere.models import (
@@ -25,11 +27,21 @@ COLLECTIBLE_STATUSES = ("sent", "viewed", "partial", "paid", "overdue")
 
 
 def valid_payments(invoice: Invoice) -> list[Payment]:
-    return [p for p in invoice.payments if p.voided_at is None]
+    return [
+        p
+        for p in Payment.query.filter_by(invoice_id=invoice.id, voided_at=None).all()
+    ]
 
 
 def amount_paid_cents(invoice: Invoice) -> int:
-    return sum(p.amount_cents for p in valid_payments(invoice))
+    if not invoice.id:
+        return 0
+    return int(
+        db.session.query(func.coalesce(func.sum(Payment.amount_cents), 0))
+        .filter(Payment.invoice_id == invoice.id, Payment.voided_at.is_(None))
+        .scalar()
+        or 0
+    )
 
 
 def balance_cents(invoice: Invoice) -> int:
