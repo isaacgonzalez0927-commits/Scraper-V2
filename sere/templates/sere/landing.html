@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sere — cash, clearly</title>
+  <link rel="icon" href="{{ url_for('sere.static', filename='img/logo.svg') }}">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('sere.static', filename='css/sere.css') }}">
+</head>
+<body class="landing">
+  <nav class="landing-nav">
+    <a class="brand" href="/"><span class="brand-mark">S</span><span class="brand-name">Sere</span></a>
+    <div class="top-actions">
+      <a class="btn btn-ghost" href="{{ url_for('sere.login') }}">Sign in</a>
+      <a class="btn" href="{{ url_for('sere.signup') }}">Start</a>
+    </div>
+  </nav>
+  <section class="hero">
+    <p class="tiny">For HVAC shops that want to see their money</p>
+    <h1>Jobs, invoices, and cash — in one calm place.</h1>
+    <p>Open Sere and know what is happening today, who still owes you, what just got paid, and how much you actually made.</p>
+    <div class="hero-actions">
+      <a class="btn" href="{{ url_for('sere.signup') }}">Create your company</a>
+      <a class="btn btn-secondary" href="{{ url_for('sere.login') }}">View the Harbor Air demo</a>
+    </div>
+  </section>
+  <section class="points">
+    <article class="card">
+      <h2>Collected, not hoped</h2>
+      <p>Invoiced revenue and cash in the bank are separate numbers. Sere never pretends a sent invoice is money you have.</p>
+    </article>
+    <article class="card">
+      <h2>One path to paid</h2>
+      <p>Customer → job → invoice → payment. Complete a job and draft the invoice in one click. Partial payments stay honest.</p>
+    </article>
+    <article class="card">
+      <h2>Profit you can explain</h2>
+      <p>Materials, labor, equipment, done. Revenue minus job costs. No accounting degree required.</p>
+    </article>
+  </section>
+</body>
+</html>

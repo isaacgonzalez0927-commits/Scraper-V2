@@ -1,0 +1,38 @@
+{% extends "sere/base.html" %}
+{% block title %}{{ 'Edit' if mode == 'edit' else 'New' }} customer · Sere{% endblock %}
+{% block heading %}{{ 'Edit customer' if mode == 'edit' else 'New customer' }}{% endblock %}
+{% block content %}
+<form method="post" class="card form-grid">
+  <div class="field"><label>Name</label><input name="name" value="{{ customer.name or '' }}" required></div>
+  <div class="field"><label>Company</label><input name="company_name" value="{{ customer.company_name or '' }}"></div>
+  <div class="field"><label>Email</label><input name="email" type="email" value="{{ customer.email or '' }}"></div>
+  <div class="field"><label>Phone</label><input name="phone" value="{{ customer.phone or '' }}"></div>
+  <div class="field"><label>Customer since</label><input name="customer_since" type="date" value="{{ customer.customer_since.isoformat() if customer.customer_since else '' }}"></div>
+  <div class="field full"><label>Notes</label><textarea name="notes">{{ customer.notes or '' }}</textarea></div>
+  <div class="field full"><strong>Billing address</strong></div>
+  <div class="field full"><label>Street</label><input name="billing_line1" value="{{ customer.billing_line1 or '' }}"></div>
+  <div class="field"><label>City</label><input name="billing_city" value="{{ customer.billing_city or '' }}"></div>
+  <div class="field"><label>State / ZIP</label>
+    <div style="display:flex;gap:8px">
+      <input name="billing_state" value="{{ customer.billing_state or '' }}" placeholder="FL">
+      <input name="billing_postal" value="{{ customer.billing_postal or '' }}" placeholder="33901">
+    </div>
+  </div>
+  <div class="field full">
+    <label><input type="checkbox" name="same_as_billing" value="1"> Service address is the same</label>
+  </div>
+  <div class="field full"><strong>Service address</strong></div>
+  <div class="field full"><label>Street</label><input name="service_line1" value="{{ customer.service_line1 or '' }}"></div>
+  <div class="field"><label>City</label><input name="service_city" value="{{ customer.service_city or '' }}"></div>
+  <div class="field"><label>State / ZIP</label>
+    <div style="display:flex;gap:8px">
+      <input name="service_state" value="{{ customer.service_state or '' }}">
+      <input name="service_postal" value="{{ customer.service_postal or '' }}">
+    </div>
+  </div>
+  <div class="field full" style="display:flex;gap:8px">
+    <button class="btn" type="submit">Save customer</button>
+    {% if mode == 'new' %}<button class="btn btn-secondary" type="submit" name="next" value="job">Save and create job</button>{% endif %}
+  </div>
+</form>
+{% endblock %}

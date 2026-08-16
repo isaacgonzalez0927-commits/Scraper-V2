@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ invoice.number }} · {{ org.name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('sere.static', filename='css/sere.css') }}">
+  <style>
+    body { background: #f6f5f2; }
+    .sheet { max-width: 760px; margin: 32px auto; background: #fff; border: 1px solid #e7e5e4; border-radius: 16px; padding: 36px; }
+    @media print { body { background: #fff; } .sheet { border: 0; box-shadow: none; margin: 0; } .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="brand"><span class="brand-mark">S</span><span class="brand-name">{{ org.name }}</span></div>
+        <p class="tiny">{{ org.address_line1 }} {{ org.city }} {{ org.state }} {{ org.postal_code }}<br>{{ org.email }} {{ org.phone }}</p>
+      </div>
+      <div style="text-align:right">
+        <div class="tiny">Invoice</div>
+        <h1 class="page-title" style="font-size:28px">{{ invoice.number }}</h1>
+        <span class="badge badge-{{ invoice.status }}">{{ invoice.status|status }}</span>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin:24px 0">
+      <div>
+        <div class="tiny">Bill to</div>
+        <strong>{{ invoice.customer.display_name }}</strong>
+        <p class="tiny">{{ invoice.customer.billing_address or invoice.customer.service_address }}<br>{{ invoice.customer.email }} {{ invoice.customer.phone }}</p>
+      </div>
+      <div>
+        <p>Issued {{ invoice.issue_date|date }}<br>Due {{ invoice.due_date|date }}</p>
+      </div>
+    </div>
+    <table class="data">
+      <thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Price</th><th class="right">Amount</th></tr></thead>
+      <tbody>
+        {% for line in invoice.lines %}
+        <tr>
+          <td>{{ line.description }}</td>
+          <td class="right">{{ line.quantity }}</td>
+          <td class="right">{{ line.unit_price_cents|money }}</td>
+          <td class="right">{{ line.amount_cents|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p style="text-align:right;margin-top:16px">
+      Subtotal {{ invoice.subtotal_cents|money }}<br>
+      {% if invoice.discount_cents %}Discount {{ invoice.discount_cents|money }}<br>{% endif %}
+      Tax {{ invoice.tax_cents|money }}<br>
+      <strong>Total {{ invoice.total_cents|money }}</strong><br>
+      Paid {{ paid|money }}<br>
+      <strong>Balance due {{ balance|money }}</strong>
+    </p>
+    {% if invoice.notes %}<p class="tiny">{{ invoice.notes }}</p>{% endif %}
+    <div class="no-print" style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap">
+      {% if public %}
+        <a class="btn btn-secondary" href="{{ url_for('sere.public_invoice_pdf', token=invoice.public_token) }}">Download PDF</a>
+        {% if stripe_ready and balance > 0 %}
+          <span class="notice">Card payments will appear here once Stripe keys are set.</span>
+        {% elif balance > 0 %}
+          <span class="notice">Pay {{ org.name }} by card, ACH, check, or cash. Online card checkout needs STRIPE_SECRET_KEY.</span>
+        {% endif %}
+      {% else %}
+        <a class="btn btn-secondary" href="{{ url_for('sere.invoice_detail', invoice_id=invoice.id) }}">Back</a>
+        <button class="btn" onclick="window.print()">Print</button>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

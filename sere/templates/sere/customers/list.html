@@ -1,0 +1,39 @@
+{% extends "sere/base.html" %}
+{% block title %}Customers · Sere{% endblock %}
+{% block heading %}Customers{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('sere.customer_new') }}">New customer</a>{% endblock %}
+{% block content %}
+<form class="filters" method="get">
+  <input name="q" value="{{ q }}" placeholder="Search name, phone, email" style="border:1px solid var(--line);border-radius:999px;padding:7px 12px;min-width:220px">
+  <a class="chip {{ 'active' if show != 'archived' }}" href="{{ url_for('sere.customers') }}">Active</a>
+  <a class="chip {{ 'active' if show == 'archived' }}" href="{{ url_for('sere.customers', show='archived') }}">Archived</a>
+  <button class="btn btn-secondary btn-sm" type="submit">Search</button>
+</form>
+{% if cards %}
+<div class="card table-wrap">
+  <table class="data">
+    <thead><tr><th>Customer</th><th>Contact</th><th>Since</th><th class="right">Lifetime</th><th class="right">Outstanding</th></tr></thead>
+    <tbody>
+    {% for row in cards %}
+      <tr>
+        <td>
+          <a class="rowlink" href="{{ url_for('sere.customer_detail', customer_id=row.customer.id) }}">{{ row.customer.display_name }}</a>
+          <div class="tiny">{{ row.customer.service_city }} {{ row.customer.service_state }}</div>
+        </td>
+        <td>{{ row.customer.phone }}<div class="tiny">{{ row.customer.email }}</div></td>
+        <td>{{ row.customer.customer_since|date }}</td>
+        <td class="right money">{{ row.revenue|money }}</td>
+        <td class="right money">{{ row.balance|money }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div class="card empty">
+    <h3>No customers yet</h3>
+    <p>Add the first one. A job and an invoice can follow in the next two screens.</p>
+    <a class="btn" href="{{ url_for('sere.customer_new') }}">New customer</a>
+  </div>
+{% endif %}
+{% endblock %}

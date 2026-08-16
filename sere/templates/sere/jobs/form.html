@@ -1,0 +1,43 @@
+{% extends "sere/base.html" %}
+{% block title %}{{ 'Edit' if mode == 'edit' else 'New' }} job · Sere{% endblock %}
+{% block heading %}{{ 'Edit job' if mode == 'edit' else 'New job' }}{% endblock %}
+{% block content %}
+<form method="post" class="card form-grid">
+  <div class="field">
+    <label>Customer</label>
+    <select name="customer_id" required>
+      <option value="">Choose…</option>
+      {% for c in customers %}
+        <option value="{{ c.id }}" {{ 'selected' if job.customer_id == c.id }}>{{ c.display_name }}</option>
+      {% endfor %}
+    </select>
+    <p class="help"><a href="{{ url_for('sere.customer_new') }}">Need a new customer?</a></p>
+  </div>
+  <div class="field"><label>Title</label><input name="title" value="{{ job.title or '' }}" required placeholder="AC replacement"></div>
+  <div class="field full"><label>Work to perform</label><textarea name="description">{{ job.description or '' }}</textarea></div>
+  <div class="field">
+    <label>Status</label>
+    <select name="status">
+      {% for s in ['unscheduled','scheduled','in_progress','completed','cancelled'] %}
+        <option value="{{ s }}" {{ 'selected' if job.status == s }}>{{ s|status }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field"><label>Technician</label><input name="technician_name" value="{{ job.technician_name or '' }}"></div>
+  <div class="field"><label>Start</label><input name="scheduled_start" type="datetime-local" value="{{ job.scheduled_start|isodt }}"></div>
+  <div class="field"><label>End</label><input name="scheduled_end" type="datetime-local" value="{{ job.scheduled_end|isodt }}"></div>
+  <div class="field full"><label>Service address</label><input name="service_line1" value="{{ job.service_line1 or '' }}"></div>
+  <div class="field"><label>City</label><input name="service_city" value="{{ job.service_city or '' }}"></div>
+  <div class="field"><label>State / ZIP</label>
+    <div style="display:flex;gap:8px">
+      <input name="service_state" value="{{ job.service_state or '' }}">
+      <input name="service_postal" value="{{ job.service_postal or '' }}">
+    </div>
+  </div>
+  <div class="field"><label>Estimated revenue</label><input name="estimated_revenue" value="{{ '%.2f' % ((job.estimated_revenue_cents or 0)/100) }}"></div>
+  <div class="field"><label>Actual revenue</label><input name="actual_revenue" value="{{ '%.2f' % ((job.actual_revenue_cents or 0)/100) }}"></div>
+  <div class="field"><label>Estimated cost</label><input name="estimated_cost" value="{{ '%.2f' % ((job.estimated_cost_cents or 0)/100) }}"></div>
+  <div class="field full"><label>Notes</label><textarea name="notes">{{ job.notes or '' }}</textarea></div>
+  <div class="field full"><button class="btn" type="submit">Save job</button></div>
+</form>
+{% endblock %}

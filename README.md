@@ -1,74 +1,75 @@
-# Acsend Call List
+# Sere
 
-Mobile web app for your cold caller. They pick a city, tap **Get My Call List**, and dial HVAC businesses that need a website.
+Sere helps HVAC businesses manage jobs, invoices, payments, and cash flow in one simple place.
 
-## Run locally (same Wi-Fi as your phone)
+Primary domain: [sere.cash](https://sere.cash)
+
+The existing Nexus call-list app is still here at `/nexus`. It was not rewritten.
+
+## Run locally
 
 ```bash
-cd lead-finder
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python app.py
 ```
 
-Open the printed URL on the caller's phone.
+Open the printed URL.
 
-## Deploy online (Render — free tier)
+Demo company (created automatically when the database is empty):
 
-**Why not Netlify?** Netlify hosts static HTML only. This app is Python (Flask) and must run on a server like Render.
+- Email: `owner@sere.cash`
+- Password: `harborair`
+- Company: Harbor Air (Fort Myers)
 
-### 1. Push code to GitHub
+## What Sere does
 
-Your repo: `https://github.com/isaacgonzalez0927-commits/Scraper-V2`
+- **Overview** — collected cash vs invoiced revenue, overdue balances, jobs, invoice status, recent activity
+- **Customers** — contact info, jobs, invoices, payments, notes, photos, lifetime value
+- **Jobs** — schedule, costs, profit, complete, draft an invoice in one click
+- **Invoices** — line items, tax, discounts, preview, PDF, email, public payment link, activity timeline
+- **Payments** — ledger with partial payments; an invoice is never marked paid until the balance is zero
+- **Reports** — money in, outstanding, overdue, expected cash, job profitability
+- **Calendar** — day / week / month of scheduled jobs
+- **Search** — names, phones, emails, addresses, invoice numbers (`⌘K`)
+- **Settings** — company, invoice defaults, payment-provider status, account
 
-Make sure `.env` is **not** committed (it's in `.gitignore`).
+Every business row is scoped by organization. One company’s data cannot appear in another.
 
-### 2. Create a Render web service
+Money is stored as integer cents. Invoice paid amounts are summed from valid payments, never incremented.
 
-1. Go to [render.com](https://render.com) and sign up (free).
-2. **New → Web Service** → connect your GitHub repo `Scraper-V2`.
-3. Settings:
-   - **Root Directory:** `lead-finder` (if the repo root is the parent folder, leave blank if repo IS lead-finder)
-   - **Runtime:** Python
-   - **Build:** `pip install -r requirements.txt`
-   - **Start:** `gunicorn app:app --workers 1 --threads 8 --timeout 180`
-4. **Environment variables** (Environment tab):
-   - `GOOGLE_MAPS_API_KEY` = your Google Places key
-   - `ACCESS_CODE` = a password only your caller knows (e.g. `acsend2026`)
-5. Click **Deploy**.
-
-Render gives you a URL like `https://acsend-leads.onrender.com`.
-
-### 3. Give your caller the link
-
-1. Send them the Render URL.
-2. First time: they enter the **access code** once (saved on their phone).
-3. **Add to Home Screen** (iPhone: Share → Add to Home Screen) so it feels like an app.
-
-### 4. Optional — custom domain
-
-In Render → Settings → Custom Domains, point something like `leads.acsendsites.com` if you own the domain.
-
-## Environment variables
+## Environment
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `GOOGLE_MAPS_API_KEY` | Yes | Google Places search |
-| `ACCESS_CODE` | Recommended | Password so random people can't use your API credits |
-| `OWNER_CODE` | **Required for you** | Your private code to view `/dashboard`, `/reports`, `/history`, `/stats` |
-| `CALLER_NAME` | Optional | Label for who logged calls (default: `sebastien`) |
-| `PORT` | Auto on Render | Local dev only |
+| `SERE_SECRET_KEY` | Production | Session signing |
+| `SERE_PUBLIC_BASE_URL` | Recommended | Public invoice links |
+| `SERE_SMTP_HOST` + related | Optional | Email invoices and password resets |
+| `STRIPE_SECRET_KEY` | Optional | Online card checkout on the public invoice |
+| `SERE_AUTO_SEED` | Optional | Set `0` to skip the Harbor Air demo data |
+| `GOOGLE_MAPS_API_KEY` | Nexus only | Places search for the call list |
+| `ACCESS_CODE` / `OWNER_CODE` | Nexus only | Caller and owner gates |
 
-## Owner dashboard (Isaac)
+Without SMTP, “Email invoice” still marks the invoice sent and shows the shareable link.
 
-After deploy, open:
+Without Stripe, payments are recorded by hand (card, ACH, cash, check).
 
-- **Dashboard:** `https://your-app.onrender.com/dashboard`
-- **Reports:** `/reports` (auto every 100 calls)
-- **Call history:** `/history`
-- **Statistics:** `/stats`
+## Deploy (Render)
 
-Set `OWNER_CODE` in Render env vars. Enter it once when prompted — Isaac sees all data Sebastien logs, live.
+Same service as before. Build `pip install -r requirements.txt`. Start:
 
-Call data is stored in `data/calls.db` on the server (SQLite). For permanent retention on Render, enable a **persistent disk** and mount it at `data/`.
+```bash
+gunicorn app:app --workers 1 --threads 8 --timeout 180
+```
+
+Add a persistent disk at `data/` if you want the SQLite files to survive restarts.
+
+## Nexus
+
+The original HVAC lead / call-list product lives at `/nexus`.
+
+- Caller list: `/nexus/`
+- Owner dashboard: `/nexus/dashboard`
+
+`/dashboard` still redirects to Nexus so existing bookmarks work.

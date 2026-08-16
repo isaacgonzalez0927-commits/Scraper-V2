@@ -10,7 +10,7 @@ OWNER_HEAD = f"""
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Nexus">
-<link rel="manifest" href="/manifest-owner.webmanifest">
+<link rel="manifest" href="/nexus/manifest-owner.webmanifest">
 {NEXUS_ICON_LINKS}
 """
 
@@ -51,11 +51,11 @@ NEXUS_MOBILE_HEADER = """
 NEXUS_DESKTOP_TOPBAR = """
 <div class="desktop-topbar">
 <nav class="desktop-nav">
-  <a href="/" data-nav="calls">Call list</a>
-  <a href="/dashboard" data-nav="dash">Dashboard</a>
-  <a href="/reports" data-nav="reports">Reports</a>
-  <a href="/history" data-nav="history">History</a>
-  <a href="/stats" data-nav="stats">Statistics</a>
+  <a href="/nexus/" data-nav="calls">Call list</a>
+  <a href="/nexus/dashboard" data-nav="dash">Dashboard</a>
+  <a href="/nexus/reports" data-nav="reports">Reports</a>
+  <a href="/nexus/history" data-nav="history">History</a>
+  <a href="/nexus/stats" data-nav="stats">Statistics</a>
 </nav>
 <div class="theme-switch" role="group" aria-label="Appearance">
   <button type="button" data-theme-opt="light" aria-pressed="true">Light</button>
@@ -66,11 +66,11 @@ NEXUS_DESKTOP_TOPBAR = """
 
 NEXUS_BOTTOM_NAV = """
 <nav class="bottom-nav">
-  <a href="/" data-nav="calls">Calls</a>
-  <a href="/dashboard" data-nav="dash">Home</a>
-  <a href="/reports" data-nav="reports">Reports</a>
-  <a href="/history" data-nav="history">History</a>
-  <a href="/stats" data-nav="stats">Stats</a>
+  <a href="/nexus/" data-nav="calls">Calls</a>
+  <a href="/nexus/dashboard" data-nav="dash">Home</a>
+  <a href="/nexus/reports" data-nav="reports">Reports</a>
+  <a href="/nexus/history" data-nav="history">History</a>
+  <a href="/nexus/stats" data-nav="stats">Stats</a>
 </nav>
 """
 
@@ -147,8 +147,8 @@ DASHBOARD_PAGE = f"""<!DOCTYPE html>
 setActiveNav("dash");
 async function loadLearning(){{
   try {{
-    const s = await ownerFetch("/api/learning");
-    const st = await ownerFetch("/api/storage");
+    const s = await ownerFetch("/nexus/api/learning");
+    const st = await ownerFetch("/nexus/api/storage");
     const el = document.getElementById("learnStatus");
     const sel = document.getElementById("storageStatus");
     if(!s.active){{
@@ -164,7 +164,7 @@ async function loadLearning(){{
   }} catch(e) {{}}
 }}
 document.getElementById("backupBtn").onclick = async () => {{
-  const data = await ownerFetch("/api/backup");
+  const data = await ownerFetch("/nexus/api/backup");
   const blob = new Blob([JSON.stringify(data, null, 2)], {{type:"application/json"}});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -177,7 +177,7 @@ document.getElementById("restoreFile").onchange = async (e) => {{
   if(!confirm("Replace ALL call data with this backup?")) return;
   const text = await file.text();
   const payload = JSON.parse(text);
-  const res = await fetch("/api/restore", {{
+  const res = await fetch("/nexus/api/restore", {{
     method:"POST",
     headers: ownerHeaders(),
     body: JSON.stringify(payload)
@@ -187,7 +187,7 @@ document.getElementById("restoreFile").onchange = async (e) => {{
   load(); loadLearning();
 }};
 async function load(){{
-  const d = await ownerFetch("/api/dashboard");
+  const d = await ownerFetch("/nexus/api/dashboard");
   const m = [
     ["Total calls", d.total], ["Interested", d.interested], ["Callbacks", d.callbacks],
     ["Clients", d.clients], ["Interest rate", d.interest_rate+"%"], ["Close rate", d.close_rate+"%"]
@@ -227,7 +227,7 @@ REPORTS_PAGE = f"""<!DOCTYPE html>
 <script>{OWNER_AUTH_JS}
 setActiveNav("reports");
 async function load(){{
-  const reports = await ownerFetch("/api/reports");
+  const reports = await ownerFetch("/nexus/api/reports");
   if(!reports.length){{
     document.getElementById("list").innerHTML = "<p class=sub>No reports yet — first report at call #100.</p>";
     return;
@@ -282,7 +282,7 @@ async function load(){{
     outcome: document.getElementById("fOutcome").value,
     city: document.getElementById("fCity").value,
   }});
-  const rows = await ownerFetch("/api/history?"+q);
+  const rows = await ownerFetch("/nexus/api/history?"+q);
   document.getElementById("rows").innerHTML = rows.map(r=>`
     <tr><td>${{r.business_name}}</td><td>${{r.score??"—"}}</td><td>${{r.lead_type}}</td>
     <td>${{r.outcome_label || r.outcome}}</td><td>${{r.city||"—"}}</td><td>${{r.date_called}}</td></tr>`
@@ -311,7 +311,7 @@ STATS_PAGE = f"""<!DOCTYPE html>
 <script>{OWNER_AUTH_JS}
 setActiveNav("stats");
 async function load(){{
-  const s = await ownerFetch("/api/stats");
+  const s = await ownerFetch("/nexus/api/stats");
   document.getElementById("summary").innerHTML = `
     <div class="card"><div class="num">${{s.avg_score_interested}}</div><div class="lbl">Avg score (interested)</div></div>
     <div class="card"><div class="num">${{s.avg_score_client}}</div><div class="lbl">Avg score (clients)</div></div>

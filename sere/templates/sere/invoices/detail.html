@@ -1,0 +1,72 @@
+{% extends "sere/base.html" %}
+{% block title %}{{ invoice.number }} · Sere{% endblock %}
+{% block heading %}{{ invoice.number }}{% endblock %}
+{% block sub %}<p class="page-sub"><a href="{{ url_for('sere.customer_detail', customer_id=invoice.customer_id) }}">{{ invoice.customer.display_name }}</a> · <span class="badge badge-{{ invoice.status }}">{{ invoice.status|status }}</span></p>{% endblock %}
+{% block actions %}
+  <a class="btn btn-secondary" href="{{ url_for('sere.invoice_preview', invoice_id=invoice.id) }}">Preview</a>
+  <a class="btn btn-secondary" href="{{ url_for('sere.invoice_pdf_route', invoice_id=invoice.id) }}">Download PDF</a>
+  {% if invoice.status not in ['paid','void'] %}
+    <a class="btn" href="{{ url_for('sere.payment_new', invoice_id=invoice.id) }}">Record payment</a>
+    <form method="post" action="{{ url_for('sere.invoice_send', invoice_id=invoice.id) }}">
+      <button class="btn" type="submit">Email invoice</button>
+    </form>
+    <a class="btn btn-ghost" href="{{ url_for('sere.invoice_edit', invoice_id=invoice.id) }}">Edit</a>
+  {% endif %}
+{% endblock %}
+{% block content %}
+<div class="grid grid-4">
+  <article class="card"><p class="stat-label">Total</p><p class="stat-value money">{{ invoice.total_cents|money }}</p></article>
+  <article class="card"><p class="stat-label">Paid</p><p class="stat-value money">{{ paid|money }}</p></article>
+  <article class="card"><p class="stat-label">Remaining</p><p class="stat-value money">{{ balance|money }}</p></article>
+  <article class="card"><p class="stat-label">Due</p><p class="stat-value" style="font-size:22px">{{ invoice.due_date|date }}</p></article>
+</div>
+
+<div class="grid grid-2" style="margin-top:14px">
+  <section class="card">
+    <div class="card-title">Line items</div>
+    <table class="data">
+      <thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Price</th><th class="right">Amount</th></tr></thead>
+      <tbody>
+        {% for line in invoice.lines %}
+        <tr>
+          <td>{{ line.description }}</td>
+          <td class="right">{{ line.quantity }}</td>
+          <td class="right money">{{ line.unit_price_cents|money }}</td>
+          <td class="right money">{{ line.amount_cents|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="tiny">Subtotal {{ invoice.subtotal_cents|money }}
+      {% if invoice.discount_cents %} · Discount {{ invoice.discount_cents|money }}{% endif %}
+      · Tax {{ invoice.tax_cents|money }}</p>
+    {% if invoice.job %}<p>Job: <a href="{{ url_for('sere.job_detail', job_id=invoice.job_id) }}">{{ invoice.job.title }}</a></p>{% endif %}
+    {% if invoice.notes %}<p>{{ invoice.notes }}</p>{% endif %}
+    <div class="notice" style="margin-top:14px">
+      Customer link: <a href="{{ public_url }}">{{ public_url }}</a><br>
+      {% if not email_ready %}Set <code>SERE_SMTP_HOST</code> (and related SMTP vars) to send email from the server.{% endif %}
+      {% if not stripe_ready %} Card links need <code>STRIPE_SECRET_KEY</code> and <code>STRIPE_PUBLISHABLE_KEY</code>.{% endif %}
+    </div>
+    {% if invoice.status not in ['void','paid'] and paid == 0 %}
+    <form method="post" action="{{ url_for('sere.invoice_void', invoice_id=invoice.id) }}" style="margin-top:12px">
+      <button class="btn btn-ghost btn-sm" type="submit">Void invoice</button>
+    </form>
+    {% endif %}
+  </section>
+  <section class="card">
+    <div class="card-title">Activity</div>
+    <ul class="timeline">
+      {% for event in invoice.events %}
+        <li>
+          <strong>{{ event.message }}</strong>
+          {% if event.amount_cents %}<span class="money"> · {{ event.amount_cents|money }}</span>{% endif %}
+          <div class="tiny">{{ event.created_at|when }}</div>
+        </li>
+      {% else %}
+        <li>Invoice created<div class="tiny">{{ invoice.created_at|when }}</div></li>
+      {% endfor %}
+    </ul>
+    <p style="margin-top:16px"><strong>Remaining balance: {{ balance|money }}</strong></p>
+  </section>
+</div>
+{% endblock %}

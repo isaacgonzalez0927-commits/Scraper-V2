@@ -1,0 +1,21 @@
+{% extends "sere/base.html" %}
+{% block title %}Payment · Sere{% endblock %}
+{% block heading %}{{ payment.amount_cents|money }}{% endblock %}
+{% block sub %}<p class="page-sub">{{ payment.paid_on|date }} · {{ payment.method|status }}{% if payment.voided_at %} · Voided{% endif %}</p>{% endblock %}
+{% block content %}
+<section class="card">
+  <p>From <a href="{{ url_for('sere.customer_detail', customer_id=payment.customer_id) }}">{{ payment.customer.display_name }}</a></p>
+  {% if payment.invoice %}
+    <p>Applied to <a href="{{ url_for('sere.invoice_detail', invoice_id=payment.invoice_id) }}">{{ payment.invoice.number }}</a></p>
+  {% else %}
+    <p>Unapplied — not counted against a specific invoice.</p>
+  {% endif %}
+  <p>Reference: {{ payment.reference or '—' }}</p>
+  {% if payment.notes %}<p>{{ payment.notes }}</p>{% endif %}
+  {% if not payment.voided_at %}
+  <form method="post" action="{{ url_for('sere.payment_void', payment_id=payment.id) }}">
+    <button class="btn btn-ghost" type="submit">Void payment</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "sere/base.html" %}
+{% block title %}Create company · Sere{% endblock %}
+{% block heading %}Name your company{% endblock %}
+{% block content %}
+<form method="post" class="card form-grid" style="max-width:480px;grid-template-columns:1fr">
+  <div class="field"><label>Company name</label><input name="company" required></div>
+  <button class="btn" type="submit">Continue</button>
+</form>
+{% endblock %}

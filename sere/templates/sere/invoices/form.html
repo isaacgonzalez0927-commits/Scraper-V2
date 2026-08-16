@@ -1,0 +1,72 @@
+{% extends "sere/base.html" %}
+{% block title %}{{ 'Edit' if mode == 'edit' else 'New' }} invoice · Sere{% endblock %}
+{% block heading %}{{ 'Edit invoice' if mode == 'edit' else 'New invoice' }}{% endblock %}
+{% block content %}
+<form method="post" class="card">
+  <div class="form-grid">
+    <div class="field">
+      <label>Customer</label>
+      <select name="customer_id" id="customer_id" required>
+        <option value="">Choose…</option>
+        {% for c in customers %}
+          <option value="{{ c.id }}" {{ 'selected' if invoice.customer_id == c.id }}>{{ c.display_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Related job</label>
+      <select name="job_id" id="job_id">
+        <option value="">No related job</option>
+        {% for j in jobs %}
+          <option value="{{ j.id }}" {{ 'selected' if invoice.job_id == j.id }}>{{ j.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Issue date</label><input type="date" name="issue_date" value="{{ invoice.issue_date.isoformat() if invoice.issue_date else '' }}"></div>
+    <div class="field"><label>Due date</label><input type="date" name="due_date" value="{{ invoice.due_date.isoformat() if invoice.due_date else '' }}"></div>
+    <div class="field"><label>Tax rate %</label><input name="tax_rate" value="{{ '%.2f' % ((invoice.tax_bps or 0)/100) }}"></div>
+    <div class="field"><label>Discount</label><input name="discount" value="{{ '%.2f' % ((invoice.discount_cents or 0)/100) }}"></div>
+    <div class="field full"><label>Notes</label><textarea name="notes">{{ invoice.notes or '' }}</textarea></div>
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:end;margin:18px 0 10px">
+    <div class="field" style="flex:1">
+      <label>Add a saved service</label>
+      <select id="service-catalog">
+        <option value="">Reusable line items…</option>
+        {% for s in services %}
+          <option value="{{ s.id }}" data-name="{{ s.name }}" data-price="{{ '%.2f' % (s.unit_price_cents/100) }}">{{ s.name }} — {{ s.unit_price_cents|money }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="button" class="btn btn-secondary" id="add-line">Add blank line</button>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th></th></tr></thead>
+      <tbody id="line-body">
+        {% if invoice.lines %}
+          {% for line in invoice.lines %}
+          <tr>
+            <td><input name="line_description" value="{{ line.description }}" required></td>
+            <td><input name="line_quantity" value="{{ line.quantity }}"></td>
+            <td><input name="line_price" value="{{ '%.2f' % (line.unit_price_cents/100) }}"></td>
+            <td><button type="button" class="btn btn-ghost btn-sm" data-remove-line>Remove</button></td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td><input name="line_description" required placeholder="Diagnostic visit"></td>
+            <td><input name="line_quantity" value="1"></td>
+            <td><input name="line_price" placeholder="129.00"></td>
+            <td></td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  <p class="help">Totals, tax, and balance update when you save. Partials never mark an invoice paid.</p>
+  <button class="btn" type="submit" style="margin-top:14px">Save invoice</button>
+</form>
+{% endblock %}

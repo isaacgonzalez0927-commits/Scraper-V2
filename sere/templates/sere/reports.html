@@ -1,0 +1,62 @@
+{% extends "sere/base.html" %}
+{% block title %}Reports · Sere{% endblock %}
+{% block heading %}Cash & profit{% endblock %}
+{% block sub %}<p class="page-sub">Collected cash is not the same as invoiced revenue.</p>{% endblock %}
+{% block content %}
+<form class="filters" method="get">
+  {% for key, label in [('this_week','This week'),('this_month','This month'),('last_month','Last month'),('custom','Custom')] %}
+    <a class="chip {{ 'active' if period == key }}" href="{{ url_for('sere.reports', period=key) }}">{{ label }}</a>
+  {% endfor %}
+</form>
+{% if period == 'custom' %}
+<form class="filters" method="get">
+  <input type="hidden" name="period" value="custom">
+  <input type="date" name="start" value="{{ start.isoformat() }}">
+  <input type="date" name="end" value="{{ end.isoformat() }}">
+  <button class="btn btn-secondary btn-sm" type="submit">Apply</button>
+</form>
+{% endif %}
+
+<div class="grid grid-4">
+  <article class="card stat-good"><p class="stat-label">Money in</p><p class="stat-value money">{{ money_in|money }}</p><p class="stat-note">Payments received in this period</p></article>
+  <article class="card"><p class="stat-label">Invoiced</p><p class="stat-value money">{{ invoiced|money }}</p><p class="stat-note">Issued invoices — not cash</p></article>
+  <article class="card"><p class="stat-label">Outstanding</p><p class="stat-value money">{{ outstanding|money }}</p><p class="stat-note">Still owed, all open invoices</p></article>
+  <article class="card stat-bad"><p class="stat-label">Overdue</p><p class="stat-value money">{{ overdue|money }}</p></article>
+</div>
+
+<div class="grid grid-2" style="margin-top:14px">
+  <section class="card">
+    <div class="card-title">Expected cash by due date</div>
+    {% for row in expected %}
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0eeea">
+        <span>{{ row.date|date }}</span><span class="money">{{ row.amount_cents|money }}</span>
+      </div>
+    {% else %}
+      <p class="muted">Nothing waiting on a due date.</p>
+    {% endfor %}
+  </section>
+  <section class="card">
+    <div class="card-title">Job profitability</div>
+    <p>Average job value <strong class="money">{{ avg_value|money }}</strong></p>
+    <p>Average margin <strong>{{ avg_margin|margin }}</strong></p>
+    <p>Gross profit in period <strong class="money">{{ monthly_profit|money }}</strong></p>
+  </section>
+</div>
+
+<div class="grid grid-2" style="margin-top:14px">
+  <section class="card">
+    <div class="card-title">Most profitable</div>
+    {% for row in best %}
+      <p><a href="{{ url_for('sere.job_detail', job_id=row.job.id) }}">{{ row.job.title }}</a>
+        <span class="money">{{ row.profit|money }}</span></p>
+    {% else %}<p class="muted">Complete a job and add costs to see this.</p>{% endfor %}
+  </section>
+  <section class="card">
+    <div class="card-title">Least profitable</div>
+    {% for row in worst %}
+      <p><a href="{{ url_for('sere.job_detail', job_id=row.job.id) }}">{{ row.job.title }}</a>
+        <span class="money">{{ row.profit|money }}</span></p>
+    {% else %}<p class="muted">No completed jobs in this period.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}
