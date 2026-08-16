@@ -10,6 +10,9 @@ export const metadata: Metadata = {
     shortcut: "/favicon.png",
     apple: "/icon-192.png",
   },
+  appleWebApp: {
+    title: "Sere",
+  },
   manifest: "/manifest.webmanifest",
 };
 
