@@ -5,10 +5,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from paths import DATA_ROOT
-
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
+DATA_ROOT = Path(os.getenv("SERE_DATA_DIR", str(ROOT / "data")))
+DATA_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 class Config:
@@ -19,7 +19,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
     MAX_CONTENT_LENGTH = 12 * 1024 * 1024
-    UPLOAD_FOLDER = Path(os.getenv("SERE_UPLOAD_DIR", str(DATA_ROOT / "sere_uploads")))
+    UPLOAD_FOLDER = Path(os.getenv("SERE_UPLOAD_DIR", str(DATA_ROOT / "uploads")))
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_NAME = "sere_session"
@@ -39,4 +39,3 @@ class Config:
     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
 
     AUTO_SEED = os.getenv("SERE_AUTO_SEED", "1") != "0"
-    PRESERVE_NEXUS = os.getenv("SERE_PRESERVE_NEXUS", "1") != "0"

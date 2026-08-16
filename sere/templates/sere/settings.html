@@ -63,7 +63,6 @@
   {% endif %}
   <p class="tiny" style="margin-top:12px">Email invoices need <code>SERE_SMTP_HOST</code>, <code>SERE_SMTP_PORT</code>, <code>SERE_SMTP_USER</code>, <code>SERE_SMTP_PASSWORD</code>, <code>SERE_SMTP_FROM</code>.
     {% if smtp_ready %} SMTP is configured.{% else %} SMTP is not configured — send will mark the invoice sent and show the share link.{% endif %}</p>
-  <p class="tiny" style="margin-top:16px">Need the old lead list? <a href="/nexus/">Open Nexus</a>.</p>
 </section>
 {% else %}
 <form method="post" class="card form-grid">

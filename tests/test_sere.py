@@ -20,7 +20,6 @@ def app(tmp_path):
     application = create_app(
         SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'test.db'}",
         AUTO_SEED=False,
-        PRESERVE_NEXUS=False,
         TESTING=True,
         SECRET_KEY="test",
         WTF_CSRF_ENABLED=False,

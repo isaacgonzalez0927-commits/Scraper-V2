@@ -4,8 +4,6 @@ Sere helps HVAC businesses manage jobs, invoices, payments, and cash flow in one
 
 Primary domain: [sere.cash](https://sere.cash)
 
-The existing Nexus call-list app is still here at `/nexus`. It was not rewritten.
-
 ## Run locally
 
 ```bash
@@ -45,11 +43,10 @@ Money is stored as integer cents. Invoice paid amounts are summed from valid pay
 |----------|----------|---------|
 | `SERE_SECRET_KEY` | Production | Session signing |
 | `SERE_PUBLIC_BASE_URL` | Recommended | Public invoice links |
+| `SERE_DATA_DIR` | Optional | Where SQLite and uploads live (default `data/`) |
 | `SERE_SMTP_HOST` + related | Optional | Email invoices and password resets |
 | `STRIPE_SECRET_KEY` | Optional | Online card checkout on the public invoice |
 | `SERE_AUTO_SEED` | Optional | Set `0` to skip the Harbor Air demo data |
-| `GOOGLE_MAPS_API_KEY` | Nexus only | Places search for the call list |
-| `ACCESS_CODE` / `OWNER_CODE` | Nexus only | Caller and owner gates |
 
 Without SMTP, “Email invoice” still marks the invoice sent and shows the shareable link.
 
@@ -57,19 +54,10 @@ Without Stripe, payments are recorded by hand (card, ACH, cash, check).
 
 ## Deploy (Render)
 
-Same service as before. Build `pip install -r requirements.txt`. Start:
+Build `pip install -r requirements.txt`. Start:
 
 ```bash
 gunicorn app:app --workers 1 --threads 8 --timeout 180
 ```
 
-Add a persistent disk at `data/` if you want the SQLite files to survive restarts.
-
-## Nexus
-
-The original HVAC lead / call-list product lives at `/nexus`.
-
-- Caller list: `/nexus/`
-- Owner dashboard: `/nexus/dashboard`
-
-`/dashboard` still redirects to Nexus so existing bookmarks work.
+Add a persistent disk mounted at `data/` if you want the SQLite files to survive restarts.

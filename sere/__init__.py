@@ -1,10 +1,10 @@
-"""Sere application factory. Nexus stays available at /nexus."""
+"""Sere application factory."""
 
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 
-from flask import Flask, g, redirect, render_template
+from flask import Flask, g, render_template
 
 from sere.auth import load_request_context
 from sere.config import ROOT, Config
@@ -17,7 +17,7 @@ from sere.views import bp as sere_bp
 def create_app(config_class: type = Config, **overrides) -> Flask:
     app = Flask(
         "sere",
-        static_folder=str(ROOT / "static"),
+        static_folder=str(ROOT / "sere" / "static"),
         template_folder=str(ROOT / "sere" / "templates"),
     )
     app.config.from_object(config_class)
@@ -43,19 +43,6 @@ def create_app(config_class: type = Config, **overrides) -> Flask:
         }
 
     app.register_blueprint(sere_bp)
-
-    if app.config.get("PRESERVE_NEXUS", True):
-        from nexus_web import nexus_bp
-
-        app.register_blueprint(nexus_bp)
-
-        @app.get("/dashboard")
-        def _nexus_dashboard_redirect():
-            return redirect("/nexus/dashboard")
-
-        @app.get("/generate")
-        def _nexus_generate_redirect():
-            return redirect("/nexus/generate", code=307)
 
     @app.errorhandler(404)
     def _not_found(_e):
@@ -83,7 +70,9 @@ def _configure_jinja(app: Flask) -> None:
     app.jinja_env.filters["money"] = format_money
     app.jinja_env.filters["percent"] = format_percent
     app.jinja_env.filters["margin"] = format_margin
-    app.jinja_env.filters["status"] = lambda v: STATUS_LABELS.get(v, (v or "").replace("_", " ").title())
+    app.jinja_env.filters["status"] = lambda v: STATUS_LABELS.get(
+        v, (v or "").replace("_", " ").title()
+    )
 
     def pretty_date(value):
         if not value:

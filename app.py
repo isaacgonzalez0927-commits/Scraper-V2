@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
-"""Sere — jobs, invoices, payments, and cash for HVAC shops.
-
-Nexus (the existing call-list app) remains at /nexus.
-"""
+"""Sere — jobs, invoices, payments, and cash for HVAC shops."""
 
 from __future__ import annotations
 
 import os
 import socket
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-from paths import HERE
 from sere import create_app
 
-load_dotenv(HERE / ".env")
+load_dotenv(Path(__file__).parent / ".env")
 
 app = create_app()
 
@@ -36,9 +33,8 @@ if __name__ == "__main__":
     print("=" * 60)
     print("Sere — jobs, invoices, payments, cash")
     print("=" * 60)
-    print(f"  Sere              : http://127.0.0.1:{port}")
+    print(f"  Local             : http://127.0.0.1:{port}")
     print(f"  On your network   : http://{ip}:{port}")
-    print(f"  Demo login        : owner@sere.cash / harborair")
-    print(f"  Nexus (preserved) : http://127.0.0.1:{port}/nexus/")
+    print("  Demo login        : owner@sere.cash / harborair")
     print("=" * 60)
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
