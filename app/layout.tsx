@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   title: "Sere",
   description: "Jobs, invoices, payments, and cash for HVAC shops.",
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
     apple: "/icon-192.png",
   },
   manifest: "/manifest.webmanifest",

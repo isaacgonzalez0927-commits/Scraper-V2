@@ -1,5 +1,5 @@
 import { resetAction } from "../../actions";
-import { BrandMark } from "@/components/BrandMark";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +16,7 @@ export default async function ResetPage({
     <div className="auth-shell">
       <div className="auth-card">
         <div className="brand" style={{ paddingBottom: 28 }}>
-          <BrandMark className="brand-mark-image" size={40} />
-          <span className="brand-name">Sere</span>
+          <BrandLogo className="brand-lockup" variant="lockup" />
         </div>
         <h1 className="page-title" style={{ fontSize: 28 }}>Choose a new password</h1>
         {q.error ? <div className="flash flash-error">{q.error}</div> : null}

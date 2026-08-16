@@ -627,6 +627,14 @@ body {
   display: block;
   object-fit: contain;
 }
+.brand-lockup {
+  flex-shrink: 0;
+  display: block;
+  height: 36px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
 .brand-name {
   color: #211758;
   font-family: var(--sans);
@@ -798,7 +806,7 @@ table.data a.rowlink:hover { color: var(--accent); }
   padding: 34px;
 }
 .auth-card .brand { padding: 0 0 28px; }
-.auth-card .brand-mark-image { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
+.auth-card .brand-lockup { height: 40px; }
 .auth-card .brand-name { font-size: 26px; }
 .auth-card .page-title { font-size: 29px !important; margin-bottom: 8px; }
 
@@ -809,7 +817,7 @@ table.data a.rowlink:hover { color: var(--accent); }
     #faf9fd;
 }
 .landing-nav { max-width: 1180px; padding: 28px 30px; }
-.landing-brand .brand-mark-image { width: 36px; height: 36px; min-width: 36px; min-height: 36px; }
+.landing-brand .brand-lockup { height: 34px; }
 .landing-brand .brand-name { font-size: 25px; }
 .landing-nav nav { display: flex; align-items: center; gap: 20px; }
 .landing-nav nav > a:not(.btn) { color: #6d6880; font-size: 13px; font-weight: 550; }
