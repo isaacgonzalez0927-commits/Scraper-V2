@@ -43,9 +43,15 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
-a { color: var(--accent); text-decoration: none; }
-a:hover { color: var(--accent-hover); }
-button, input, select, textarea { font: inherit; color: inherit; }
+a:where(:not(.btn):not(.chip):not(.rowlink)) {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:where(:not(.btn):not(.chip):not(.rowlink)):hover {
+  color: var(--accent-hover);
+}
+button, input, select, textarea { font: inherit; }
+button:not(.btn), input, select, textarea { color: inherit; }
 img { max-width: 100%; }
 
 .money, .tabular { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
@@ -702,19 +708,36 @@ body {
   border-radius: 10px;
   padding: 8px 14px;
   background: linear-gradient(135deg, #6944e7, #4d2ac4);
+  color: #fff;
   box-shadow: 0 5px 12px rgba(86, 49, 205, .16);
   font-size: 13px;
   letter-spacing: -0.005em;
 }
-.btn:hover { background: linear-gradient(135deg, #5c37d2, #4321b0); box-shadow: 0 7px 16px rgba(86, 49, 205, .2); }
+.btn:hover {
+  background: linear-gradient(135deg, #5c37d2, #4321b0);
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(86, 49, 205, .2);
+}
 .btn-secondary {
   background: #fff;
+  color: var(--ink);
   border-color: var(--line);
   box-shadow: var(--shadow-sm);
 }
-.btn-secondary:hover { background: #faf9ff; border-color: #d1c9f3; }
-.btn-ghost { box-shadow: none; }
-.btn-ghost:hover { background: #f0eff7; }
+.btn-secondary:hover {
+  background: #faf9ff;
+  color: var(--ink);
+  border-color: #d1c9f3;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  box-shadow: none;
+}
+.btn-ghost:hover {
+  background: #f0eff7;
+  color: var(--ink);
+}
 
 .grid { gap: 16px; }
 .card {
@@ -869,4 +892,25 @@ table.data a.rowlink:hover { color: var(--accent); }
   .hero { padding-top: 72px; }
   .landing-nav { padding: 20px 18px; }
   .points { padding: 0 18px; }
+}
+
+/* Link-styled buttons must not inherit global anchor colors. */
+a.btn,
+a.btn:hover,
+a.btn:active {
+  color: #fff;
+}
+a.btn-secondary,
+a.btn-secondary:hover,
+a.btn-secondary:active {
+  color: var(--ink);
+}
+a.btn-ghost,
+a.btn-ghost:hover,
+a.btn-ghost:active {
+  color: var(--ink-soft);
+}
+a.btn-ghost:hover,
+a.btn-ghost:active {
+  color: var(--ink);
 }
