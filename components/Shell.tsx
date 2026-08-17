@@ -16,8 +16,8 @@ const NAV = [
 const BOTTOM_NAV = [
   ["/overview", "Home", "grid"],
   ["/jobs", "Jobs", "briefcase"],
+  ["/calendar", "Calendar", "calendar"],
   ["/invoices", "Invoices", "file"],
-  ["/payments", "Cash", "card"],
   ["/settings", "Settings", "settings"],
 ] as const;
 
@@ -40,6 +40,7 @@ const FILL: Record<string, React.ReactNode> = {
   briefcase: <><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M8.5 7V5.5A2 2 0 0 1 10.5 3.5h3a2 2 0 0 1 2 2V7" fill="none" stroke="currentColor" strokeWidth="1.7" /></>,
   file: <path d="M6 3.5h7.5L18 8v12.5H6z" />,
   card: <rect x="3" y="5" width="18" height="14" rx="2.5" />,
+  calendar: <><rect x="3.5" y="5.5" width="17" height="15" rx="2.5" /><path d="M8 3.5v4M16 3.5v4" fill="none" stroke="currentColor" strokeWidth="1.7" /></>,
   settings: <><circle cx="12" cy="12" r="8.2" opacity="0.22" /><circle cx="12" cy="12" r="3.2" /><path d="M12 3.5v2.2M12 18.3v2.2M4.9 7.8l1.9 1.1M17.2 15.1l1.9 1.1M4.9 16.2l1.9-1.1M17.2 8.9l1.9-1.1" fill="none" stroke="currentColor" strokeWidth="1.8" /></>,
 };
 
