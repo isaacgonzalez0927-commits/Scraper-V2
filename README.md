@@ -16,11 +16,17 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-A demo company is created automatically when the database is empty:
+A demo company, Harbor Air of Fort Myers, is created automatically when the database is
+empty. Open [/demo](http://localhost:3000/demo) and you are in it, with no sign in and
+nothing to type. That is also what the **Open the demo** buttons on the landing and sign
+in pages do.
 
-- Email: `owner@sere.cash`
-- Password: `harborair`
-- Company: Harbor Air (Fort Myers)
+The demo is a real signed in session on real seeded data, so anything a visitor changes
+sticks until the database is reseeded. **Leave the demo** in the sidebar signs out.
+
+The same company still accepts a normal sign in with `owner@sere.cash` and password
+`harborair`. Set `SERE_DEMO=0` to close the no sign in door, or `SERE_AUTO_SEED=0` to
+skip the demo company entirely.
 
 ```bash
 npm test
@@ -63,6 +69,7 @@ Two rules the code keeps:
 | `TURSO_AUTH_TOKEN` | Production | Turso auth token |
 | `SERE_PUBLIC_BASE_URL` | Recommended | Public origin for invoice links, for example `https://sere.cash` |
 | `SERE_AUTO_SEED` | Optional | Set to `0` to skip the Harbor Air demo data |
+| `SERE_DEMO` | Optional | Set to `0` to close the no sign in demo door at `/demo` |
 | `STRIPE_SECRET_KEY` | Optional | Deployment-wide Stripe fallback for a single-shop install |
 | `RESEND_API_KEY` and `SERE_EMAIL_FROM` | Optional | Deployment-wide email fallback |
 

@@ -29,8 +29,10 @@ export default async function LoginPage({
           <BrandLogo className="brand-lockup" />
         </div>
         <h1 className="auth-title">Sign in</h1>
-        <p className="auth-sub">Harbor Air demo: owner@sere.cash with password harborair</p>
+        <p className="auth-sub">Or skip it and look around the Harbor Air demo first.</p>
         <Banner error={bootError || q.error} ok={q.ok} />
+        <a className="btn btn-secondary btn-block" href="/demo">Open the demo, no sign in</a>
+        <div className="or">or sign in</div>
         <form action={loginAction} className="stack">
           <input type="hidden" name="next" value={q.next || "/overview"} />
           <label>

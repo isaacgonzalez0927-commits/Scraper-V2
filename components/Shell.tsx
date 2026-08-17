@@ -55,6 +55,7 @@ export function Shell({
   orgName,
   userName,
   unread,
+  isDemo,
   path,
   title,
   sub,
@@ -64,6 +65,7 @@ export function Shell({
   orgName: string;
   userName: string;
   unread: number;
+  isDemo?: boolean;
   path: string;
   title: string;
   sub?: React.ReactNode;
@@ -86,12 +88,20 @@ export function Shell({
           ))}
         </nav>
         <div className="sidebar-foot">
+          {isDemo ? (
+            <a className="demo-chip" href="/signup">
+              <strong>Demo shop</strong>
+              <span>Change anything. Create your own when you are ready.</span>
+            </a>
+          ) : null}
           <a className="org-chip" href="/settings">
             <strong>{orgName}</strong>
             <span>{userName}</span>
           </a>
           <form action={logoutAction}>
-            <button className="btn btn-ghost btn-sm btn-block" type="submit">Sign out</button>
+            <button className="btn btn-ghost btn-sm btn-block" type="submit">
+              {isDemo ? "Leave the demo" : "Sign out"}
+            </button>
           </form>
         </div>
       </aside>

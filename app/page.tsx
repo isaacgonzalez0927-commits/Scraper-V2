@@ -39,10 +39,12 @@ export default function LandingPage() {
         </p>
         <div className="hero-actions">
           <Link className="btn" href="/signup">Create your shop</Link>
-          <Link className="btn btn-secondary" href="/login">Open the demo</Link>
+          {/* A route handler, not a page, so keep it a plain anchor and skip prefetch. */}
+          <a className="btn btn-secondary" href="/demo">Open the demo</a>
         </div>
         <p className="hero-note">
-          Demo sign in: <code>owner@sere.cash</code> with password <code>harborair</code>
+          The demo opens a real shop with a month of jobs, invoices, and payments.
+          No sign in, no email, nothing to fill in.
         </p>
       </section>
 
