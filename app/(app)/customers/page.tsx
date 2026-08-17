@@ -1,8 +1,8 @@
 import { and, eq, isNotNull, isNull, like, or } from "drizzle-orm";
-import { Empty } from "@/components/ui";
+import { Empty, RecordTable, SearchField, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
-import { displayName } from "@/lib/display";
+import { displayName, formatAddress } from "@/lib/display";
 import { formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
 import { loadApp } from "@/lib/page";
@@ -47,52 +47,67 @@ export default async function CustomersPage({
       {...shell}
       path="/customers"
       title="Customers"
+      sub={<p className="page-sub">Who you work for, what they have paid, and what they still owe.</p>}
       actions={<a className="btn" href="/customers/new">New customer</a>}
     >
-      <form className="filters" method="get">
-        <input
-          name="q"
-          defaultValue={term}
-          placeholder="Search name, phone, email"
-          style={{ border: "1px solid var(--line)", borderRadius: 999, padding: "7px 12px", minWidth: 220 }}
+      <div className="toolbar">
+        <Tabs
+          tabs={[
+            { key: "active", name: "Active", href: "/customers" },
+            { key: "archived", name: "Archived", href: "/customers?show=archived" },
+          ]}
+          active={archived ? "archived" : "active"}
         />
-        {archived ? <input type="hidden" name="show" value="archived" /> : null}
-        <a className={`chip ${archived ? "" : "active"}`} href="/customers">Active</a>
-        <a className={`chip ${archived ? "active" : ""}`} href="/customers?show=archived">Archived</a>
-        <button className="btn btn-secondary btn-sm" type="submit">Search</button>
-      </form>
+        <SearchField
+          value={term}
+          placeholder="Name, phone, or email"
+          hidden={archived ? { show: "archived" } : undefined}
+        />
+      </div>
+
       {cards.length ? (
-        <div className="card table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Contact</th>
-                <th>Since</th>
-                <th className="right">Lifetime</th>
-                <th className="right">Outstanding</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cards.map(({ customer, revenue, balance }) => (
-                <tr key={customer.id}>
-                  <td>
-                    <a className="rowlink" href={`/customers/${customer.id}`}>{displayName(customer)}</a>
-                    <div className="tiny">{customer.serviceCity} {customer.serviceState}</div>
-                  </td>
-                  <td>{customer.phone}<div className="tiny">{customer.email}</div></td>
-                  <td>{prettyDate(customer.customerSince)}</td>
-                  <td className="right money">{formatMoney(revenue)}</td>
-                  <td className="right money">{formatMoney(balance)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RecordTable
+          columns={[
+            { label: "Customer" },
+            { label: "Contact" },
+            { label: "Customer since" },
+            { label: "Paid to date", align: "right" },
+            { label: "Outstanding", align: "right" },
+          ]}
+          records={cards.map(({ customer, revenue, balance }) => ({
+            key: customer.id,
+            href: `/customers/${customer.id}`,
+            cells: [
+              <>
+                <a className="rowlink" href={`/customers/${customer.id}`}>{displayName(customer)}</a>
+                <div className="tiny">
+                  {formatAddress("", customer.serviceCity, customer.serviceState, customer.servicePostal)}
+                </div>
+              </>,
+              <>
+                {customer.phone}
+                <div className="tiny">{customer.email}</div>
+              </>,
+              prettyDate(customer.customerSince),
+              <span className="money">{formatMoney(revenue)}</span>,
+              <span className="money">{formatMoney(balance)}</span>,
+            ],
+            phone: {
+              title: displayName(customer),
+              meta: customer.phone || customer.email || "No contact details",
+              amount: formatMoney(balance),
+              amountNote: balance > 0 ? "outstanding" : "all paid",
+            },
+          }))}
+        />
       ) : (
         <Empty
-          title="No customers yet"
-          body="Add the first one. A job and an invoice can follow in the next two screens."
+          title={term ? "No customers matched that search" : "No customers yet"}
+          body={
+            term
+              ? "Try a phone number, a last name, or part of an email address."
+              : "Add the first one. A job and an invoice can follow in the next two screens."
+          }
           href="/customers/new"
           action="New customer"
         />

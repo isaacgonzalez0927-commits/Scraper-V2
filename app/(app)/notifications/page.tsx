@@ -1,5 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { markNotificationsReadAction } from "@/app/actions";
+import { Card, Empty } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { prettyWhen } from "@/lib/labels";
@@ -13,34 +14,45 @@ export default async function NotificationsPage() {
     .from(notifications)
     .where(eq(notifications.organizationId, org.id))
     .orderBy(desc(notifications.createdAt));
+  const unread = rows.filter((n) => !n.readAt).length;
 
   return (
     <Shell
       {...shell}
       path="/notifications"
       title="Alerts"
+      sub={<p className="page-sub">{unread ? `${unread} unread` : "Everything is read."}</p>}
       actions={
-        <form action={markNotificationsReadAction}>
-          <button className="btn btn-secondary btn-sm" type="submit">Mark all read</button>
-        </form>
+        unread ? (
+          <form action={markNotificationsReadAction}>
+            <button className="btn btn-secondary" type="submit">Mark all read</button>
+          </form>
+        ) : null
       }
     >
-      <section className="card">
-        {rows.length ? (
+      {rows.length ? (
+        <Card flush>
           <ul className="list">
             {rows.map((n) => (
-              <li key={n.id} style={n.readAt ? { opacity: 0.6 } : undefined}>
+              <li key={n.id} style={{ padding: "12px 18px" }}>
                 <div>
-                  <a href={n.link || "/overview"}>{n.title}</a>
-                  <div className="tiny">{n.body} · {prettyWhen(n.createdAt)}</div>
+                  <a className="rowlink" href={n.link || "/overview"}>{n.title}</a>
+                  <div className="tiny">
+                    {n.body ? `${n.body} · ` : ""}
+                    {prettyWhen(n.createdAt)}
+                  </div>
                 </div>
+                {n.readAt ? null : <span className="badge badge-viewed">New</span>}
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="muted">No alerts yet.</p>
-        )}
-      </section>
+        </Card>
+      ) : (
+        <Empty
+          title="No alerts yet"
+          body="Sere tells you when an invoice is viewed, paid, or goes overdue."
+        />
+      )}
     </Shell>
   );
 }

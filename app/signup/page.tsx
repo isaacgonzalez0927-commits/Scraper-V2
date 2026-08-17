@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signupAction } from "../actions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { Banner } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -11,33 +12,37 @@ export default async function SignupPage({
 }) {
   const q = await searchParams;
   return (
-    <div className="auth-shell">
+    <div className="auth">
       <div className="auth-card">
-        <div className="brand" style={{ paddingBottom: 28 }}>
+        <div className="brand">
           <BrandLogo className="brand-lockup" />
         </div>
-        <h1 className="page-title" style={{ fontSize: 28 }}>Create your shop</h1>
-        {q.error ? <div className="flash flash-error">{q.error}</div> : null}
+        <h1 className="auth-title">Create your shop</h1>
+        <p className="auth-sub">Two minutes to your first invoice. No card needed.</p>
+        <Banner error={q.error} />
         <form action={signupAction} className="stack">
           <label>
             Shop name
-            <input name="company" required />
+            <input name="company" required autoComplete="organization" enterKeyHint="next" />
           </label>
           <label>
             Your name
-            <input name="name" required />
+            <input name="name" required autoComplete="name" enterKeyHint="next" />
           </label>
           <label>
             Email
-            <input name="email" type="email" required />
+            <input name="email" type="email" required autoComplete="email" inputMode="email" enterKeyHint="next" />
           </label>
           <label>
             Password
-            <input name="password" type="password" required minLength={8} />
+            <input name="password" type="password" required minLength={8} autoComplete="new-password" enterKeyHint="go" />
           </label>
           <button className="btn" type="submit">Create shop</button>
         </form>
-        <p>Already have an account? <Link href="/login">Sign in</Link></p>
+        <div className="auth-foot">
+          <span>Already have an account?</span>
+          <Link href="/login">Sign in</Link>
+        </div>
       </div>
     </div>
   );

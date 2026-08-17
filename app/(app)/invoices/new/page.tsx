@@ -18,7 +18,13 @@ export default async function NewInvoicePage({
     db().select().from(serviceItems).where(eq(serviceItems.organizationId, org.id)),
   ]);
   return (
-    <Shell {...shell} path="/invoices" title="New invoice">
+    <Shell
+      {...shell}
+      path="/invoices"
+      title="New invoice"
+      sub={<p className="page-sub">Numbered {org.invoicePrefix}{org.nextInvoiceNumber} when you save it.</p>}
+      actions={<a className="btn btn-secondary" href="/invoices">Cancel</a>}
+    >
       <InvoiceForm
         customerRows={customerRows}
         jobRows={jobRows}

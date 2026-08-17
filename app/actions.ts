@@ -5,15 +5,22 @@ import { redirect } from "next/navigation";
 import { boot } from "@/lib/boot";
 import { clearSession, createSession, hashPassword, requireContext, verifyPassword } from "@/lib/auth";
 import { db, nowISO, token } from "@/lib/db";
+import { invoiceEmail, sendEmail } from "@/lib/email";
 import {
   addEvent,
   applyPayment,
+  balanceCents,
+  amountPaidCents,
   logActivity,
   nextInvoiceNumber,
   refreshInvoice,
   totalsFromLines,
 } from "@/lib/finance";
-import { dollarsToCents } from "@/lib/money";
+import { disconnectIntegration, emailConfig, saveIntegration } from "@/lib/integrations";
+import { dollarsToCents, formatMoney } from "@/lib/money";
+import { prettyDate } from "@/lib/labels";
+import { accountLabel, retrieveAccount } from "@/lib/stripe";
+import { absoluteBaseUrl } from "@/lib/url";
 import {
   customers,
   invoiceLines,
@@ -141,7 +148,7 @@ export async function saveCustomerAction(form: FormData) {
     .insert(customers)
     .values({ ...row, organizationId: org.id, createdAt: nowISO() })
     .returning();
-  await logActivity(org.id, "customer_created", `New customer — ${created.name}`, null, `/customers/${created.id}`);
+  await logActivity(org.id, "customer_created", `New customer: ${created.name}`, null, `/customers/${created.id}`);
   if (str(form, "next") === "job") redirect(`/jobs/new?customerId=${created.id}`);
   redirect(`/customers/${created.id}`);
 }
@@ -197,7 +204,7 @@ export async function saveJobAction(form: FormData) {
     redirect(`/jobs/${id}`);
   }
   const [job] = await db().insert(jobs).values({ ...row, organizationId: org.id, createdAt: nowISO() }).returning();
-  await logActivity(org.id, "job_created", `New job created — ${job.title}`, job.estimatedRevenueCents, `/jobs/${job.id}`);
+  await logActivity(org.id, "job_created", `New job: ${job.title}`, job.estimatedRevenueCents, `/jobs/${job.id}`);
   redirect(`/jobs/${job.id}`);
 }
 
@@ -210,7 +217,7 @@ export async function updateJobStatusAction(form: FormData) {
   await db().update(jobs).set(patch).where(and(eq(jobs.id, id), eq(jobs.organizationId, org.id)));
   if (status === "completed") {
     const [job] = await db().select().from(jobs).where(eq(jobs.id, id));
-    await logActivity(org.id, "job_completed", `Job completed — ${job.title}`, job.estimatedRevenueCents, `/jobs/${id}`);
+    await logActivity(org.id, "job_completed", `Job completed: ${job.title}`, job.estimatedRevenueCents, `/jobs/${id}`);
   }
   redirect(`/jobs/${id}`);
 }
@@ -364,14 +371,40 @@ export async function sendInvoiceAction(form: FormData) {
   const id = Number(str(form, "id"));
   const [invoice] = await db().select().from(invoices).where(and(eq(invoices.id, id), eq(invoices.organizationId, org.id)));
   if (!invoice) redirect("/invoices");
+  const [customer] = await db().select().from(customers).where(eq(customers.id, invoice.customerId));
   await db()
     .update(invoices)
     .set({ sentAt: invoice.sentAt || nowISO(), status: invoice.status === "draft" ? "sent" : invoice.status })
     .where(eq(invoices.id, id));
-  await addEvent(org.id, id, "sent", `Sent to customer`);
+  await addEvent(org.id, id, "sent", "Marked as sent");
   await refreshInvoice(id, org.id);
-  const configured = Boolean(process.env.SERE_SMTP_HOST);
-  redirect(configured ? `/invoices/${id}` : `/invoices/${id}?notice=Marked+as+sent.+Set+SERE_SMTP_HOST+to+email+it.`);
+
+  const config = await emailConfig(org.id);
+  let notice = "Marked as sent. Share the customer link below.";
+  if (!customer?.email) {
+    notice = "Marked as sent. This customer has no email address on file.";
+  } else if (!config) {
+    notice = "Marked as sent. Connect email under Settings to deliver it automatically.";
+  } else {
+    const paid = await amountPaidCents(id);
+    const base = await absoluteBaseUrl();
+    const body = invoiceEmail({
+      shopName: org.name,
+      invoiceNumber: invoice.number,
+      amountDue: formatMoney(balanceCents(invoice.totalCents, paid, invoice.status)),
+      dueDate: prettyDate(invoice.dueDate),
+      payUrl: `${base}/p/inv/${invoice.publicToken}`,
+      notes: invoice.notes,
+    });
+    try {
+      await sendEmail(config, { to: customer.email, ...body });
+      await addEvent(org.id, id, "emailed", `Emailed to ${customer.email}`);
+      notice = `Invoice emailed to ${customer.email}.`;
+    } catch (error) {
+      notice = `Marked as sent, but the email did not go out. ${(error as Error).message}`;
+    }
+  }
+  redirect(`/invoices/${id}?notice=${encodeURIComponent(notice)}`);
 }
 
 export async function voidInvoiceAction(form: FormData) {
@@ -463,6 +496,90 @@ export async function saveSettingsAction(form: FormData) {
     }
   }
   redirect(`/settings?tab=${section === "service" ? "invoices" : section}`);
+}
+
+const INTEGRATIONS_TAB = "/settings?tab=integrations";
+
+export async function connectStripeAction(form: FormData) {
+  const { org } = await requireContext();
+  const secretKey = str(form, "stripe_secret_key");
+  const publishableKey = str(form, "stripe_publishable_key");
+  const webhookSecret = str(form, "stripe_webhook_secret");
+  if (!secretKey) {
+    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Paste your Stripe secret key first.")}`);
+  }
+  if (!/^(sk|rk)_(test|live)_/.test(secretKey)) {
+    redirect(
+      `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
+        "That does not look like a Stripe secret key. It starts with sk_live_, sk_test_, or rk_live_.",
+      )}`,
+    );
+  }
+
+  let failure = "";
+  let label = "";
+  try {
+    label = accountLabel(await retrieveAccount(secretKey));
+  } catch (error) {
+    failure = (error as Error).message;
+  }
+  if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
+
+  await saveIntegration(org.id, "stripe", { secretKey, publishableKey, webhookSecret }, label);
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Stripe connected to ${label}.`)}`);
+}
+
+export async function disconnectStripeAction() {
+  const { org } = await requireContext();
+  await disconnectIntegration(org.id, "stripe");
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("Stripe disconnected. Payments can still be logged by hand.")}`);
+}
+
+export async function connectEmailAction(form: FormData) {
+  const { org } = await requireContext();
+  const apiKey = str(form, "email_api_key");
+  const fromEmail = str(form, "email_from").toLowerCase();
+  const fromName = str(form, "email_from_name") || org.name;
+  const replyTo = str(form, "email_reply_to");
+  if (!apiKey || !fromEmail) {
+    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("An API key and a from address are both required.")}`);
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(fromEmail)) {
+    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("That from address is not a valid email address.")}`);
+  }
+  await saveIntegration(
+    org.id,
+    "email",
+    { provider: "resend", apiKey, fromEmail, fromName, replyTo },
+    fromEmail,
+  );
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("Email connected. Send yourself a test to confirm.")}`);
+}
+
+export async function disconnectEmailAction() {
+  const { org } = await requireContext();
+  await disconnectIntegration(org.id, "email");
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("Email disconnected. Invoices will only be marked as sent.")}`);
+}
+
+export async function sendTestEmailAction() {
+  const { org, user } = await requireContext();
+  const config = await emailConfig(org.id);
+  if (!config) {
+    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Connect email first.")}`);
+  }
+  let failure = "";
+  try {
+    await sendEmail(config, {
+      to: user.email,
+      subject: `${org.name}: Sere email is working`,
+      text: `This is a test from Sere. Invoices sent from ${org.name} will arrive from ${config.fromEmail}.`,
+    });
+  } catch (error) {
+    failure = (error as Error).message;
+  }
+  if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Test email sent to ${user.email}.`)}`);
 }
 
 export async function markNotificationsReadAction() {

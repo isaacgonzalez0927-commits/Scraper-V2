@@ -12,14 +12,20 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     title: "Sere",
+    capable: true,
+    // The app chrome is light, so a light status bar with dark text blends in.
+    statusBarStyle: "default",
   },
+  formatDetection: { telephone: false },
   manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#5b38d6",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
+  /* Let the page reach under the notch and home indicator; padding handles the rest. */
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

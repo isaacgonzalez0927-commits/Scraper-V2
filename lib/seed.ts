@@ -336,7 +336,9 @@ export async function seedHarborAir() {
         customerId,
         jobId,
         number,
-        status: "draft",
+        // An invoice with a sent timestamp is not a draft, and deriveStatus below
+        // refuses to move a draft along. Without this the demo shows five drafts.
+        status: extra.sentAt ? "sent" : "draft",
         issueDate: issue,
         dueDate: due,
         notes: org.defaultInvoiceNotes,
@@ -390,7 +392,7 @@ export async function seedHarborAir() {
     dayOffset(-28),
     dayOffset(-14),
     [
-      ["Quarterly maintenance — Building 1", "1", 64000],
+      ["Quarterly maintenance, Building 1", "1", 64000],
       ["Filter set", "4", 2800],
     ],
     { sentAt: dtOffset(-28, 9), viewedAt: dtOffset(-21, 9) },
@@ -401,7 +403,7 @@ export async function seedHarborAir() {
     null,
     dayOffset(-10),
     dayOffset(4),
-    [["PTAC service — rooms 1 through 7", "7", 18500]],
+    [["PTAC service, rooms 1 through 7", "7", 18500]],
     { sentAt: dtOffset(-10, 9), viewedAt: dtOffset(-8, 9) },
   );
   const inv1047 = await makeInvoice(
@@ -454,7 +456,7 @@ export async function seedHarborAir() {
       paidOn: dayOffset(-5),
       method: "ach",
       reference: "ACH-2291",
-      notes: "Partial — remainder next week.",
+      notes: "Partial payment. Remainder next week.",
       createdAt: created,
     },
     {
@@ -498,17 +500,17 @@ export async function seedHarborAir() {
   });
 
   await db().insert(activities).values([
-    { organizationId: org.id, kind: "payment_received", title: `Invoice INV-1042 paid — ${formatMoney(inv1042.totalCents)}`, amountCents: inv1042.totalCents, link: `/invoices/${inv1042.id}`, createdAt: dtOffset(-2, 15) },
+    { organizationId: org.id, kind: "payment_received", title: `Invoice INV-1042 paid in full`, amountCents: inv1042.totalCents, link: `/invoices/${inv1042.id}`, createdAt: dtOffset(-2, 15) },
     { organizationId: org.id, kind: "job_created", title: "New job created for Coastal Dental", amountCents: null, link: `/jobs/${coastalJob.id}`, createdAt: dtOffset(0, 7) },
     { organizationId: org.id, kind: "invoice_overdue", title: "Invoice INV-1047 became overdue", amountCents: inv1047.totalCents, link: `/invoices/${inv1047.id}`, createdAt: dtOffset(-4, 8) },
     { organizationId: org.id, kind: "payment_received", title: "Payment received from Coastal Dental", amountCents: 12900, link: "/payments", createdAt: dtOffset(-1, 16) },
-    { organizationId: org.id, kind: "job_completed", title: "Job completed — AC replacement", amountCents: 840000, link: `/jobs/${acReplace.id}`, createdAt: dtOffset(-12, 16) },
+    { organizationId: org.id, kind: "job_completed", title: "Job completed: AC replacement", amountCents: 840000, link: `/jobs/${acReplace.id}`, createdAt: dtOffset(-12, 16) },
   ]);
 
   await db().insert(notifications).values([
     { organizationId: org.id, kind: "invoice_overdue", title: "INV-1047 is overdue", body: "Maria Alvarez still has an open balance.", link: `/invoices/${inv1047.id}`, createdAt: dtOffset(-4, 8) },
     { organizationId: org.id, kind: "invoice_overdue", title: "INV-1045 is overdue", body: "Riverside Property Group still has an open balance.", link: `/invoices/${inv1045.id}`, createdAt: dtOffset(-14, 8) },
-    { organizationId: org.id, kind: "payment_received", title: `Payment received — ${formatMoney(inv1042.totalCents)}`, body: "John Smith paid INV-1042 in full.", link: `/invoices/${inv1042.id}`, createdAt: dtOffset(-2, 15) },
+    { organizationId: org.id, kind: "payment_received", title: `Payment received, ${formatMoney(inv1042.totalCents)}`, body: "John Smith paid INV-1042 in full.", link: `/invoices/${inv1042.id}`, createdAt: dtOffset(-2, 15) },
     { organizationId: org.id, kind: "invoice_viewed", title: "INV-1049 was viewed", body: "Coastal Dental opened the invoice and has not paid.", link: `/invoices/${inv1049.id}`, createdAt: dtOffset(0, 10) },
   ]);
 }

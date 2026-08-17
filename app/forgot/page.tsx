@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { forgotAction } from "../actions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { Banner } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -11,34 +12,39 @@ export default async function ForgotPage({
 }) {
   const q = await searchParams;
   return (
-    <div className="auth-shell">
+    <div className="auth">
       <div className="auth-card">
-        <div className="brand" style={{ paddingBottom: 28 }}>
+        <div className="brand">
           <BrandLogo className="brand-lockup" />
         </div>
-        <h1 className="page-title" style={{ fontSize: 28 }}>Reset password</h1>
-        {q.error ? <div className="flash flash-error">{q.error}</div> : null}
+        <h1 className="auth-title">Reset password</h1>
+        <p className="auth-sub">Enter the email you sign in with.</p>
+        <Banner error={q.error} />
         {q.ok || q.token ? (
-          <div className="notice">
-            If that email exists, a reset link was created.
-            {q.token ? (
-              <p>
-                SMTP is not required in this environment. Use{" "}
-                <Link href={`/reset/${q.token}`}>this reset link</Link>.
-              </p>
-            ) : (
-              <p>Without SMTP, open the latest reset URL from your database.</p>
-            )}
-          </div>
+          <Banner>
+            <div>
+              <strong>Reset link created.</strong>
+              {q.token ? (
+                <p className="mt-1">
+                  Email is not connected on this deployment, so open{" "}
+                  <Link href={`/reset/${q.token}`}>your reset link</Link> directly.
+                </p>
+              ) : (
+                <p className="mt-1">If that email has an account, the link is on its way.</p>
+              )}
+            </div>
+          </Banner>
         ) : null}
         <form action={forgotAction} className="stack">
           <label>
             Email
             <input name="email" type="email" required />
           </label>
-          <button className="btn" type="submit">Send reset</button>
+          <button className="btn" type="submit">Send reset link</button>
         </form>
-        <p><Link href="/login">Back to sign in</Link></p>
+        <div className="auth-foot">
+          <Link href="/login">Back to sign in</Link>
+        </div>
       </div>
     </div>
   );

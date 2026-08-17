@@ -19,7 +19,12 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
     .from(customers)
     .where(and(eq(customers.organizationId, org.id), isNull(customers.archivedAt)));
   return (
-    <Shell {...shell} path="/jobs" title="Edit job">
+    <Shell
+      {...shell}
+      path="/jobs"
+      title={`Edit ${job.title}`}
+      actions={<a className="btn btn-secondary" href={`/jobs/${job.id}`}>Cancel</a>}
+    >
       <JobForm job={job} customerRows={customerRows} />
     </Shell>
   );

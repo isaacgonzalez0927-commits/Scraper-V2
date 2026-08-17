@@ -1,6 +1,13 @@
+import { Card, SearchField } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { loadApp } from "@/lib/page";
 import { searchOrg } from "@/lib/queries";
+
+const GROUPS = [
+  { key: "customers", name: "Customers" },
+  { key: "jobs", name: "Jobs" },
+  { key: "invoices", name: "Invoices" },
+] as const;
 
 export default async function SearchPage({
   searchParams,
@@ -11,30 +18,43 @@ export default async function SearchPage({
   const { q } = await searchParams;
   const term = (q || "").trim();
   const results = term.length >= 2 ? await searchOrg(org.id, term) : { customers: [], jobs: [], invoices: [] };
+  const total = GROUPS.reduce((sum, g) => sum + results[g.key].length, 0);
 
   return (
-    <Shell {...shell} path="/search" title="Search">
-      <form className="filters" method="get">
-        <input
-          name="q"
-          defaultValue={term}
-          placeholder="Name, phone, invoice number, address"
-          style={{ border: "1px solid var(--line)", borderRadius: 999, padding: "7px 12px", minWidth: 280 }}
-        />
-        <button className="btn btn-secondary btn-sm" type="submit">Search</button>
-      </form>
+    <Shell
+      {...shell}
+      path="/search"
+      title="Search"
+      sub={
+        <p className="page-sub">
+          {term ? `${total} matches for "${term}"` : "Names, phone numbers, addresses, and invoice numbers."}
+        </p>
+      }
+    >
+      <div className="toolbar">
+        <SearchField value={term} placeholder="Name, phone, invoice number, address" />
+      </div>
       {!term ? <p className="muted">Type at least two characters.</p> : null}
-      {(["customers", "jobs", "invoices"] as const).map((group) => (
-        <section className="card" key={group} style={{ marginBottom: 14 }}>
-          <div className="card-title">{group}</div>
-          {results[group].length ? results[group].map((item) => (
-            <p key={item.href}>
-              <a href={item.href}>{item.label}</a>
-              <span className="tiny"> {item.meta}</span>
-            </p>
-          )) : <p className="muted">No matches</p>}
-        </section>
-      ))}
+      <div className="grid grid-3">
+        {GROUPS.map((group) => (
+          <Card key={group.key} title={group.name} note={`${results[group.key].length} found`}>
+            {results[group.key].length ? (
+              <ul className="list">
+                {results[group.key].map((item) => (
+                  <li key={item.href}>
+                    <div>
+                      <a className="rowlink" href={item.href}>{item.label}</a>
+                      <div className="tiny">{item.meta}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">No matches.</p>
+            )}
+          </Card>
+        ))}
+      </div>
     </Shell>
   );
 }
