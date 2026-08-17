@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { Badge, Card, Money, Stat } from "@/components/ui";
+import { Badge, Card, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -104,20 +104,17 @@ export default async function OverviewPage() {
           </ul>
           <p className="section-label mt-2">Next up</p>
           {awaiting.length ? (
-            <ul className="list">
+            <Rows>
               {awaiting.map(({ job, customer }) => (
-                <li key={job.id}>
-                  <div>
-                    <a className="rowlink" href={`/jobs/${job.id}`}>{job.title}</a>
-                    <div className="tiny">{displayName(customer)}</div>
-                  </div>
-                  <div className="row">
-                    <span className="tiny">{prettyWhen(job.scheduledStart)}</span>
-                    <Badge status={job.status} />
-                  </div>
-                </li>
+                <RowLink
+                  key={job.id}
+                  href={`/jobs/${job.id}`}
+                  title={job.title}
+                  meta={`${displayName(customer)} · ${prettyWhen(job.scheduledStart) || "Unscheduled"}`}
+                  badge={<Badge status={job.status} />}
+                />
               ))}
-            </ul>
+            </Rows>
           ) : (
             <p className="muted">Nothing waiting. Enjoy the quiet.</p>
           )}
@@ -135,17 +132,17 @@ export default async function OverviewPage() {
             ))}
           </div>
           {activity.length ? (
-            <ul className="list mt-2">
+            <Rows>
               {activity.map((item) => (
-                <li key={item.id}>
-                  <div>
-                    <a className="rowlink" href={item.link || "/overview"}>{item.title}</a>
-                    <div className="tiny">{prettyWhen(item.createdAt)}</div>
-                  </div>
-                  {item.amountCents != null ? <Money cents={item.amountCents} /> : null}
-                </li>
+                <RowLink
+                  key={item.id}
+                  href={item.link || "/overview"}
+                  title={item.title}
+                  meta={prettyWhen(item.createdAt)}
+                  amount={item.amountCents != null ? formatMoney(item.amountCents) : undefined}
+                />
               ))}
-            </ul>
+            </Rows>
           ) : (
             <div className="empty">
               <h3>Your day will show up here</h3>

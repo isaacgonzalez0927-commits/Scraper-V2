@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { addJobCostAction, addNoteAction, invoiceFromJobAction, updateJobStatusAction } from "@/app/actions";
-import { Badge, Blank, Card, KeyValue, Stat } from "@/components/ui";
+import { Badge, Blank, Card, KeyValue, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
@@ -95,7 +95,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               ["Status", label(job.status)],
             ]}
           />
-          <form action={updateJobStatusAction} className="row mt-2">
+          <form action={updateJobStatusAction} className="schedule-row mt-2">
             <input type="hidden" name="id" value={job.id} />
             <select className="input" name="status" defaultValue={job.status}>
               {JOB_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
@@ -145,22 +145,20 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       <div className="grid grid-2 mt-2">
-        <Card title="Invoices">
+        <Card title="Invoices" flush={invoiceCards.length > 0}>
           {invoiceCards.length ? (
-            <ul className="list">
+            <Rows>
               {invoiceCards.map(({ inv, balance }) => (
-                <li key={inv.id}>
-                  <div>
-                    <a className="rowlink" href={`/invoices/${inv.id}`}>{inv.number}</a>
-                    <div className="tiny">Balance {formatMoney(balance)}</div>
-                  </div>
-                  <div className="row">
-                    <span className="money">{formatMoney(inv.totalCents)}</span>
-                    <Badge status={inv.status} />
-                  </div>
-                </li>
+                <RowLink
+                  key={inv.id}
+                  href={`/invoices/${inv.id}`}
+                  title={inv.number}
+                  meta={`Balance ${formatMoney(balance)}`}
+                  badge={<Badge status={inv.status} />}
+                  amount={formatMoney(inv.totalCents)}
+                />
               ))}
-            </ul>
+            </Rows>
           ) : (
             <p className="muted">No invoice yet. Finish the job, then create one.</p>
           )}

@@ -1,5 +1,5 @@
 import { and, eq, isNotNull, isNull, like, or } from "drizzle-orm";
-import { Empty, SearchField, Tabs } from "@/components/ui";
+import { Empty, RecordTable, SearchField, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
@@ -66,38 +66,40 @@ export default async function CustomersPage({
       </div>
 
       {cards.length ? (
-        <div className="card card-flush table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Contact</th>
-                <th>Customer since</th>
-                <th className="right">Paid to date</th>
-                <th className="right">Outstanding</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cards.map(({ customer, revenue, balance }) => (
-                <tr key={customer.id}>
-                  <td>
-                    <a className="rowlink" href={`/customers/${customer.id}`}>{displayName(customer)}</a>
-                    <div className="tiny">
-                      {formatAddress("", customer.serviceCity, customer.serviceState, customer.servicePostal)}
-                    </div>
-                  </td>
-                  <td>
-                    {customer.phone}
-                    <div className="tiny">{customer.email}</div>
-                  </td>
-                  <td>{prettyDate(customer.customerSince)}</td>
-                  <td className="right money">{formatMoney(revenue)}</td>
-                  <td className="right money">{formatMoney(balance)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RecordTable
+          columns={[
+            { label: "Customer" },
+            { label: "Contact" },
+            { label: "Customer since" },
+            { label: "Paid to date", align: "right" },
+            { label: "Outstanding", align: "right" },
+          ]}
+          records={cards.map(({ customer, revenue, balance }) => ({
+            key: customer.id,
+            href: `/customers/${customer.id}`,
+            cells: [
+              <>
+                <a className="rowlink" href={`/customers/${customer.id}`}>{displayName(customer)}</a>
+                <div className="tiny">
+                  {formatAddress("", customer.serviceCity, customer.serviceState, customer.servicePostal)}
+                </div>
+              </>,
+              <>
+                {customer.phone}
+                <div className="tiny">{customer.email}</div>
+              </>,
+              prettyDate(customer.customerSince),
+              <span className="money">{formatMoney(revenue)}</span>,
+              <span className="money">{formatMoney(balance)}</span>,
+            ],
+            phone: {
+              title: displayName(customer),
+              meta: customer.phone || customer.email || "No contact details",
+              amount: formatMoney(balance),
+              amountNote: balance > 0 ? "outstanding" : "all paid",
+            },
+          }))}
+        />
       ) : (
         <Empty
           title={term ? "No customers matched that search" : "No customers yet"}

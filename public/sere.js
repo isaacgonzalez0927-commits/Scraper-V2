@@ -4,23 +4,36 @@
   const results = document.getElementById("palette-results");
   const sidebar = document.getElementById("sidebar");
   const scrim = document.querySelector("[data-close-nav]");
+  const menuToggle = document.querySelector("[data-toggle-nav]");
+
+  function lockPage(locked) {
+    document.documentElement.classList.toggle("locked", locked);
+    document.body.classList.toggle("locked", locked);
+  }
 
   /* Search palette */
 
   function openPalette() {
     if (!palette) return;
     palette.classList.add("open");
-    input.value = "";
-    results.innerHTML = '<div class="palette-group">Type a name, invoice, phone, or address</div>';
-    setTimeout(() => input.focus(), 20);
+    lockPage(true);
+    if (input) {
+      input.value = "";
+      results.innerHTML = '<div class="palette-group">Type a name, invoice, phone, or address</div>';
+      setTimeout(() => input.focus(), 40);
+    }
   }
 
   function closePalette() {
     if (palette) palette.classList.remove("open");
+    if (!sidebar || !sidebar.classList.contains("open")) lockPage(false);
   }
 
   document.querySelectorAll("[data-open-search]").forEach((el) => {
     el.addEventListener("click", openPalette);
+  });
+  document.querySelectorAll("[data-close-search]").forEach((el) => {
+    el.addEventListener("click", closePalette);
   });
 
   if (palette) {
@@ -66,12 +79,46 @@
     if (!sidebar) return;
     sidebar.classList.toggle("open", open);
     if (scrim) scrim.classList.toggle("open", open);
+    if (menuToggle) menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (menuToggle) menuToggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    lockPage(open || Boolean(palette && palette.classList.contains("open")));
+    if (!open) sidebar.style.transform = "";
   }
 
   document.querySelectorAll("[data-toggle-nav]").forEach((el) => {
     el.addEventListener("click", () => setNav(!sidebar.classList.contains("open")));
   });
   if (scrim) scrim.addEventListener("click", () => setNav(false));
+  if (sidebar) {
+    sidebar.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => setNav(false));
+    });
+  }
+
+  /* Swipe the drawer shut, the way an iPhone sheet works. */
+  let touchStartX = 0;
+  let dragging = false;
+  if (sidebar) {
+    sidebar.addEventListener("touchstart", (e) => {
+      if (!sidebar.classList.contains("open")) return;
+      touchStartX = e.touches[0].clientX;
+      dragging = true;
+      sidebar.style.transition = "none";
+    }, { passive: true });
+    sidebar.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      const dx = Math.min(0, e.touches[0].clientX - touchStartX);
+      sidebar.style.transform = "translateX(" + dx + "px)";
+    }, { passive: true });
+    sidebar.addEventListener("touchend", (e) => {
+      if (!dragging) return;
+      dragging = false;
+      sidebar.style.transition = "";
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (dx < -56) setNav(false);
+      else sidebar.style.transform = "";
+    });
+  }
 
   document.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {

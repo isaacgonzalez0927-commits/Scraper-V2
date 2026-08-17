@@ -38,9 +38,10 @@ export function InvoiceSheet({
   const billTo =
     formatAddress(customer.billingLine1, customer.billingCity, customer.billingState, customer.billingPostal) ||
     formatAddress(customer.serviceLine1, customer.serviceCity, customer.serviceState, customer.servicePostal);
+  const payable = Boolean(publicView && canPayOnline && balance > 0);
 
   return (
-    <div className="sheet-page">
+    <div className={`sheet-page${payable ? " has-pay-bar" : ""}`}>
       <div className="sheet">
         {publicView ? (
           <div className="no-print">
@@ -141,7 +142,7 @@ export function InvoiceSheet({
                     </p>
                     <form action={startInvoiceCheckoutAction} className="mt-2">
                       <input type="hidden" name="token" value={publicToken} />
-                      <button className="btn" type="submit">Pay this invoice</button>
+                      <button className="btn pay-btn" type="submit">Pay this invoice</button>
                     </form>
                   </>
                 ) : (
@@ -174,6 +175,13 @@ export function InvoiceSheet({
           </div>
         )}
       </div>
+
+      {payable ? (
+        <form action={startInvoiceCheckoutAction} className="pay-bar no-print">
+          <input type="hidden" name="token" value={publicToken} />
+          <button className="btn" type="submit">Pay {formatMoney(balance)}</button>
+        </form>
+      ) : null}
     </div>
   );
 }

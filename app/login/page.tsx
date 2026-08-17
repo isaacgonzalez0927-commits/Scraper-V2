@@ -37,11 +37,11 @@ export default async function LoginPage({
           <input type="hidden" name="next" value={q.next || "/overview"} />
           <label>
             Email
-            <input name="email" type="email" required autoComplete="email" />
+            <input name="email" type="email" required autoComplete="email" inputMode="email" enterKeyHint="next" />
           </label>
           <label>
             Password
-            <input name="password" type="password" required autoComplete="current-password" />
+            <input name="password" type="password" required autoComplete="current-password" enterKeyHint="go" />
           </label>
           <button className="btn" type="submit" disabled={Boolean(bootError)}>Sign in</button>
         </form>

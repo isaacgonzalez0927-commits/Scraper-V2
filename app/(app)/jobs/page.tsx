@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { Badge, Blank, Empty, Tabs } from "@/components/ui";
+import { Badge, Blank, Empty, RecordTable, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -38,32 +38,35 @@ export default async function JobsPage({
     >
       <Tabs tabs={tabs} active={status || ""} />
       {rows.length ? (
-        <div className="card card-flush table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Job</th>
-                <th>Customer</th>
-                <th>Scheduled</th>
-                <th>Technician</th>
-                <th>Status</th>
-                <th className="right">Est. revenue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ job, customer }) => (
-                <tr key={job.id}>
-                  <td><a className="rowlink" href={`/jobs/${job.id}`}>{job.title}</a></td>
-                  <td>{displayName(customer)}</td>
-                  <td>{prettyWhen(job.scheduledStart) || <Blank text="Unscheduled" />}</td>
-                  <td>{job.technicianName || <Blank text="Unassigned" />}</td>
-                  <td><Badge status={job.status} /></td>
-                  <td className="right money">{formatMoney(job.estimatedRevenueCents)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RecordTable
+          columns={[
+            { label: "Job" },
+            { label: "Customer" },
+            { label: "Scheduled" },
+            { label: "Technician" },
+            { label: "Status" },
+            { label: "Est. revenue", align: "right" },
+          ]}
+          records={rows.map(({ job, customer }) => ({
+            key: job.id,
+            href: `/jobs/${job.id}`,
+            cells: [
+              <a className="rowlink" href={`/jobs/${job.id}`}>{job.title}</a>,
+              displayName(customer),
+              prettyWhen(job.scheduledStart) || <Blank text="Unscheduled" />,
+              job.technicianName || <Blank text="Unassigned" />,
+              <Badge status={job.status} />,
+              <span className="money">{formatMoney(job.estimatedRevenueCents)}</span>,
+            ],
+            phone: {
+              title: job.title,
+              meta: `${displayName(customer)} · ${prettyWhen(job.scheduledStart) || "Unscheduled"}`,
+              badge: <Badge status={job.status} />,
+              amount: formatMoney(job.estimatedRevenueCents),
+              amountNote: "estimate",
+            },
+          }))}
+        />
       ) : (
         <Empty
           title="No jobs on this list"

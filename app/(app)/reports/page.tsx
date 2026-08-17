@@ -78,7 +78,7 @@ export default async function ReportsPage({
           active={period}
         />
         {period === "custom" ? (
-          <form className="row" method="get">
+          <form className="date-range" method="get">
             <input type="hidden" name="period" value="custom" />
             <input className="input" type="date" name="start" defaultValue={start} />
             <input className="input" type="date" name="end" defaultValue={end} />

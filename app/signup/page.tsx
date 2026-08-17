@@ -23,19 +23,19 @@ export default async function SignupPage({
         <form action={signupAction} className="stack">
           <label>
             Shop name
-            <input name="company" required />
+            <input name="company" required autoComplete="organization" enterKeyHint="next" />
           </label>
           <label>
             Your name
-            <input name="name" required />
+            <input name="name" required autoComplete="name" enterKeyHint="next" />
           </label>
           <label>
             Email
-            <input name="email" type="email" required />
+            <input name="email" type="email" required autoComplete="email" inputMode="email" enterKeyHint="next" />
           </label>
           <label>
             Password
-            <input name="password" type="password" required minLength={8} />
+            <input name="password" type="password" required minLength={8} autoComplete="new-password" enterKeyHint="go" />
           </label>
           <button className="btn" type="submit">Create shop</button>
         </form>

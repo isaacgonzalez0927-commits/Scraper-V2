@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { addNoteAction, archiveCustomerAction } from "@/app/actions";
-import { Badge, Blank, Card, KeyValue, Stat } from "@/components/ui";
+import { Badge, Blank, Card, KeyValue, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
@@ -69,8 +69,14 @@ export default async function CustomerDetailPage({
         <Card title="Contact">
           <KeyValue
             rows={[
-              ["Phone", customer.phone || <Blank />],
-              ["Email", customer.email || <Blank />],
+              [
+                "Phone",
+                customer.phone ? <a href={`tel:${customer.phone}`}>{customer.phone}</a> : <Blank />,
+              ],
+              [
+                "Email",
+                customer.email ? <a href={`mailto:${customer.email}`}>{customer.email}</a> : <Blank />,
+              ],
               ["Billing", billing || <Blank />],
               ["Service", service || <Blank text="Same as billing" />],
             ]}
@@ -79,40 +85,38 @@ export default async function CustomerDetailPage({
       </div>
 
       <div className="grid grid-2 mt-2">
-        <Card title="Jobs" action={<a className="btn btn-secondary btn-sm" href={`/jobs/new?customerId=${customer.id}`}>Add</a>}>
+        <Card title="Jobs" action={<a className="btn btn-secondary btn-sm" href={`/jobs/new?customerId=${customer.id}`}>Add</a>} flush={jobRows.length > 0}>
           {jobRows.length ? (
-            <ul className="list">
+            <Rows>
               {jobRows.map((job) => (
-                <li key={job.id}>
-                  <div>
-                    <a className="rowlink" href={`/jobs/${job.id}`}>{job.title}</a>
-                    <div className="tiny">{prettyWhen(job.scheduledStart) || "Not scheduled"}</div>
-                  </div>
-                  <Badge status={job.status} />
-                </li>
+                <RowLink
+                  key={job.id}
+                  href={`/jobs/${job.id}`}
+                  title={job.title}
+                  meta={prettyWhen(job.scheduledStart) || "Not scheduled"}
+                  badge={<Badge status={job.status} />}
+                />
               ))}
-            </ul>
+            </Rows>
           ) : (
             <p className="muted">No jobs yet.</p>
           )}
         </Card>
 
-        <Card title="Invoices" action={<a className="btn btn-secondary btn-sm" href={`/invoices/new?customerId=${customer.id}`}>Add</a>}>
+        <Card title="Invoices" action={<a className="btn btn-secondary btn-sm" href={`/invoices/new?customerId=${customer.id}`}>Add</a>} flush={invoiceRows.length > 0}>
           {invoiceRows.length ? (
-            <ul className="list">
+            <Rows>
               {invoiceRows.map((inv) => (
-                <li key={inv.id}>
-                  <div>
-                    <a className="rowlink" href={`/invoices/${inv.id}`}>{inv.number}</a>
-                    <div className="tiny">Due {prettyDate(inv.dueDate)}</div>
-                  </div>
-                  <div className="row">
-                    <span className="money">{formatMoney(inv.totalCents)}</span>
-                    <Badge status={inv.status} />
-                  </div>
-                </li>
+                <RowLink
+                  key={inv.id}
+                  href={`/invoices/${inv.id}`}
+                  title={inv.number}
+                  meta={`Due ${prettyDate(inv.dueDate)}`}
+                  badge={<Badge status={inv.status} />}
+                  amount={formatMoney(inv.totalCents)}
+                />
               ))}
-            </ul>
+            </Rows>
           ) : (
             <p className="muted">No invoices yet.</p>
           )}
@@ -120,19 +124,20 @@ export default async function CustomerDetailPage({
       </div>
 
       <div className="grid grid-2 mt-2">
-        <Card title="Payments">
+        <Card title="Payments" flush={paymentRows.length > 0}>
           {paymentRows.length ? (
-            <ul className="list">
+            <Rows>
               {paymentRows.map((p) => (
-                <li key={p.id}>
-                  <div>
-                    <a className="rowlink" href={`/payments/${p.id}`}>{prettyDate(p.paidOn)}</a>
-                    <div className="tiny">{label(p.method)}{p.voidedAt ? " · voided" : ""}</div>
-                  </div>
-                  <span className="money">{formatMoney(p.amountCents)}</span>
-                </li>
+                <RowLink
+                  key={p.id}
+                  href={`/payments/${p.id}`}
+                  title={prettyDate(p.paidOn)}
+                  meta={`${label(p.method)}${p.voidedAt ? " · voided" : ""}`}
+                  amount={formatMoney(p.amountCents)}
+                  dim={Boolean(p.voidedAt)}
+                />
               ))}
-            </ul>
+            </Rows>
           ) : (
             <p className="muted">No payments yet.</p>
           )}

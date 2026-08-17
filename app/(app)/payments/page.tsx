@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { Blank, Empty, SearchField, Stat } from "@/components/ui";
+import { Blank, Empty, RecordTable, SearchField, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -52,35 +52,44 @@ export default async function PaymentsPage({
       </div>
 
       {filtered.length ? (
-        <div className="card card-flush table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Customer</th>
-                <th>Invoice</th>
-                <th>Method</th>
-                <th>Reference</th>
-                <th className="right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(({ payment, customer, invoice }) => (
-                <tr key={payment.id} className={payment.voidedAt ? "void-row" : undefined}>
-                  <td><a className="rowlink" href={`/payments/${payment.id}`}>{prettyDate(payment.paidOn)}</a></td>
-                  <td>{displayName(customer)}</td>
-                  <td>
-                    {invoice ? <a href={`/invoices/${invoice.id}`}>{invoice.number}</a> : <Blank text="Unapplied" />}
-                    {payment.voidedAt ? <span className="tiny"> · voided</span> : null}
-                  </td>
-                  <td>{label(payment.method)}</td>
-                  <td>{payment.reference || <Blank text="None" />}</td>
-                  <td className="right money">{formatMoney(payment.amountCents)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RecordTable
+          columns={[
+            { label: "Date" },
+            { label: "Customer" },
+            { label: "Invoice" },
+            { label: "Method" },
+            { label: "Reference" },
+            { label: "Amount", align: "right" },
+          ]}
+          records={filtered.map(({ payment, customer, invoice }) => ({
+            key: payment.id,
+            href: `/payments/${payment.id}`,
+            dim: Boolean(payment.voidedAt),
+            cells: [
+              <a className="rowlink" href={`/payments/${payment.id}`}>{prettyDate(payment.paidOn)}</a>,
+              displayName(customer),
+              <>
+                {invoice ? <a href={`/invoices/${invoice.id}`}>{invoice.number}</a> : <Blank text="Unapplied" />}
+                {payment.voidedAt ? <span className="tiny"> · voided</span> : null}
+              </>,
+              label(payment.method),
+              payment.reference || <Blank text="None" />,
+              <span className="money">{formatMoney(payment.amountCents)}</span>,
+            ],
+            phone: {
+              title: displayName(customer),
+              meta: [
+                prettyDate(payment.paidOn),
+                label(payment.method),
+                invoice ? invoice.number : "Unapplied",
+                payment.voidedAt ? "voided" : "",
+              ]
+                .filter(Boolean)
+                .join(" · "),
+              amount: formatMoney(payment.amountCents),
+            },
+          }))}
+        />
       ) : (
         <Empty
           title="No payments recorded"

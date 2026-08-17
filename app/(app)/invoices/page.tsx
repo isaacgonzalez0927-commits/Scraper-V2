@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { Badge, Empty, Tabs } from "@/components/ui";
+import { Badge, Empty, RecordTable, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -41,36 +41,40 @@ export default async function InvoicesPage({
     >
       <Tabs tabs={tabs} active={status || ""} />
       {rows.length ? (
-        <div className="card card-flush table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Number</th>
-                <th>Customer</th>
-                <th>Issued</th>
-                <th>Due</th>
-                <th>Status</th>
-                <th className="right">Total</th>
-                <th className="right">Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ invoice, customer }) => (
-                <tr key={invoice.id}>
-                  <td><a className="rowlink" href={`/invoices/${invoice.id}`}>{invoice.number}</a></td>
-                  <td>{displayName(customer)}</td>
-                  <td>{prettyDate(invoice.issueDate)}</td>
-                  <td>{prettyDate(invoice.dueDate)}</td>
-                  <td><Badge status={invoice.status} /></td>
-                  <td className="right money">{formatMoney(invoice.totalCents)}</td>
-                  <td className="right money">
-                    {formatMoney(balanceCents(invoice.totalCents, paid.get(invoice.id) || 0, invoice.status))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RecordTable
+          columns={[
+            { label: "Number" },
+            { label: "Customer" },
+            { label: "Issued" },
+            { label: "Due" },
+            { label: "Status" },
+            { label: "Total", align: "right" },
+            { label: "Balance", align: "right" },
+          ]}
+          records={rows.map(({ invoice, customer }) => {
+            const balance = balanceCents(invoice.totalCents, paid.get(invoice.id) || 0, invoice.status);
+            return {
+              key: invoice.id,
+              href: `/invoices/${invoice.id}`,
+              cells: [
+                <a className="rowlink" href={`/invoices/${invoice.id}`}>{invoice.number}</a>,
+                displayName(customer),
+                prettyDate(invoice.issueDate),
+                prettyDate(invoice.dueDate),
+                <Badge status={invoice.status} />,
+                <span className="money">{formatMoney(invoice.totalCents)}</span>,
+                <span className="money">{formatMoney(balance)}</span>,
+              ],
+              phone: {
+                title: `${invoice.number} · ${displayName(customer)}`,
+                meta: `Due ${prettyDate(invoice.dueDate)}`,
+                badge: <Badge status={invoice.status} />,
+                amount: formatMoney(balance > 0 ? balance : invoice.totalCents),
+                amountNote: balance > 0 ? "due" : "paid",
+              },
+            };
+          })}
+        />
       ) : (
         <Empty
           title="No invoices here"

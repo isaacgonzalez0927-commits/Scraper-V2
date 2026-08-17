@@ -48,6 +48,11 @@ export default function LandingPage() {
         </p>
       </section>
 
+      <div className="landing-dock">
+        <a className="btn" href="/signup">Create your shop</a>
+        <a className="btn btn-secondary" href="/demo">Open the demo</a>
+      </div>
+
       <section className="landing-grid">
         {POINTS.map((point) => (
           <Card key={point.title} title={point.title}>
