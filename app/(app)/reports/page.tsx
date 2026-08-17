@@ -56,6 +56,8 @@ export default async function ReportsPage({
     ? Math.round(completed.reduce((s, r) => s + (marginBps(r.revenue, r.cost) || 0), 0) / completed.length)
     : null;
   const ranked = [...completed].sort((a, b) => b.profit - a.profit);
+  /* With only a handful of jobs, a best and a worst list are the same list twice. */
+  const split = ranked.length > 8;
   const best = ranked.slice(0, 5);
   const worst = [...ranked].reverse().slice(0, 5);
 
@@ -124,11 +126,11 @@ export default async function ReportsPage({
         </Card>
       </div>
 
-      <div className="grid grid-2 mt-2">
-        <Card title="Most profitable jobs">
+      <div className={`grid ${split ? "grid-2" : ""} mt-2`}>
+        <Card title={split ? "Most profitable jobs" : "Profit by job"} note={split ? undefined : "Highest profit first"}>
           {best.length ? (
             <ul className="list">
-              {best.map((row) => (
+              {(split ? best : ranked).map((row) => (
                 <li key={row.job.id}>
                   <a className="rowlink" href={`/jobs/${row.job.id}`}>{row.job.title}</a>
                   <span className="money">{formatMoney(row.profit)}</span>
@@ -140,8 +142,8 @@ export default async function ReportsPage({
           )}
         </Card>
 
-        <Card title="Least profitable jobs">
-          {worst.length ? (
+        {split ? (
+          <Card title="Least profitable jobs">
             <ul className="list">
               {worst.map((row) => (
                 <li key={row.job.id}>
@@ -150,10 +152,8 @@ export default async function ReportsPage({
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="muted">No completed jobs in this period.</p>
-          )}
-        </Card>
+          </Card>
+        ) : null}
       </div>
     </Shell>
   );

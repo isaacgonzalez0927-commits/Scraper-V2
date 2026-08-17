@@ -147,24 +147,46 @@ export async function emailConfig(organizationId: number): Promise<EmailConfig |
   return fromEnv?.fromEmail ? fromEnv : null;
 }
 
-/** What the settings screen shows without ever decrypting a secret. */
-export async function integrationStatus(organizationId: number) {
-  const [stripeRow, emailRow] = await Promise.all([
+export type ProviderStatus = {
+  connected: boolean;
+  fromEnv: boolean;
+  /** True when a row says connected but its secret no longer decrypts. */
+  unreadable: boolean;
+  label: string;
+  updatedAt: string;
+};
+
+/**
+ * What the settings screen shows. A saved secret that no longer decrypts, which
+ * is what a rotated SERE_SECRET_KEY looks like, is reported instead of quietly
+ * behaving as if the shop were connected.
+ */
+export async function integrationStatus(
+  organizationId: number,
+): Promise<{ stripe: ProviderStatus; email: ProviderStatus }> {
+  const [stripeRow, emailRow, stripeSaved, emailSaved] = await Promise.all([
     readIntegration(organizationId, "stripe"),
     readIntegration(organizationId, "email"),
+    readConfig<StripeConfig>(organizationId, "stripe"),
+    readConfig<EmailConfig>(organizationId, "email"),
   ]);
   const stripeEnv = stripeEnvConfig();
   const emailEnv = emailEnvConfig();
+  const stripeUnreadable = Boolean(stripeRow) && !stripeSaved?.secretKey;
+  const emailUnreadable = Boolean(emailRow) && !emailSaved?.apiKey;
+
   return {
     stripe: {
-      connected: Boolean(stripeRow) || Boolean(stripeEnv),
+      connected: (Boolean(stripeRow) && !stripeUnreadable) || Boolean(stripeEnv),
       fromEnv: !stripeRow && Boolean(stripeEnv),
+      unreadable: stripeUnreadable && !stripeEnv,
       label: stripeRow?.label || (stripeEnv ? "Deployment environment keys" : ""),
       updatedAt: stripeRow?.updatedAt || "",
     },
     email: {
-      connected: Boolean(emailRow) || Boolean(emailEnv?.fromEmail),
+      connected: (Boolean(emailRow) && !emailUnreadable) || Boolean(emailEnv?.fromEmail),
       fromEnv: !emailRow && Boolean(emailEnv?.fromEmail),
+      unreadable: emailUnreadable && !emailEnv?.fromEmail,
       label: emailRow?.label || emailEnv?.fromEmail || "",
       updatedAt: emailRow?.updatedAt || "",
     },

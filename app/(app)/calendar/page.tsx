@@ -58,6 +58,14 @@ export default async function CalendarPage({
   const unscheduled = rows.filter((r) => !r.job.scheduledStart && r.job.status === "unscheduled");
   const dateParam = isoDate(anchor);
 
+  const shift = (direction: 1 | -1) => {
+    const next = new Date(anchor);
+    if (view === "day") next.setDate(next.getDate() + direction);
+    else if (view === "week") next.setDate(next.getDate() + 7 * direction);
+    else next.setMonth(next.getMonth() + direction);
+    return `/calendar?view=${view}&date=${isoDate(next)}`;
+  };
+
   return (
     <Shell
       {...shell}
@@ -70,6 +78,11 @@ export default async function CalendarPage({
       }
       actions={
         <>
+          <div className="row">
+            <a className="btn btn-secondary btn-sm" href={shift(-1)} aria-label={`Previous ${view}`}>Back</a>
+            <a className="btn btn-secondary btn-sm" href={`/calendar?view=${view}`}>Today</a>
+            <a className="btn btn-secondary btn-sm" href={shift(1)} aria-label={`Next ${view}`}>Next</a>
+          </div>
           <Tabs
             tabs={(["day", "week", "month"] as const).map((v) => ({
               key: v,

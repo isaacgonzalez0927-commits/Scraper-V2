@@ -57,6 +57,10 @@ export default async function SettingsPage({
 
       <Banner error={q.error} ok={q.ok} />
 
+      {tab === "integrations" && (integrations.stripe.unreadable || integrations.email.unreadable) ? (
+        <Banner warn="Saved credentials could not be read. This happens when SERE_SECRET_KEY changes. Paste the keys again to reconnect." />
+      ) : null}
+
       {tab === "company" ? (
         <form action={saveSettingsAction} className="card form-grid narrow">
           <input type="hidden" name="section" value="company" />
@@ -129,8 +133,16 @@ export default async function SettingsPage({
             title="Stripe"
             note="Let customers pay an invoice by card. The money lands in your own Stripe account."
             action={
-              <span className={`badge badge-${integrations.stripe.connected ? "paid" : "draft"}`}>
-                {integrations.stripe.connected ? "Connected" : "Not connected"}
+              <span
+                className={`badge badge-${
+                  integrations.stripe.connected ? "paid" : integrations.stripe.unreadable ? "partial" : "draft"
+                }`}
+              >
+                {integrations.stripe.connected
+                  ? "Connected"
+                  : integrations.stripe.unreadable
+                    ? "Needs reconnecting"
+                    : "Not connected"}
               </span>
             }
           >
@@ -210,8 +222,16 @@ export default async function SettingsPage({
             title="Email"
             note="Send invoices straight to your customers instead of copying a link."
             action={
-              <span className={`badge badge-${integrations.email.connected ? "paid" : "draft"}`}>
-                {integrations.email.connected ? "Connected" : "Not connected"}
+              <span
+                className={`badge badge-${
+                  integrations.email.connected ? "paid" : integrations.email.unreadable ? "partial" : "draft"
+                }`}
+              >
+                {integrations.email.connected
+                  ? "Connected"
+                  : integrations.email.unreadable
+                    ? "Needs reconnecting"
+                    : "Not connected"}
               </span>
             }
           >

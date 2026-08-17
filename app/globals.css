@@ -122,7 +122,8 @@ code {
   border: 1px solid var(--line);
   border-radius: var(--r-xs);
   padding: 1px 5px;
-  word-break: break-all;
+  /* Break a long key or URL only where it has to, not mid word by default. */
+  overflow-wrap: anywhere;
 }
 
 hr {
@@ -453,7 +454,16 @@ a.btn-ghost:hover { color: var(--ink); }
 
 /* Cards and grids */
 
-.grid { display: grid; gap: 14px; }
+/*
+  Every track and card gets a zero floor. Without it, one long unbreakable
+  string (an invoice link, a webhook URL) sets the min-content width of its
+  card and the card pushes past a narrow screen instead of truncating.
+*/
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
 /* Forms read better in a column than stretched across a wide screen. */
 .narrow { max-width: 820px; }
 .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -463,6 +473,7 @@ a.btn-ghost:hover { color: var(--ink); }
 .span-2 { grid-column: span 2; }
 
 .card {
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
@@ -781,6 +792,7 @@ table.data a.rowlink:hover { color: var(--accent); }
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .copy-value {
@@ -816,6 +828,7 @@ a.copy-value:hover { color: var(--accent); border-color: var(--accent-line); }
 .banner-bad { background: var(--bad-soft); border-color: var(--bad-line); color: var(--bad); }
 .banner-info { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-strong); }
 .banner-warn { background: var(--warn-soft); border-color: var(--warn-line); color: var(--warn); }
+.banner > * { min-width: 0; }
 .banner strong { font-weight: 600; }
 .banner-flush { margin-bottom: 0; }
 
@@ -1126,11 +1139,14 @@ a.copy-value:hover { color: var(--accent); border-color: var(--accent-line); }
   .page-head { flex-direction: column; gap: 12px; }
   .page-actions { justify-content: flex-start; width: 100%; }
 
-  .grid-5, .grid-4, .grid-3, .grid-2, .form-grid, .landing-grid, .cal-week {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  /* Stat cards stay two up so the numbers do not become a long scroll. */
+  .grid-5, .grid-4, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-2, .form-grid, .landing-grid, .cal-week { grid-template-columns: minmax(0, 1fr); }
   .span-2 { grid-column: auto; }
   .page-title { font-size: 21px; }
+  .stat-value { font-size: 21px; }
+  .stat-value-sm { font-size: 15px; }
+  .card { padding: 14px; }
   .sheet { padding: 20px; }
   .sheet-head { flex-direction: column; }
 
