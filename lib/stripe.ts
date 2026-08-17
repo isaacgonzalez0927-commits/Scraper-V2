@@ -6,7 +6,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * many shops that each keep their own Stripe account and their own money.
  */
 
-const API = "https://api.stripe.com/v1";
+/** STRIPE_API_BASE exists so tests can point at a local stand in. */
+const API = process.env.STRIPE_API_BASE || "https://api.stripe.com/v1";
 const API_VERSION = "2024-06-20";
 
 export class StripeError extends Error {

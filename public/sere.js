@@ -5,7 +5,7 @@
   const sidebar = document.getElementById("sidebar");
   const scrim = document.querySelector("[data-close-nav]");
 
-  /* ---------- Search palette ---------- */
+  /* Search palette */
 
   function openPalette() {
     if (!palette) return;
@@ -60,7 +60,7 @@
     });
   }
 
-  /* ---------- Mobile navigation drawer ---------- */
+  /* Mobile navigation drawer */
 
   function setNav(open) {
     if (!sidebar) return;
@@ -84,7 +84,7 @@
     }
   });
 
-  /* ---------- Dependent selects ---------- */
+  /* Dependent selects */
 
   const customerSelect = document.getElementById("customer_id");
   const jobSelect = document.getElementById("job_id");
@@ -100,7 +100,7 @@
     });
   }
 
-  /* ---------- Invoice line items ---------- */
+  /* Invoice line items */
 
   const catalog = document.getElementById("service-catalog");
   if (catalog) {
@@ -142,7 +142,7 @@
     if (!description && first) first.focus();
   }
 
-  /* ---------- Calendar drag and drop ---------- */
+  /* Calendar drag and drop */
 
   document.querySelectorAll(".cal-event[data-job]").forEach((el) => {
     el.addEventListener("dragstart", (e) => {
@@ -168,20 +168,43 @@
     });
   });
 
-  /* ---------- Copy to clipboard ---------- */
+  /* Copy to clipboard */
 
   document.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.addEventListener("click", async () => {
+      const value = btn.dataset.copy || "";
+      let copied = false;
       try {
-        await navigator.clipboard.writeText(btn.dataset.copy);
-        const original = btn.textContent;
-        btn.textContent = "Copied";
-        setTimeout(() => { btn.textContent = original; }, 1400);
+        await navigator.clipboard.writeText(value);
+        copied = true;
       } catch (err) {
-        /* Clipboard blocked. The value stays visible on screen. */
+        copied = legacyCopy(value);
       }
+      const original = btn.dataset.label || btn.textContent;
+      btn.dataset.label = original;
+      btn.textContent = copied ? "Copied" : "Press ctrl C";
+      setTimeout(() => { btn.textContent = original; }, 1600);
     });
   });
+
+  /* Clipboard API needs a focused, secure page. This works when it does not. */
+  function legacyCopy(value) {
+    const field = document.createElement("textarea");
+    field.value = value;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.opacity = "0";
+    document.body.appendChild(field);
+    field.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch (err) {
+      ok = false;
+    }
+    document.body.removeChild(field);
+    return ok;
+  }
 
   function esc(s) {
     return String(s || "").replace(/[&<>"']/g, (c) => ({

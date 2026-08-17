@@ -128,8 +128,10 @@ export default async function InvoiceDetailPage({
 
         <div className="col">
           <Card title="Customer link" note="Anyone with this link can view and pay the invoice.">
-            <div className="row">
-              <a className="grow tiny" href={publicPath}>{publicUrl || publicPath}</a>
+            <div className="copy-row">
+              <a className="copy-value" href={publicPath} target="_blank" rel="noreferrer">
+                {publicUrl || publicPath}
+              </a>
               <button className="btn btn-secondary btn-sm" type="button" data-copy={publicUrl || publicPath}>
                 Copy
               </button>
@@ -155,7 +157,6 @@ export default async function InvoiceDetailPage({
               {events.length ? events.map((event) => (
                 <li key={event.id}>
                   <strong>{event.message}</strong>
-                  {event.amountCents ? <span className="money"> {formatMoney(event.amountCents)}</span> : null}
                   <div className="tiny">{prettyWhen(event.createdAt)}</div>
                 </li>
               )) : (

@@ -18,7 +18,7 @@ export function JobForm({
   error?: string;
 }) {
   return (
-    <form action={saveJobAction} className="grid">
+    <form action={saveJobAction} className="grid narrow">
       {job?.id ? <input type="hidden" name="id" value={job.id} /> : null}
       <Banner error={error} />
 

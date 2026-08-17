@@ -12,7 +12,7 @@ export function CustomerForm({
   error?: string;
 }) {
   return (
-    <form action={saveCustomerAction} className="grid">
+    <form action={saveCustomerAction} className="grid narrow">
       {customer?.id ? <input type="hidden" name="id" value={customer.id} /> : null}
       <Banner error={error} />
 

@@ -58,7 +58,7 @@ export default async function SettingsPage({
       <Banner error={q.error} ok={q.ok} />
 
       {tab === "company" ? (
-        <form action={saveSettingsAction} className="card form-grid">
+        <form action={saveSettingsAction} className="card form-grid narrow">
           <input type="hidden" name="section" value="company" />
           <div className="field"><label>Business name</label><input name="name" defaultValue={org.name} /></div>
           <div className="field"><label>Phone</label><input name="phone" defaultValue={org.phone} /></div>
@@ -81,8 +81,8 @@ export default async function SettingsPage({
       ) : null}
 
       {tab === "invoices" ? (
-        <div className="grid">
-          <form action={saveSettingsAction} className="card form-grid">
+        <div className="grid narrow">
+          <form action={saveSettingsAction} className="card form-grid narrow">
             <input type="hidden" name="section" value="invoices" />
             <div className="field"><label>Invoice prefix</label><input name="invoice_prefix" defaultValue={org.invoicePrefix} /></div>
             <div className="field"><label>Payment terms in days</label><input name="payment_terms_days" type="number" defaultValue={org.paymentTermsDays} /></div>
@@ -124,7 +124,7 @@ export default async function SettingsPage({
       ) : null}
 
       {tab === "integrations" ? (
-        <div className="grid">
+        <div className="grid narrow">
           <Card
             title="Stripe"
             note="Let customers pay an invoice by card. The money lands in your own Stripe account."
@@ -150,8 +150,8 @@ export default async function SettingsPage({
                       In Stripe, open Developers, then Webhooks, then add this endpoint and select the
                       event <code>checkout.session.completed</code>.
                     </p>
-                    <div className="row mt-1">
-                      <code className="grow">{webhookUrl}</code>
+                    <div className="copy-row mt-1">
+                      <span className="copy-value">{webhookUrl}</span>
                       <button className="btn btn-secondary btn-sm" type="button" data-copy={webhookUrl}>Copy</button>
                     </div>
                     <p className="mt-1">
@@ -300,8 +300,8 @@ export default async function SettingsPage({
       ) : null}
 
       {tab === "account" ? (
-        <div className="grid">
-          <form action={saveSettingsAction} className="card form-grid">
+        <div className="grid narrow">
+          <form action={saveSettingsAction} className="card form-grid narrow">
             <input type="hidden" name="section" value="account" />
             <div className="field"><label>Your name</label><input name="user_name" defaultValue={user.name} /></div>
             <div className="field"><label>Email</label><input name="user_email" type="email" defaultValue={user.email} readOnly /></div>

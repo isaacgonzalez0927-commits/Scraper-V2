@@ -336,7 +336,9 @@ export async function seedHarborAir() {
         customerId,
         jobId,
         number,
-        status: "draft",
+        // An invoice with a sent timestamp is not a draft, and deriveStatus below
+        // refuses to move a draft along. Without this the demo shows five drafts.
+        status: extra.sentAt ? "sent" : "draft",
         issueDate: issue,
         dueDate: due,
         notes: org.defaultInvoiceNotes,
