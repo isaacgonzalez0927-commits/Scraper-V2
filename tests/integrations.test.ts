@@ -3,6 +3,8 @@ import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { decryptSecret, encryptSecret, maskSecret } from "../lib/crypto";
 import { encodeParams, readConnectState, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled, verifyWebhookSignature } from "../lib/stripe";
+import { paypalAmount } from "../lib/paypal";
+import { verifySquareSignature } from "../lib/square";
 
 test("stored secrets survive a round trip and never appear in the ciphertext", () => {
   const secret = "sk_live_51NotARealKeyAtAll0000";
@@ -101,4 +103,29 @@ test("webhook signatures are accepted only when they match and are recent", () =
   );
   assert.equal(verifyWebhookSignature({ payload, header: null, secret }), false);
   assert.equal(verifyWebhookSignature({ payload, header, secret: "" }), false);
+});
+
+test("Square webhook signatures match HMAC of notification URL plus body", () => {
+  const payload = JSON.stringify({ type: "payment.updated" });
+  const notificationUrl = "https://www.sere.cash/api/webhooks/square";
+  const signatureKey = "sq_sig_test";
+  const signature = createHmac("sha256", signatureKey)
+    .update(notificationUrl + payload, "utf8")
+    .digest("base64");
+  assert.equal(verifySquareSignature({ payload, signature, signatureKey, notificationUrl }), true);
+  assert.equal(
+    verifySquareSignature({ payload: `${payload} `, signature, signatureKey, notificationUrl }),
+    false,
+  );
+  assert.equal(
+    verifySquareSignature({ payload, signature, signatureKey: "other", notificationUrl }),
+    false,
+  );
+  assert.equal(verifySquareSignature({ payload, signature: null, signatureKey, notificationUrl }), false);
+});
+
+test("PayPal amounts are two-decimal dollars from integer cents", () => {
+  assert.equal(paypalAmount(12900), "129.00");
+  assert.equal(paypalAmount(1), "0.01");
+  assert.equal(paypalAmount(0), "0.00");
 });

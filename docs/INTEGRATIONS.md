@@ -24,7 +24,7 @@ theirs again.
    deployment, Stripe asks them to approve Sere and they come back connected. If it is
    not enabled yet, they paste a secret key (`sk_live_...` or `sk_test_...`) on the
    same screen.
-3. Invoice links then show **Pay this invoice**. Card details never touch Sere.
+3. Invoice links then show **Pay with Stripe**. Card details never touch Sere.
 
 Cash, check, Zelle, Venmo, and bank transfers are still recorded by hand under
 **Payments**. Stripe is only for the card button on the customer invoice.
@@ -65,7 +65,7 @@ signing secret, so add the endpoint in test mode too if you want to exercise pas
 
 1. The customer opens their invoice link, `/p/inv/<token>`.
 2. If the shop has Stripe connected and the balance is above zero, the page shows
-   **Pay this invoice**.
+   **Pay with Stripe**. Square and PayPal, if connected, appear as secondary buttons.
 3. That button creates a Stripe Checkout Session for the exact remaining balance and
    sends the customer to Stripe. Card details never touch Sere.
 4. Stripe returns the customer to the same invoice page with a success banner.
@@ -89,8 +89,50 @@ balance reaches zero.
 ### Turning it off
 
 **Disconnect Stripe** removes the stored keys and, for Connect, disconnects the shop
-in Stripe. Existing payments stay in the ledger, and invoice pages fall back to telling
-the customer how to pay the shop directly.
+in Stripe. Existing payments stay in the ledger, and invoice pages fall back to Square
+or PayPal if those are connected, otherwise they tell the customer how to pay the shop
+directly.
+
+---
+
+## Square and PayPal: shops already on other processors
+
+Stripe stays the main **Pay with Stripe** button. If a shop already takes cards in
+Square or PayPal, they can connect those too. The customer invoice then shows Stripe
+first (when connected) and Square / PayPal as secondary buttons.
+
+### Square
+
+1. In Square, create an access token (sandbox or production) with Payments and Orders
+   permissions.
+2. In Sere, open **Settings**, then **Integrations**, then **Connect Square**. Paste the
+   token. Location ID is optional; Sere uses the first active location if it is blank.
+3. Add a webhook in Square for `payment.updated` pointing at
+   `https://yourdomain.com/api/webhooks/square`, and paste the signature key into Sere.
+
+The payment link note stores `sere:organizationId:invoiceId:customerId` so the webhook
+can post the payment even if the customer closes the tab.
+
+### PayPal
+
+1. In the PayPal developer dashboard, create a REST app and copy the client id and
+   secret.
+2. In Sere, **Connect PayPal**. Check **Sandbox** when using sandbox credentials.
+3. Add a webhook for `CHECKOUT.ORDER.APPROVED` and `PAYMENT.CAPTURE.COMPLETED` at
+   `https://yourdomain.com/api/webhooks/paypal`. The webhook ID is optional.
+
+Sere creates a Capture-intent order. The return trip and the webhook both retrieve the
+order, capture it if it is still only approved, and record the payment using the PayPal
+order id as the idempotency key.
+
+### QuickBooks
+
+QuickBooks is a books link, not card checkout. Paste an access token and company
+(realm) id so Sere can confirm the company name. Invoices and payments still live in
+Sere.
+
+Cash, check, Zelle, Venmo, and bank transfers are still recorded by hand under
+**Payments**.
 
 ---
 
@@ -141,12 +183,13 @@ not let you disconnect them from inside the app.
 ## Adding another provider later
 
 The store is provider agnostic: one row per shop per provider in the `integrations`
-table, with credentials in a single encrypted JSON blob. To add a provider:
+table, with credentials in a single encrypted JSON blob. Stripe, email, Square, PayPal,
+and QuickBooks already use that store. To add another provider:
 
 1. Add its config type and a reader in `lib/integrations.ts`.
 2. Put the API calls in their own module, the way `lib/stripe.ts` and `lib/email.ts` do.
    Plain `fetch` keeps the dependency list short.
 3. Add a card to the Integrations tab and an action that verifies the credentials before
-   saving them.
+   saving them. Keep Stripe as the primary connect / pay button.
 
 No database migration is needed for a new provider.

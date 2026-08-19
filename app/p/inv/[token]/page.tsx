@@ -11,7 +11,9 @@ import {
   recordOnlinePayment,
   refreshInvoice,
 } from "@/lib/finance";
-import { stripeConfig } from "@/lib/integrations";
+import { onlinePayMethods, paypalConfig, squareConfig, stripeConfig } from "@/lib/integrations";
+import { capturePayPalOrder, paypalOrderAmountCents, paypalOrderPaid, retrievePayPalOrder } from "@/lib/paypal";
+import { retrieveSquareOrder, retrieveSquarePayment } from "@/lib/square";
 import { retrieveCheckoutSession } from "@/lib/stripe";
 import { customers, invoiceLines, invoices, organizations } from "@/lib/schema";
 
@@ -23,7 +25,16 @@ export default async function PublicInvoicePage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ session_id?: string; cancelled?: string; error?: string }>;
+  searchParams: Promise<{
+    session_id?: string;
+    cancelled?: string;
+    error?: string;
+    square?: string;
+    transactionId?: string;
+    orderId?: string;
+    paypal?: string;
+    token?: string;
+  }>;
 }) {
   await boot();
   const { token } = await params;
@@ -41,13 +52,9 @@ export default async function PublicInvoicePage({
     await refreshInvoice(invoice.id, org.id);
   }
 
-  /*
-   * The customer is back from Stripe Checkout. Confirm the session with Stripe
-   * and record the payment here as well as in the webhook: whichever arrives
-   * first wins, and the session id keeps it to a single ledger entry.
-   */
   let paidJustNow = false;
   let error = q.error || "";
+
   if (q.session_id) {
     const config = await stripeConfig(invoice.organizationId);
     if (config?.secretKey) {
@@ -73,9 +80,74 @@ export default async function PublicInvoicePage({
     }
   }
 
+  if (q.square) {
+    const config = await squareConfig(invoice.organizationId);
+    const paymentId = q.transactionId || "";
+    const orderId = q.orderId || "";
+    if (config?.accessToken && (paymentId || orderId)) {
+      try {
+        let amount = 0;
+        let reference = paymentId || orderId;
+        let completed = false;
+        if (paymentId) {
+          const payment = await retrieveSquarePayment(config.accessToken, paymentId, config.sandbox);
+          completed = payment.status === "COMPLETED";
+          amount = Number(payment.amount_money?.amount || 0);
+          reference = payment.id || reference;
+        } else if (orderId) {
+          const order = await retrieveSquareOrder(config.accessToken, orderId, config.sandbox);
+          completed = order.state === "COMPLETED";
+          amount = Number(order.total_money?.amount || 0);
+          reference = order.id || reference;
+        }
+        if (completed) {
+          await recordOnlinePayment({
+            organizationId: invoice.organizationId,
+            customerId: invoice.customerId,
+            invoiceId: invoice.id,
+            amountCents: amount,
+            reference,
+            method: "card",
+            notes: "Paid online through Square",
+          });
+          paidJustNow = true;
+        }
+      } catch (caught) {
+        error = `We could not confirm that payment with Square. ${(caught as Error).message}`;
+      }
+    }
+  }
+
+  if (q.paypal) {
+    const config = await paypalConfig(invoice.organizationId);
+    const orderId = q.token || "";
+    if (config && orderId) {
+      try {
+        let order = await retrievePayPalOrder(config.clientId, config.clientSecret, orderId, config.sandbox);
+        if (order.status === "APPROVED") {
+          order = await capturePayPalOrder(config.clientId, config.clientSecret, orderId, config.sandbox);
+        }
+        if (paypalOrderPaid(order)) {
+          await recordOnlinePayment({
+            organizationId: invoice.organizationId,
+            customerId: invoice.customerId,
+            invoiceId: invoice.id,
+            amountCents: paypalOrderAmountCents(order) || invoice.totalCents,
+            reference: order.id || orderId,
+            method: "card",
+            notes: "Paid online through PayPal",
+          });
+          paidJustNow = true;
+        }
+      } catch (caught) {
+        error = `We could not confirm that payment with PayPal. ${(caught as Error).message}`;
+      }
+    }
+  }
+
   const [fresh] = await db().select().from(invoices).where(eq(invoices.id, invoice.id));
   const paid = await amountPaidCents(invoice.id);
-  const config = await stripeConfig(invoice.organizationId);
+  const methods = await onlinePayMethods(invoice.organizationId);
 
   return (
     <InvoiceSheet
@@ -87,7 +159,7 @@ export default async function PublicInvoicePage({
       balance={balanceCents(fresh.totalCents, paid, fresh.status)}
       publicView
       publicToken={token}
-      canPayOnline={Boolean(config?.secretKey)}
+      payMethods={methods}
       paidJustNow={paidJustNow}
       cancelled={Boolean(q.cancelled)}
       error={error}

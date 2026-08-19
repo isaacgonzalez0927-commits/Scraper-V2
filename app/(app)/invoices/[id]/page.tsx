@@ -137,19 +137,38 @@ export default async function InvoiceDetailPage({
                 Copy
               </button>
             </div>
+            {!integrations.stripe.connected && !shell.isDemo ? (
+              <div className="connect-cta connect-cta-flush mt-2">
+                <div>
+                  <strong>Stripe is the main pay button.</strong>
+                  <p>Customers tap Pay with Stripe on the invoice. Square and PayPal can sit underneath if those are connected too.</p>
+                </div>
+                <ConnectStripeButton large />
+              </div>
+            ) : null}
             <div className="kv mt-2">
               <div className="kv-row">
                 <span className="kv-key">Card payments</span>
                 <span className="kv-value">
-                  {integrations.stripe.connected ? (
-                    "On through Stripe"
-                  ) : shell.isDemo ? (
-                    <a href="/signup">Create your shop</a>
-                  ) : (
-                    <ConnectStripeButton secondary label="Connect Stripe" />
-                  )}
+                  {integrations.stripe.connected
+                    ? "On through Stripe"
+                    : shell.isDemo
+                      ? <a href="/signup">Create your shop</a>
+                      : "Stripe not connected"}
                 </span>
               </div>
+              {integrations.square.connected ? (
+                <div className="kv-row">
+                  <span className="kv-key">Square</span>
+                  <span className="kv-value">Also on · {integrations.square.label}</span>
+                </div>
+              ) : null}
+              {integrations.paypal.connected ? (
+                <div className="kv-row">
+                  <span className="kv-key">PayPal</span>
+                  <span className="kv-value">Also on · {integrations.paypal.label}</span>
+                </div>
+              ) : null}
               <div className="kv-row">
                 <span className="kv-key">Email delivery</span>
                 <span className="kv-value">

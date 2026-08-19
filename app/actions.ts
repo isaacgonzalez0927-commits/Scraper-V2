@@ -20,6 +20,9 @@ import { disconnectIntegration, emailConfig, saveIntegration } from "@/lib/integ
 import { parseBusinessType, tradeCopy } from "@/lib/business";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
+import { paypalAccountLabel } from "@/lib/paypal";
+import { quickBooksCompanyName } from "@/lib/quickbooks";
+import { listSquareLocations, squareAccountLabel } from "@/lib/square";
 import { accountLabel, retrieveAccount, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
 import { DEMO_EMAIL } from "@/lib/seed";
 import { absoluteBaseUrl } from "@/lib/url";
@@ -510,7 +513,7 @@ const INTEGRATIONS_TAB = "/settings?tab=integrations";
 
 function demoBlocked(): string {
   return `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
-    "Create your own shop to connect Stripe. The demo is shared, so keys cannot be saved here.",
+    "Create your own shop to connect accounts. The demo is shared, so keys cannot be saved here.",
   )}`;
 }
 
@@ -571,6 +574,107 @@ export async function disconnectStripeAction() {
   const { org } = await requireContext();
   await disconnectIntegration(org.id, "stripe");
   redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("Stripe disconnected. Payments can still be logged by hand.")}`);
+}
+
+function on(form: FormData, key: string): boolean {
+  const value = str(form, key).toLowerCase();
+  return value === "1" || value === "on" || value === "true";
+}
+
+export async function connectSquareAction(form: FormData) {
+  const { org, user } = await requireContext();
+  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
+  const accessToken = str(form, "square_access_token");
+  let locationId = str(form, "square_location_id");
+  const webhookSignatureKey = str(form, "square_webhook_key");
+  const sandbox = on(form, "square_sandbox");
+  if (!accessToken) {
+    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Paste your Square access token first.")}`);
+  }
+  let failure = "";
+  let label = "";
+  try {
+    const locations = await listSquareLocations(accessToken, sandbox);
+    if (!locationId) locationId = locations[0]?.id || "";
+    if (!locationId) throw new Error("This Square account has no active location.");
+    label = await squareAccountLabel(accessToken, sandbox);
+  } catch (error) {
+    failure = (error as Error).message;
+  }
+  if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
+  await saveIntegration(
+    org.id,
+    "square",
+    { accessToken, locationId, webhookSignatureKey, sandbox },
+    label,
+  );
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Square connected to ${label}.`)}`);
+}
+
+export async function disconnectSquareAction() {
+  const { org } = await requireContext();
+  await disconnectIntegration(org.id, "square");
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("Square disconnected.")}`);
+}
+
+export async function connectPaypalAction(form: FormData) {
+  const { org, user } = await requireContext();
+  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
+  const clientId = str(form, "paypal_client_id");
+  const clientSecret = str(form, "paypal_client_secret");
+  const webhookId = str(form, "paypal_webhook_id");
+  const sandbox = on(form, "paypal_sandbox");
+  if (!clientId || !clientSecret) {
+    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("PayPal client id and secret are both required.")}`);
+  }
+  let failure = "";
+  let label = "";
+  try {
+    label = await paypalAccountLabel(clientId, clientSecret, sandbox);
+  } catch (error) {
+    failure = (error as Error).message;
+  }
+  if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
+  await saveIntegration(
+    org.id,
+    "paypal",
+    { clientId, clientSecret, webhookId, sandbox },
+    label,
+  );
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`PayPal connected (${label}).`)}`);
+}
+
+export async function disconnectPaypalAction() {
+  const { org } = await requireContext();
+  await disconnectIntegration(org.id, "paypal");
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("PayPal disconnected.")}`);
+}
+
+export async function connectQuickbooksAction(form: FormData) {
+  const { org, user } = await requireContext();
+  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
+  const accessToken = str(form, "quickbooks_access_token");
+  const realmId = str(form, "quickbooks_realm_id");
+  const sandbox = on(form, "quickbooks_sandbox");
+  if (!accessToken || !realmId) {
+    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("A QuickBooks access token and company id are both required.")}`);
+  }
+  let failure = "";
+  let label = "";
+  try {
+    label = await quickBooksCompanyName(accessToken, realmId, sandbox);
+  } catch (error) {
+    failure = (error as Error).message;
+  }
+  if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
+  await saveIntegration(org.id, "quickbooks", { accessToken, realmId, sandbox }, label);
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`QuickBooks connected to ${label}.`)}`);
+}
+
+export async function disconnectQuickbooksAction() {
+  const { org } = await requireContext();
+  await disconnectIntegration(org.id, "quickbooks");
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("QuickBooks disconnected.")}`);
 }
 
 export async function connectEmailAction(form: FormData) {
