@@ -19,7 +19,8 @@ import {
 import { disconnectIntegration, emailConfig, saveIntegration } from "@/lib/integrations";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
-import { accountLabel, retrieveAccount } from "@/lib/stripe";
+import { accountLabel, retrieveAccount, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
+import { DEMO_EMAIL } from "@/lib/seed";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
   customers,
@@ -500,8 +501,33 @@ export async function saveSettingsAction(form: FormData) {
 
 const INTEGRATIONS_TAB = "/settings?tab=integrations";
 
+function demoBlocked(): string {
+  return `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
+    "Create your own shop to connect Stripe. The demo is shared, so keys cannot be saved here.",
+  )}`;
+}
+
+export async function startStripeConnectAction() {
+  const { org, user } = await requireContext();
+  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
+  if (!stripeConnectEnabled()) {
+    redirect(
+      `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
+        "One-click Connect is not enabled on this deployment. Paste a Stripe secret key below.",
+      )}`,
+    );
+  }
+  const base = await absoluteBaseUrl();
+  if (!base) {
+    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Could not determine this site's public address.")}`);
+  }
+  const state = signConnectState(org.id, user.id);
+  redirect(stripeConnectAuthorizeUrl({ state, redirectUri: `${base}/api/integrations/stripe/callback` }));
+}
+
 export async function connectStripeAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org, user } = await requireContext();
+  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
   const secretKey = str(form, "stripe_secret_key");
   const publishableKey = str(form, "stripe_publishable_key");
   const webhookSecret = str(form, "stripe_webhook_secret");
@@ -525,7 +551,12 @@ export async function connectStripeAction(form: FormData) {
   }
   if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
 
-  await saveIntegration(org.id, "stripe", { secretKey, publishableKey, webhookSecret }, label);
+  await saveIntegration(org.id, "stripe", {
+    secretKey,
+    publishableKey,
+    webhookSecret,
+    connectedVia: "keys",
+  }, label);
   redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Stripe connected to ${label}.`)}`);
 }
 

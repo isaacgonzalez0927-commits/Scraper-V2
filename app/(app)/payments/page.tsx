@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { ConnectStripeCallout } from "@/components/ConnectStripe";
 import { Blank, Empty, RecordTable, SearchField, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -6,6 +7,7 @@ import { displayName } from "@/lib/display";
 import { label, prettyDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
+import { integrationStatus } from "@/lib/integrations";
 import { customers, invoices, payments } from "@/lib/schema";
 
 export default async function PaymentsPage({
@@ -16,6 +18,7 @@ export default async function PaymentsPage({
   const { org, shell } = await loadApp();
   const { q } = await searchParams;
   const term = (q || "").trim();
+  const integrations = await integrationStatus(org.id);
   const rows = await db()
     .select({ payment: payments, customer: customers, invoice: invoices })
     .from(payments)
@@ -41,6 +44,8 @@ export default async function PaymentsPage({
       sub={<p className="page-sub">Cash that actually arrived. Voided payments drop out of every report.</p>}
       actions={<a className="btn" href="/payments/new">Record payment</a>}
     >
+      {!shell.isDemo && !integrations.stripe.connected ? <ConnectStripeCallout /> : null}
+
       <div className="grid grid-3">
         <Stat label="Payments shown" value={String(live.length)} small />
         <Stat label="Total collected" value={formatMoney(total)} tone="good" />

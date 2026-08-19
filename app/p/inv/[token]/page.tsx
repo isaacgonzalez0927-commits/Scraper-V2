@@ -52,7 +52,9 @@ export default async function PublicInvoicePage({
     const config = await stripeConfig(invoice.organizationId);
     if (config?.secretKey) {
       try {
-        const session = await retrieveCheckoutSession(config.secretKey, q.session_id);
+        const session = await retrieveCheckoutSession(config.secretKey, q.session_id, {
+          stripeAccount: config.stripeAccount,
+        });
         if (session.payment_status === "paid") {
           await recordOnlinePayment({
             organizationId: invoice.organizationId,

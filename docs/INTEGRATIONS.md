@@ -4,7 +4,8 @@ Every shop connects its own accounts. Sere is not a middleman: money goes from t
 customer's card straight into the shop's own Stripe account, and email goes out from
 the shop's own domain.
 
-All of it lives in one screen inside the app: **Settings**, then **Integrations**.
+Shop owners do this from **Settings**, then **Integrations**, or from the **Connect
+Stripe** button on Overview, Invoices, and Payments.
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
 key derived from `SERE_SECRET_KEY`. Nothing shows a saved secret back on screen. If you
@@ -18,29 +19,47 @@ theirs again.
 ### What the shop owner does
 
 1. Create a Stripe account at [stripe.com](https://stripe.com) and finish Stripe's
-   business verification. Stripe pays out to the shop's bank account, so this part is
-   between the shop and Stripe.
-2. In the Stripe dashboard, open **Developers**, then **API keys**, and copy the
-   **Secret key** (`sk_live_...`). A restricted key (`rk_live_...`) also works if it can
-   write Checkout Sessions and read the account.
-3. In Sere, open **Settings**, then **Integrations**, paste the key, and select
-   **Connect Stripe**. Sere calls Stripe once to confirm the key and shows which account
-   it belongs to.
-4. Still in Stripe, open **Developers**, then **Webhooks**, and select **Add endpoint**:
-   - Endpoint URL: `https://yourdomain.com/api/webhooks/stripe`
-   - Events: `checkout.session.completed` and, if you accept bank debits,
-     `checkout.session.async_payment_succeeded`
-5. Copy the **Signing secret** (`whsec_...`) Stripe shows for that endpoint, paste it
-   into the webhook field in Sere, and save again.
+   business verification. Stripe pays out to the shop's bank account.
+2. In Sere, select **Connect Stripe**. If one-click Connect is enabled on this
+   deployment, Stripe asks them to approve Sere and they come back connected. If it is
+   not enabled yet, they paste a secret key (`sk_live_...` or `sk_test_...`) on the
+   same screen.
+3. Invoice links then show **Pay this invoice**. Card details never touch Sere.
 
-Sere prints the exact webhook URL for your deployment on the Integrations screen with a
-copy button, so nobody has to guess.
+Cash, check, Zelle, Venmo, and bank transfers are still recorded by hand under
+**Payments**. Stripe is only for the card button on the customer invoice.
+
+### One-click Connect (Sere operator)
+
+This is what turns the button into a real Stripe redirect instead of a paste-keys form.
+It is configured once for the whole product, in Vercel:
+
+1. Create a Stripe account for Sere itself and turn on [Stripe Connect](https://dashboard.stripe.com/connect)
+   for Standard accounts.
+2. Add the redirect URI:
+   `https://www.sere.cash/api/integrations/stripe/callback`
+   (and the `www`-less host if that is the primary domain).
+3. Set environment variables and redeploy:
+
+| Variable | Purpose |
+| -------- | ------- |
+| `STRIPE_CONNECT_CLIENT_ID` | Connect client id (`ca_...`) |
+| `STRIPE_SECRET_KEY` | Sere's platform secret key. Used to finish OAuth, not to take the shop's money |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret for Sere's platform webhook |
+
+4. Add one webhook on the Sere platform account:
+   - URL: `https://www.sere.cash/api/webhooks/stripe`
+   - Events: `checkout.session.completed` and `checkout.session.async_payment_succeeded`
+   - Listen to events on **Connected accounts**
+
+Until those are set, **Connect Stripe** still works: it opens Settings so the shop can
+paste their own API keys.
 
 ### Trying it without real money
 
 Use a test key (`sk_test_...`) and Stripe's test card `4242 4242 4242 4242` with any
 future expiry and any CVC. Stripe's test mode has its own webhook endpoints and its own
-signing secret, so add the endpoint in test mode too if you want to exercise it.
+signing secret, so add the endpoint in test mode too if you want to exercise pasted keys.
 
 ### What the customer sees
 
@@ -59,7 +78,8 @@ Two independent paths, because customers close tabs:
   Stripe about that session and records the payment if Stripe says it is paid.
 - **The webhook.** Stripe posts `checkout.session.completed` to
   `/api/webhooks/stripe`. Sere finds the shop from the event metadata, checks the
-  signature against that shop's signing secret, and records the payment.
+  signature against that shop's signing secret or the platform secret, and records
+  the payment.
 
 Whichever arrives first wins. The Stripe session id is stored as the payment reference
 and is the idempotency key, so the same checkout can never be recorded twice. Sere also
@@ -68,8 +88,9 @@ balance reaches zero.
 
 ### Turning it off
 
-**Disconnect Stripe** removes the stored keys. Existing payments stay in the ledger, and
-invoice pages fall back to telling the customer how to pay the shop directly.
+**Disconnect Stripe** removes the stored keys and, for Connect, disconnects the shop
+in Stripe. Existing payments stay in the ledger, and invoice pages fall back to telling
+the customer how to pay the shop directly.
 
 ---
 
@@ -99,7 +120,9 @@ sent and shows the shareable link.
 ## Running one shop and skipping the connect screen
 
 A single-shop deployment can put the credentials in the environment instead. Any shop
-without saved credentials falls back to these:
+without saved credentials falls back to these, **unless** `STRIPE_CONNECT_CLIENT_ID` is
+set. In that case `STRIPE_SECRET_KEY` is Sere's platform key and is not used as a shop
+fallback, so money cannot land in the wrong account.
 
 | Variable | Purpose |
 | -------- | ------- |
