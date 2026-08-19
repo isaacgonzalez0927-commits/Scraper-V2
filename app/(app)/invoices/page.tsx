@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { Badge, Empty, RecordTable, Tabs } from "@/components/ui";
+import { ConnectStripeCallout } from "@/components/ConnectStripe";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -7,6 +8,7 @@ import { balanceCents } from "@/lib/finance";
 import { INVOICE_STATUSES, label, prettyDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
+import { integrationStatus } from "@/lib/integrations";
 import { paidMap } from "@/lib/queries";
 import { customers, invoices } from "@/lib/schema";
 
@@ -17,6 +19,7 @@ export default async function InvoicesPage({
 }) {
   const { org, shell } = await loadApp();
   const { status } = await searchParams;
+  const integrations = await integrationStatus(org.id);
   const filters = [eq(invoices.organizationId, org.id)];
   if (status) filters.push(eq(invoices.status, status));
   const rows = await db()
@@ -39,6 +42,7 @@ export default async function InvoicesPage({
       sub={<p className="page-sub">An invoice is paid only when the balance reaches zero.</p>}
       actions={<a className="btn" href="/invoices/new">New invoice</a>}
     >
+      {!shell.isDemo && !integrations.stripe.connected ? <ConnectStripeCallout /> : null}
       <Tabs tabs={tabs} active={status || ""} />
       {rows.length ? (
         <RecordTable

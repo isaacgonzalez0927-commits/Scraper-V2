@@ -45,7 +45,12 @@ export function encodeParams(params: Params, prefix = ""): string {
 async function request<T>(
   secretKey: string,
   path: string,
-  options: { method?: "GET" | "POST"; params?: Params; idempotencyKey?: string } = {},
+  options: {
+    method?: "GET" | "POST";
+    params?: Params;
+    idempotencyKey?: string;
+    stripeAccount?: string;
+  } = {},
 ): Promise<T> {
   if (!secretKey) throw new StripeError("No Stripe secret key is configured.");
   const method = options.method || "GET";
@@ -57,6 +62,7 @@ async function request<T>(
   };
   if (method === "POST") headers["Content-Type"] = "application/x-www-form-urlencoded";
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
+  if (options.stripeAccount) headers["Stripe-Account"] = options.stripeAccount;
 
   let response: Response;
   try {
@@ -122,11 +128,13 @@ export function createCheckoutSession(
     customerEmail?: string;
     metadata?: Record<string, string | number>;
     idempotencyKey?: string;
+    stripeAccount?: string;
   },
 ): Promise<CheckoutSession> {
   return request<CheckoutSession>(secretKey, "/checkout/sessions", {
     method: "POST",
     idempotencyKey: opts.idempotencyKey,
+    stripeAccount: opts.stripeAccount,
     params: {
       mode: "payment",
       success_url: opts.successUrl,
@@ -148,8 +156,14 @@ export function createCheckoutSession(
   });
 }
 
-export function retrieveCheckoutSession(secretKey: string, id: string): Promise<CheckoutSession> {
-  return request<CheckoutSession>(secretKey, `/checkout/sessions/${encodeURIComponent(id)}`);
+export function retrieveCheckoutSession(
+  secretKey: string,
+  id: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<CheckoutSession> {
+  return request<CheckoutSession>(secretKey, `/checkout/sessions/${encodeURIComponent(id)}`, {
+    stripeAccount: opts.stripeAccount,
+  });
 }
 
 /**
@@ -187,4 +201,117 @@ export function verifyWebhookSignature(opts: {
     if (signature.length !== expected.length) return false;
     return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
   });
+}
+
+/** Platform Connect OAuth. STRIPE_CONNECT_BASE exists so tests can point at a stand in. */
+const CONNECT = process.env.STRIPE_CONNECT_BASE || "https://connect.stripe.com";
+
+export function stripeConnectClientId(): string {
+  return process.env.STRIPE_CONNECT_CLIENT_ID || "";
+}
+
+export function stripePlatformSecret(): string {
+  return process.env.STRIPE_SECRET_KEY || "";
+}
+
+/** One-click Connect needs Sere's own Stripe platform credentials. */
+export function stripeConnectEnabled(): boolean {
+  return Boolean(stripeConnectClientId() && stripePlatformSecret());
+}
+
+type ConnectState = { organizationId: number; userId: number; exp: number };
+
+function connectStateSecret(): string {
+  return process.env.SERE_SECRET_KEY || process.env.AUTH_SECRET || "sere-dev-only-change-me";
+}
+
+export function signConnectState(organizationId: number, userId: number, now = Date.now()): string {
+  const payload: ConnectState = {
+    organizationId,
+    userId,
+    exp: now + 15 * 60 * 1000,
+  };
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = createHmac("sha256", connectStateSecret()).update(body).digest("base64url");
+  return `${body}.${sig}`;
+}
+
+export function readConnectState(state: string | null, now = Date.now()): ConnectState | null {
+  if (!state) return null;
+  const [body, sig] = state.split(".");
+  if (!body || !sig) return null;
+  const expected = createHmac("sha256", connectStateSecret()).update(body).digest("base64url");
+  if (expected.length !== sig.length) return null;
+  if (!timingSafeEqual(Buffer.from(expected), Buffer.from(sig))) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as ConnectState;
+    if (!payload.organizationId || !payload.userId || payload.exp < now) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export function stripeConnectAuthorizeUrl(opts: { state: string; redirectUri: string }): string {
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: stripeConnectClientId(),
+    scope: "read_write",
+    state: opts.state,
+    redirect_uri: opts.redirectUri,
+  });
+  return `${CONNECT}/oauth/authorize?${params.toString()}`;
+}
+
+export type StripeConnectToken = {
+  access_token: string;
+  stripe_user_id: string;
+  stripe_publishable_key?: string;
+  refresh_token?: string;
+};
+
+async function connectForm<T>(path: string, params: Record<string, string>): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${CONNECT}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: encodeParams(params),
+    });
+  } catch (error) {
+    throw new StripeError(`Could not reach Stripe: ${(error as Error).message}`);
+  }
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    error_description?: string;
+  };
+  if (!response.ok || payload.error) {
+    throw new StripeError(payload.error_description || payload.error || `Stripe returned ${response.status}.`);
+  }
+  return payload as T;
+}
+
+export function exchangeStripeConnectCode(code: string): Promise<StripeConnectToken> {
+  const secret = stripePlatformSecret();
+  if (!secret) throw new StripeError("Sere has not configured its Stripe platform key.");
+  return connectForm<StripeConnectToken>("/oauth/token", {
+    grant_type: "authorization_code",
+    client_secret: secret,
+    code,
+  });
+}
+
+export async function deauthorizeStripeConnect(accountId: string): Promise<void> {
+  const clientId = stripeConnectClientId();
+  const secret = stripePlatformSecret();
+  if (!clientId || !secret || !accountId) return;
+  try {
+    await connectForm("/oauth/deauthorize", {
+      client_id: clientId,
+      client_secret: secret,
+      stripe_user_id: accountId,
+    });
+  } catch {
+    // Already disconnected in Stripe, or Connect is not configured. Sere still drops the row.
+  }
 }
