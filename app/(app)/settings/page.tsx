@@ -1,8 +1,14 @@
 import { eq } from "drizzle-orm";
 import {
   connectEmailAction,
+  connectPaypalAction,
+  connectQuickbooksAction,
+  connectSquareAction,
   connectStripeAction,
   disconnectEmailAction,
+  disconnectPaypalAction,
+  disconnectQuickbooksAction,
+  disconnectSquareAction,
   disconnectStripeAction,
   logoutAction,
   saveSettingsAction,
@@ -62,7 +68,12 @@ export default async function SettingsPage({
 
       <Banner error={q.error} ok={q.ok} />
 
-      {tab === "integrations" && (integrations.stripe.unreadable || integrations.email.unreadable) ? (
+      {tab === "integrations" &&
+      (integrations.stripe.unreadable ||
+        integrations.email.unreadable ||
+        integrations.square.unreadable ||
+        integrations.paypal.unreadable ||
+        integrations.quickbooks.unreadable) ? (
         <Banner warn="Saved credentials could not be read. This happens when SERE_SECRET_KEY changes. Paste the keys again to reconnect." />
       ) : null}
 
@@ -145,7 +156,7 @@ export default async function SettingsPage({
         <div className="grid narrow">
           <Card
             title="Stripe"
-            note="Let customers pay an invoice by card. The money lands in the shop's own Stripe account."
+            note="The main way customers pay an invoice by card. Money lands in the shop's own Stripe account."
             action={
               <span
                 className={`badge badge-${
@@ -229,18 +240,22 @@ export default async function SettingsPage({
                   <strong>Connect the shop's Stripe.</strong>
                   <p>
                     {oneClick
-                      ? "One click. Stripe asks the shop to approve Sere, then invoice links show Pay this invoice. Money goes to their account."
-                      : "Paste the shop's Stripe secret key. Customers then pay invoice links by card, and the money goes to that Stripe account."}
+                      ? "One click. Stripe asks the shop to approve Sere, then invoice links show Pay with Stripe as the big button. Money goes to their account."
+                      : "Paste the shop's Stripe secret key. Customers then see Pay with Stripe as the main button, and the money goes to that Stripe account."}
                   </p>
                 </div>
-                {oneClick ? <ConnectStripeButton /> : null}
+                {oneClick ? <ConnectStripeButton large /> : (
+                  <button className="btn btn-stripe btn-connect-lg" type="submit" form="stripe-keys-form">
+                    Connect Stripe
+                  </button>
+                )}
               </div>
             ) : null}
 
             {!demoShop ? (
               <details className="disclosure" open={!oneClick && !integrations.stripe.connected}>
                 <summary>{integrations.stripe.connected ? "Update with API keys" : "Or paste API keys"}</summary>
-                <form action={connectStripeAction} className="form-grid mt-2">
+                <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
                   <div className="field full">
                     <label>Secret key</label>
                     <input name="stripe_secret_key" type="password" placeholder="sk_live_..." autoComplete="off" />
@@ -269,6 +284,212 @@ export default async function SettingsPage({
                 <button className="btn btn-ghost btn-sm" type="submit">Disconnect Stripe</button>
               </form>
             ) : null}
+          </Card>
+
+          <p className="section-label mt-1">Also works with</p>
+          <p className="muted">
+            Already on Square, PayPal, or QuickBooks? Connect those too. Customers still
+            see <strong>Pay with Stripe</strong> as the main button whenever Stripe is on.
+          </p>
+
+          <Card
+            title="Square"
+              note="Payment links for invoices, if that is what the shop already uses."
+              action={
+                <span
+                  className={`badge badge-${
+                    integrations.square.connected ? "paid" : integrations.square.unreadable ? "partial" : "draft"
+                  }`}
+                >
+                  {integrations.square.connected
+                    ? "Connected"
+                    : integrations.square.unreadable
+                      ? "Needs reconnecting"
+                      : "Not connected"}
+                </span>
+              }
+            >
+              {integrations.square.connected ? (
+                <>
+                  <div className="kv">
+                    <div className="kv-row">
+                      <span className="kv-key">Account</span>
+                      <span className="kv-value">{integrations.square.label}</span>
+                    </div>
+                    {integrations.square.updatedAt ? (
+                      <div className="kv-row">
+                        <span className="kv-key">Connected on</span>
+                        <span className="kv-value">{prettyDate(integrations.square.updatedAt)}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="copy-row mt-2">
+                    <span className="copy-value">{`${base}/api/webhooks/square`}</span>
+                    <button className="btn btn-secondary btn-sm" type="button" data-copy={`${base}/api/webhooks/square`}>
+                      Copy
+                    </button>
+                  </div>
+                  {!demoShop ? (
+                    <form action={disconnectSquareAction} className="mt-2">
+                      <button className="btn btn-ghost btn-sm" type="submit">Disconnect Square</button>
+                    </form>
+                  ) : null}
+                </>
+              ) : demoShop ? (
+                <p className="muted">Create your shop to connect Square.</p>
+              ) : (
+                <form action={connectSquareAction} className="form-grid">
+                  <div className="field full">
+                    <label>Access token</label>
+                    <input name="square_access_token" type="password" autoComplete="off" required />
+                  </div>
+                  <div className="field">
+                    <label>Location ID (optional)</label>
+                    <input name="square_location_id" placeholder="L..." autoComplete="off" />
+                  </div>
+                  <div className="field">
+                    <label>Webhook signature key</label>
+                    <input name="square_webhook_key" type="password" autoComplete="off" />
+                  </div>
+                  <label className="checkbox">
+                    <input type="checkbox" name="square_sandbox" value="1" />
+                    Sandbox
+                  </label>
+                  <div className="form-actions">
+                    <button className="btn btn-secondary" type="submit">Connect Square</button>
+                  </div>
+                </form>
+              )}
+          </Card>
+
+          <Card
+            title="PayPal"
+              note="Checkout for invoices. Shown under Stripe when both are connected."
+              action={
+                <span
+                  className={`badge badge-${
+                    integrations.paypal.connected ? "paid" : integrations.paypal.unreadable ? "partial" : "draft"
+                  }`}
+                >
+                  {integrations.paypal.connected
+                    ? "Connected"
+                    : integrations.paypal.unreadable
+                      ? "Needs reconnecting"
+                      : "Not connected"}
+                </span>
+              }
+            >
+              {integrations.paypal.connected ? (
+                <>
+                  <div className="kv">
+                    <div className="kv-row">
+                      <span className="kv-key">Account</span>
+                      <span className="kv-value">{integrations.paypal.label}</span>
+                    </div>
+                    {integrations.paypal.updatedAt ? (
+                      <div className="kv-row">
+                        <span className="kv-key">Connected on</span>
+                        <span className="kv-value">{prettyDate(integrations.paypal.updatedAt)}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="copy-row mt-2">
+                    <span className="copy-value">{`${base}/api/webhooks/paypal`}</span>
+                    <button className="btn btn-secondary btn-sm" type="button" data-copy={`${base}/api/webhooks/paypal`}>
+                      Copy
+                    </button>
+                  </div>
+                  {!demoShop ? (
+                    <form action={disconnectPaypalAction} className="mt-2">
+                      <button className="btn btn-ghost btn-sm" type="submit">Disconnect PayPal</button>
+                    </form>
+                  ) : null}
+                </>
+              ) : demoShop ? (
+                <p className="muted">Create your shop to connect PayPal.</p>
+              ) : (
+                <form action={connectPaypalAction} className="form-grid">
+                  <div className="field full">
+                    <label>Client ID</label>
+                    <input name="paypal_client_id" autoComplete="off" required />
+                  </div>
+                  <div className="field full">
+                    <label>Client secret</label>
+                    <input name="paypal_client_secret" type="password" autoComplete="off" required />
+                  </div>
+                  <div className="field full">
+                    <label>Webhook ID (optional)</label>
+                    <input name="paypal_webhook_id" autoComplete="off" />
+                  </div>
+                  <label className="checkbox">
+                    <input type="checkbox" name="paypal_sandbox" value="1" />
+                    Sandbox
+                  </label>
+                  <div className="form-actions">
+                    <button className="btn btn-secondary" type="submit">Connect PayPal</button>
+                  </div>
+                </form>
+              )}
+          </Card>
+
+          <Card
+            title="QuickBooks"
+              note="Books link only. Invoices and card checkout still live in Sere."
+              action={
+                <span
+                  className={`badge badge-${
+                    integrations.quickbooks.connected ? "paid" : integrations.quickbooks.unreadable ? "partial" : "draft"
+                  }`}
+                >
+                  {integrations.quickbooks.connected
+                    ? "Connected"
+                    : integrations.quickbooks.unreadable
+                      ? "Needs reconnecting"
+                      : "Not connected"}
+                </span>
+              }
+            >
+              {integrations.quickbooks.connected ? (
+                <>
+                  <div className="kv">
+                    <div className="kv-row">
+                      <span className="kv-key">Company</span>
+                      <span className="kv-value">{integrations.quickbooks.label}</span>
+                    </div>
+                    {integrations.quickbooks.updatedAt ? (
+                      <div className="kv-row">
+                        <span className="kv-key">Connected on</span>
+                        <span className="kv-value">{prettyDate(integrations.quickbooks.updatedAt)}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                  {!demoShop ? (
+                    <form action={disconnectQuickbooksAction} className="mt-2">
+                      <button className="btn btn-ghost btn-sm" type="submit">Disconnect QuickBooks</button>
+                    </form>
+                  ) : null}
+                </>
+              ) : demoShop ? (
+                <p className="muted">Create your shop to connect QuickBooks.</p>
+              ) : (
+                <form action={connectQuickbooksAction} className="form-grid">
+                  <div className="field full">
+                    <label>Access token</label>
+                    <input name="quickbooks_access_token" type="password" autoComplete="off" required />
+                  </div>
+                  <div className="field full">
+                    <label>Company (realm) ID</label>
+                    <input name="quickbooks_realm_id" autoComplete="off" required />
+                  </div>
+                  <label className="checkbox">
+                    <input type="checkbox" name="quickbooks_sandbox" value="1" />
+                    Sandbox
+                  </label>
+                  <div className="form-actions">
+                    <button className="btn btn-secondary" type="submit">Connect QuickBooks</button>
+                  </div>
+                </form>
+              )}
           </Card>
 
           <Card

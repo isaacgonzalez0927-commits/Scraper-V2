@@ -12,7 +12,7 @@ import { deauthorizeStripeConnect, stripePlatformSecret } from "./stripe";
  * provider never needs a database migration.
  */
 
-export type Provider = "stripe" | "email";
+export type Provider = "stripe" | "email" | "square" | "paypal" | "quickbooks";
 
 export type StripeConfig = {
   secretKey: string;
@@ -30,6 +30,26 @@ type StoredStripe = {
   accessToken?: string;
   refreshToken?: string;
   connectedVia?: string;
+};
+
+export type SquareConfig = {
+  accessToken: string;
+  locationId: string;
+  webhookSignatureKey: string;
+  sandbox: boolean;
+};
+
+export type PayPalConfig = {
+  clientId: string;
+  clientSecret: string;
+  webhookId: string;
+  sandbox: boolean;
+};
+
+export type QuickBooksConfig = {
+  accessToken: string;
+  realmId: string;
+  sandbox: boolean;
 };
 
 export type EmailConfig = {
@@ -50,6 +70,9 @@ export type IntegrationRecord = {
 export const PROVIDER_NAMES: Record<Provider, string> = {
   stripe: "Stripe",
   email: "Email",
+  square: "Square",
+  paypal: "PayPal",
+  quickbooks: "QuickBooks",
 };
 
 export async function readIntegration(
@@ -82,7 +105,7 @@ async function readConfig<T>(organizationId: number, provider: Provider): Promis
 export async function saveIntegration(
   organizationId: number,
   provider: Provider,
-  config: Record<string, string>,
+  config: Record<string, string | boolean>,
   label: string,
 ): Promise<void> {
   const now = nowISO();
@@ -194,6 +217,63 @@ export async function emailConfig(organizationId: number): Promise<EmailConfig |
   return fromEnv?.fromEmail ? fromEnv : null;
 }
 
+export async function squareConfig(organizationId: number): Promise<SquareConfig | null> {
+  const saved = await readConfig<SquareConfig>(organizationId, "square");
+  if (saved?.accessToken) {
+    return {
+      accessToken: saved.accessToken,
+      locationId: saved.locationId || "",
+      webhookSignatureKey: saved.webhookSignatureKey || "",
+      sandbox: Boolean(saved.sandbox),
+    };
+  }
+  return null;
+}
+
+export async function paypalConfig(organizationId: number): Promise<PayPalConfig | null> {
+  const saved = await readConfig<PayPalConfig>(organizationId, "paypal");
+  if (saved?.clientId && saved.clientSecret) {
+    return {
+      clientId: saved.clientId,
+      clientSecret: saved.clientSecret,
+      webhookId: saved.webhookId || "",
+      sandbox: Boolean(saved.sandbox),
+    };
+  }
+  return null;
+}
+
+export async function quickbooksConfig(organizationId: number): Promise<QuickBooksConfig | null> {
+  const saved = await readConfig<QuickBooksConfig>(organizationId, "quickbooks");
+  if (saved?.accessToken && saved.realmId) {
+    return {
+      accessToken: saved.accessToken,
+      realmId: saved.realmId,
+      sandbox: Boolean(saved.sandbox),
+    };
+  }
+  return null;
+}
+
+export type OnlinePayMethods = {
+  stripe: boolean;
+  square: boolean;
+  paypal: boolean;
+};
+
+export async function onlinePayMethods(organizationId: number): Promise<OnlinePayMethods> {
+  const [stripe, square, paypal] = await Promise.all([
+    stripeConfig(organizationId),
+    squareConfig(organizationId),
+    paypalConfig(organizationId),
+  ]);
+  return {
+    stripe: Boolean(stripe?.secretKey),
+    square: Boolean(square?.accessToken),
+    paypal: Boolean(paypal?.clientId && paypal?.clientSecret),
+  };
+}
+
 export type ProviderStatus = {
   connected: boolean;
   fromEnv: boolean;
@@ -211,35 +291,75 @@ export type ProviderStatus = {
  */
 export async function integrationStatus(
   organizationId: number,
-): Promise<{ stripe: ProviderStatus; email: ProviderStatus }> {
-  const [stripeRow, emailRow, stripeSaved, emailSaved] = await Promise.all([
-    readIntegration(organizationId, "stripe"),
-    readIntegration(organizationId, "email"),
-    readConfig<StoredStripe>(organizationId, "stripe"),
-    readConfig<EmailConfig>(organizationId, "email"),
-  ]);
+): Promise<{
+  stripe: ProviderStatus;
+  email: ProviderStatus;
+  square: ProviderStatus;
+  paypal: ProviderStatus;
+  quickbooks: ProviderStatus;
+}> {
+  const [stripeRow, emailRow, squareRow, paypalRow, qbRow, stripeSaved, emailSaved, squareSaved, paypalSaved, qbSaved] =
+    await Promise.all([
+      readIntegration(organizationId, "stripe"),
+      readIntegration(organizationId, "email"),
+      readIntegration(organizationId, "square"),
+      readIntegration(organizationId, "paypal"),
+      readIntegration(organizationId, "quickbooks"),
+      readConfig<StoredStripe>(organizationId, "stripe"),
+      readConfig<EmailConfig>(organizationId, "email"),
+      readConfig<SquareConfig>(organizationId, "square"),
+      readConfig<PayPalConfig>(organizationId, "paypal"),
+      readConfig<QuickBooksConfig>(organizationId, "quickbooks"),
+    ]);
   const stripeEnv = stripeEnvConfig();
   const emailEnv = emailEnvConfig();
   const stripeReady = Boolean(stripeSaved && fromStoredStripe(stripeSaved));
   const stripeUnreadable = Boolean(stripeRow) && !stripeReady;
   const emailUnreadable = Boolean(emailRow) && !emailSaved?.apiKey;
+  const squareUnreadable = Boolean(squareRow) && !squareSaved?.accessToken;
+  const paypalUnreadable = Boolean(paypalRow) && !(paypalSaved?.clientId && paypalSaved?.clientSecret);
+  const qbUnreadable = Boolean(qbRow) && !(qbSaved?.accessToken && qbSaved?.realmId);
+
+  function status(
+    row: IntegrationRecord | null,
+    ready: boolean,
+    unreadable: boolean,
+    fromEnv = false,
+    envLabel = "",
+    viaOAuth = false,
+  ): ProviderStatus {
+    return {
+      connected: (Boolean(row) && !unreadable) || fromEnv,
+      fromEnv: !row && fromEnv,
+      unreadable: unreadable && !fromEnv,
+      viaOAuth,
+      label: row?.label || envLabel,
+      updatedAt: row?.updatedAt || "",
+    };
+  }
 
   return {
-    stripe: {
-      connected: (Boolean(stripeRow) && !stripeUnreadable) || Boolean(stripeEnv),
-      fromEnv: !stripeRow && Boolean(stripeEnv),
-      unreadable: stripeUnreadable && !stripeEnv,
-      viaOAuth: stripeSaved?.connectedVia === "oauth" && stripeReady,
-      label: stripeRow?.label || (stripeEnv ? "Deployment environment keys" : ""),
-      updatedAt: stripeRow?.updatedAt || "",
-    },
-    email: {
-      connected: (Boolean(emailRow) && !emailUnreadable) || Boolean(emailEnv?.fromEmail),
-      fromEnv: !emailRow && Boolean(emailEnv?.fromEmail),
-      unreadable: emailUnreadable && !emailEnv?.fromEmail,
-      viaOAuth: false,
-      label: emailRow?.label || emailEnv?.fromEmail || "",
-      updatedAt: emailRow?.updatedAt || "",
-    },
+    stripe: status(
+      stripeRow,
+      stripeReady,
+      stripeUnreadable,
+      Boolean(stripeEnv),
+      stripeEnv ? "Deployment environment keys" : "",
+      stripeSaved?.connectedVia === "oauth" && stripeReady,
+    ),
+    email: status(
+      emailRow,
+      Boolean(emailSaved?.apiKey),
+      emailUnreadable,
+      Boolean(emailEnv?.fromEmail),
+      emailEnv?.fromEmail || "",
+    ),
+    square: status(squareRow, Boolean(squareSaved?.accessToken), squareUnreadable),
+    paypal: status(
+      paypalRow,
+      Boolean(paypalSaved?.clientId && paypalSaved?.clientSecret),
+      paypalUnreadable,
+    ),
+    quickbooks: status(qbRow, Boolean(qbSaved?.accessToken && qbSaved?.realmId), qbUnreadable),
   };
 }
