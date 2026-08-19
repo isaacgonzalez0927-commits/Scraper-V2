@@ -1,9 +1,10 @@
 "use client";
 
-import { startInvoiceCheckoutAction } from "@/app/pay-actions";
+import { startInvoiceCheckoutAction, startPaypalCheckoutAction, startSquareCheckoutAction } from "@/app/pay-actions";
 import { Badge, Banner } from "@/components/ui";
 import { BrandLogo } from "@/components/BrandLogo";
 import { displayName, formatAddress } from "@/lib/display";
+import type { OnlinePayMethods } from "@/lib/integrations";
 import { prettyDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import type { customers, invoiceLines, invoices, organizations } from "@/lib/schema";
@@ -18,6 +19,7 @@ export function InvoiceSheet({
   publicView,
   publicToken,
   canPayOnline,
+  payMethods,
   paidJustNow,
   cancelled,
   error,
@@ -31,14 +33,23 @@ export function InvoiceSheet({
   publicView?: boolean;
   publicToken?: string;
   canPayOnline?: boolean;
+  payMethods?: OnlinePayMethods;
   paidJustNow?: boolean;
   cancelled?: boolean;
   error?: string;
 }) {
+  const methods = payMethods || { stripe: Boolean(canPayOnline), square: false, paypal: false };
+  const online = methods.stripe || methods.square || methods.paypal;
+  const payable = Boolean(publicView && online && balance > 0);
+  const primary = methods.stripe
+    ? startInvoiceCheckoutAction
+    : methods.square
+      ? startSquareCheckoutAction
+      : startPaypalCheckoutAction;
+  const primaryLabel = methods.stripe ? "Pay with Stripe" : methods.square ? "Pay with Square" : "Pay with PayPal";
   const billTo =
     formatAddress(customer.billingLine1, customer.billingCity, customer.billingState, customer.billingPostal) ||
     formatAddress(customer.serviceLine1, customer.serviceCity, customer.serviceState, customer.servicePostal);
-  const payable = Boolean(publicView && canPayOnline && balance > 0);
 
   return (
     <div className={`sheet-page${payable ? " has-pay-bar" : ""}`}>
@@ -134,16 +145,37 @@ export function InvoiceSheet({
           <div className="no-print">
             {balance > 0 ? (
               <div className="sheet-pay">
-                {canPayOnline ? (
+                {online ? (
                   <>
                     <p className="strong">Pay {formatMoney(balance)} online</p>
                     <p className="tiny">
-                      Card payments are handled by Stripe. {org.name} never sees your card number.
+                      Card details go to {methods.stripe ? "Stripe" : methods.square ? "Square" : "PayPal"}.
+                      {" "}{org.name} never sees your card number.
                     </p>
-                    <form action={startInvoiceCheckoutAction} className="mt-2">
-                      <input type="hidden" name="token" value={publicToken} />
-                      <button className="btn pay-btn" type="submit">Pay this invoice</button>
-                    </form>
+                    <div className="pay-methods mt-2">
+                      {methods.stripe ? (
+                        <form action={startInvoiceCheckoutAction}>
+                          <input type="hidden" name="token" value={publicToken} />
+                          <button className="btn btn-stripe btn-connect-lg" type="submit">Pay with Stripe</button>
+                        </form>
+                      ) : null}
+                      {methods.square ? (
+                        <form action={startSquareCheckoutAction}>
+                          <input type="hidden" name="token" value={publicToken} />
+                          <button className={methods.stripe ? "btn btn-secondary" : "btn btn-connect-lg"} type="submit">
+                            Pay with Square
+                          </button>
+                        </form>
+                      ) : null}
+                      {methods.paypal ? (
+                        <form action={startPaypalCheckoutAction}>
+                          <input type="hidden" name="token" value={publicToken} />
+                          <button className={methods.stripe || methods.square ? "btn btn-secondary" : "btn btn-connect-lg"} type="submit">
+                            Pay with PayPal
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
                   </>
                 ) : (
                   <>
@@ -177,9 +209,11 @@ export function InvoiceSheet({
       </div>
 
       {payable ? (
-        <form action={startInvoiceCheckoutAction} className="pay-bar no-print">
+        <form action={primary} className="pay-bar no-print">
           <input type="hidden" name="token" value={publicToken} />
-          <button className="btn" type="submit">Pay {formatMoney(balance)}</button>
+          <button className={`btn${methods.stripe ? " btn-stripe" : ""}`} type="submit">
+            {primaryLabel} {formatMoney(balance)}
+          </button>
         </form>
       ) : null}
     </div>

@@ -4,11 +4,17 @@ import { stripeConnectEnabled } from "@/lib/stripe";
 export function ConnectStripeButton({
   label = "Connect Stripe",
   secondary,
+  large,
 }: {
   label?: string;
   secondary?: boolean;
+  large?: boolean;
 }) {
-  const className = secondary ? "btn btn-secondary" : "btn";
+  const className = [
+    "btn",
+    secondary ? "btn-secondary" : "btn-stripe",
+    large ? "btn-connect-lg" : "",
+  ].filter(Boolean).join(" ");
   if (!stripeConnectEnabled()) {
     return (
       <a className={className} href="/settings?tab=integrations">
@@ -31,11 +37,12 @@ export function ConnectStripeCallout() {
       <div>
         <strong>Let customers pay invoices online.</strong>
         <p>
-          Connect the shop's own Stripe account. Card payments land in their bank,
-          not yours. Cash, check, Zelle, and Venmo can still be recorded by hand.
+          Connect the shop's own Stripe account. That is the main way customers pay
+          an invoice by card. Square and PayPal are available too if that is what
+          the shop already uses.
         </p>
       </div>
-      <ConnectStripeButton />
+      <ConnectStripeButton large />
     </div>
   );
 }

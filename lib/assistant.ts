@@ -239,7 +239,7 @@ export async function buildBrief(
   const voice = tradeCopy(businessType);
   const today = isoDate(now);
   const week = weekBounds(now);
-  const [{ outstanding, overdue }, stripe, jobRows, invoiceRows, collected] = await Promise.all([
+  const [{ outstanding, overdue }, integrations, jobRows, invoiceRows, collected] = await Promise.all([
     outstandingTotals(organizationId),
     integrationStatus(organizationId),
     db().select().from(jobs).where(eq(jobs.organizationId, organizationId)),
@@ -287,7 +287,7 @@ export async function buildBrief(
       href: "/invoices?status=draft",
     });
   }
-  if (!stripe.stripe.connected) {
+  if (!integrations.stripe.connected && !integrations.square.connected && !integrations.paypal.connected) {
     alerts.push({
       tone: "info",
       title: "Card payments are off",

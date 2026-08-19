@@ -46,7 +46,8 @@ npm run build
 | Reports | Money in, outstanding, overdue, expected cash, job profitability |
 | Calendar | Day, week, or month of scheduled jobs, with drag to reschedule |
 | Search | Names, phones, emails, addresses, invoice numbers, on `⌘K` |
-| Settings | Company details, invoice defaults, integrations, account |
+| Settings | Company details, trade type, invoice defaults, integrations, account |
+| Assistant | Star in the top bar. Surfaces overdue cash and today's jobs, and can move a date or mark a job complete |
 
 Two rules the code keeps:
 
@@ -76,8 +77,8 @@ Two rules the code keeps:
 | `STRIPE_WEBHOOK_SECRET` | Optional | Platform webhook signing secret for Connect shops |
 | `RESEND_API_KEY` and `SERE_EMAIL_FROM` | Optional | Deployment-wide email fallback |
 
-Keep `SERE_SECRET_KEY` stable. Rotating it signs everyone out and makes saved Stripe and
-email credentials unreadable, so each shop would have to reconnect.
+Keep `SERE_SECRET_KEY` stable. Rotating it signs everyone out and makes saved payment
+and email credentials unreadable, so each shop would have to reconnect.
 
 ## Connect your domain
 
@@ -87,21 +88,26 @@ The short version: add the domain in Vercel under Settings, then Domains; point 
 record for the apex and a CNAME for `www` at the values Vercel shows you; then set
 `SERE_PUBLIC_BASE_URL` to `https://yourdomain.com` and redeploy.
 
-## Connect Stripe and email
+## Connect payments and email
 
 Full walkthrough: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
 
-Each shop connects its own accounts from **Settings**, then **Integrations**, or from
-the **Connect Stripe** button on Overview, Invoices, and Payments. Money lands in their
-Stripe account. Credentials are stored encrypted and never displayed again.
+Each shop connects its own accounts from **Settings**, then **Integrations**. **Connect
+Stripe** is the main button on Overview, Invoices, and Payments. Money lands in their
+account. Credentials are stored encrypted and never displayed again.
 
-- **Stripe.** Connect Stripe (one click when `STRIPE_CONNECT_CLIENT_ID` is set, or paste
-  a secret key) to turn on **Pay this invoice** on the customer facing invoice page.
-  Add the webhook endpoint `https://yourdomain.com/api/webhooks/stripe` with the event
-  `checkout.session.completed` so a payment is recorded even if the customer closes the
-  tab. Payments are keyed on the Stripe session id, so no double entries.
+- **Stripe.** The primary card processor. One click when `STRIPE_CONNECT_CLIENT_ID` is
+  set, or paste a secret key. Invoice links then show **Pay with Stripe**. Add the
+  webhook `https://yourdomain.com/api/webhooks/stripe` with `checkout.session.completed`
+  so a payment is recorded even if the customer closes the tab. Payments are keyed on
+  the Stripe session id, so no double entries.
+- **Square.** Optional. Payment links for shops already on Square. Webhook:
+  `https://yourdomain.com/api/webhooks/square`.
+- **PayPal.** Optional. Checkout under the Stripe button when both are on. Webhook:
+  `https://yourdomain.com/api/webhooks/paypal`.
+- **QuickBooks.** Optional books link. Not used for customer checkout.
 - **Email.** Paste a Resend API key and a verified from address to email invoices
   instead of copying links.
 
-Without Stripe, payments are recorded by hand as card, bank transfer, cash, check,
-Zelle, or Venmo.
+Without an online processor, payments are recorded by hand as card, bank transfer, cash,
+check, Zelle, or Venmo.
