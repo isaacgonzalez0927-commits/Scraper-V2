@@ -18,6 +18,7 @@ import { formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
 import { stripeConnectEnabled } from "@/lib/stripe";
 import { absoluteBaseUrl } from "@/lib/url";
+import { TRADE_LIST } from "@/lib/business";
 import { serviceItems } from "@/lib/schema";
 
 const TABS = [
@@ -72,6 +73,15 @@ export default async function SettingsPage({
           <div className="field"><label>Phone</label><input name="phone" defaultValue={org.phone} /></div>
           <div className="field"><label>Email</label><input name="email" defaultValue={org.email} /></div>
           <div className="field"><label>Tax ID</label><input name="tax_id" defaultValue={org.taxId} /></div>
+          <div className="field full">
+            <label>What you do</label>
+            <select name="business_type" defaultValue={org.businessType || "general"}>
+              {TRADE_LIST.map((trade) => (
+                <option key={trade.key} value={trade.key}>{trade.name}</option>
+              ))}
+            </select>
+            <p className="help">Changes labels, starter language, and how the assistant talks about jobs.</p>
+          </div>
           <div className="field full"><label>Street address</label><input name="address_line1" defaultValue={org.addressLine1} /></div>
           <div className="field"><label>City</label><input name="city" defaultValue={org.city} /></div>
           <div className="field">

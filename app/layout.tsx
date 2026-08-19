@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Sere",
-  description: "Jobs, invoices, payments, and cash for HVAC shops.",
+  description: "Jobs, invoices, payments, and cash for local service businesses.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",

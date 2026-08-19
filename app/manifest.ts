@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Sere",
     short_name: "Sere",
-    description: "Jobs, invoices, payments, and cash for HVAC shops.",
+    description: "Jobs, invoices, payments, and cash for local service businesses.",
     start_url: "/overview",
     scope: "/",
     display: "standalone",

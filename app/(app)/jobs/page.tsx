@@ -13,7 +13,7 @@ export default async function JobsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const { org, shell } = await loadApp();
+  const { org, shell, voice } = await loadApp();
   const { status } = await searchParams;
   const filters = [eq(jobs.organizationId, org.id)];
   if (status) filters.push(eq(jobs.status, status));
@@ -33,7 +33,7 @@ export default async function JobsPage({
       {...shell}
       path="/jobs"
       title="Jobs"
-      sub={<p className="page-sub">Everything scheduled, in progress, and finished.</p>}
+      sub={<p className="page-sub">{voice.jobsSub}</p>}
       actions={<a className="btn" href="/jobs/new">New job</a>}
     >
       <Tabs tabs={tabs} active={status || ""} />
@@ -43,7 +43,7 @@ export default async function JobsPage({
             { label: "Job" },
             { label: "Customer" },
             { label: "Scheduled" },
-            { label: "Technician" },
+            { label: voice.worker },
             { label: "Status" },
             { label: "Est. revenue", align: "right" },
           ]}
@@ -70,7 +70,7 @@ export default async function JobsPage({
       ) : (
         <Empty
           title="No jobs on this list"
-          body="Schedule the next call, or log a walk in as in progress."
+          body={voice.emptyJobs}
           href="/jobs/new"
           action="New job"
         />

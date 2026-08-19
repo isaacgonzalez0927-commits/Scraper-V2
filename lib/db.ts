@@ -68,6 +68,7 @@ export async function ensureSchema(): Promise<void> {
       default_invoice_notes TEXT NOT NULL DEFAULT '',
       default_tax_bps INTEGER NOT NULL DEFAULT 0,
       stripe_status TEXT NOT NULL DEFAULT 'not_connected',
+      business_type TEXT NOT NULL DEFAULT 'general',
       created_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS integrations (
@@ -241,4 +242,13 @@ export async function ensureSchema(): Promise<void> {
       created_at TEXT NOT NULL
     );
   `);
+  await addColumnIfMissing("organizations", "business_type", "TEXT NOT NULL DEFAULT 'general'");
+}
+
+async function addColumnIfMissing(table: string, column: string, definition: string): Promise<void> {
+  try {
+    await getClient().execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  } catch {
+    // Column already exists on a database created before this release.
+  }
 }

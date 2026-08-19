@@ -21,7 +21,7 @@ import {
 import { activities, customers, invoices, jobs } from "@/lib/schema";
 
 export default async function OverviewPage() {
-  const { org, shell } = await loadApp();
+  const { org, shell, brief } = await loadApp();
   const month = monthBounds();
   const week = weekBounds();
   const today = isoDate(new Date());
@@ -67,17 +67,25 @@ export default async function OverviewPage() {
     invoiceCounts[invoice.status] = (invoiceCounts[invoice.status] || 0) + 1;
   }
 
-  const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
-
   return (
     <Shell
       {...shell}
       path="/overview"
-      title="Overview"
-      sub={<p className="page-sub">{monthLabel}. What came in, what is still out, and what is on the board.</p>}
+      title={brief.greeting}
+      sub={<p className="page-sub">{brief.summary}</p>}
       actions={<a className="btn" href="/jobs/new">New job</a>}
     >
       {!shell.isDemo && !integrations.stripe.connected ? <ConnectStripeCallout /> : null}
+      {brief.alerts.length ? (
+        <div className="brief-row">
+          {brief.alerts.map((alert) => (
+            <a key={alert.title} className={`brief-chip tone-${alert.tone}`} href={alert.href}>
+              <strong>{alert.title}</strong>
+              <span>{alert.body}</span>
+            </a>
+          ))}
+        </div>
+      ) : null}
 
       <section className="grid grid-5">
         <Stat

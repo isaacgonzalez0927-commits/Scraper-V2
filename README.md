@@ -1,7 +1,8 @@
 # Sere
 
-Sere helps HVAC businesses manage jobs, invoices, payments, and cash flow in one simple
-place.
+Sere helps local service businesses manage jobs, invoices, payments, and cash in one
+place. HVAC, plumbing, electrical, landscaping, and the rest of the trades each get
+language and starter services that match the shop.
 
 Primary domain: [sere.cash](https://sere.cash)
 

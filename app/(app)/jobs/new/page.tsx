@@ -10,7 +10,7 @@ export default async function NewJobPage({
 }: {
   searchParams: Promise<{ customerId?: string; start?: string; error?: string }>;
 }) {
-  const { org, shell } = await loadApp();
+  const { org, shell, voice } = await loadApp();
   const q = await searchParams;
   const customerRows = await db()
     .select()
@@ -27,6 +27,8 @@ export default async function NewJobPage({
       <JobForm
         customerRows={customerRows}
         error={q.error}
+        jobPlaceholder={voice.jobPlaceholder}
+        workerLabel={voice.worker}
         job={{
           customerId: q.customerId ? Number(q.customerId) : undefined,
           scheduledStart: q.start || null,
