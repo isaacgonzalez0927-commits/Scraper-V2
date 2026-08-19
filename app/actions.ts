@@ -17,9 +17,11 @@ import {
   totalsFromLines,
 } from "@/lib/finance";
 import { disconnectIntegration, emailConfig, saveIntegration } from "@/lib/integrations";
+import { parseBusinessType, tradeCopy } from "@/lib/business";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
-import { accountLabel, retrieveAccount } from "@/lib/stripe";
+import { accountLabel, retrieveAccount, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
+import { DEMO_EMAIL } from "@/lib/seed";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
   customers,
@@ -66,25 +68,30 @@ export async function signupAction(form: FormData) {
   const email = str(form, "email").toLowerCase();
   const password = str(form, "password");
   const company = str(form, "company");
+  const businessType = parseBusinessType(str(form, "business_type"));
   if (!name || !email || !password || !company) redirect("/signup?error=All+fields+are+required.");
   if (password.length < 8) redirect("/signup?error=Use+at+least+8+characters.");
   const existing = await db().select().from(users).where(eq(users.email, email));
   if (existing.length) redirect("/signup?error=An+account+with+that+email+already+exists.");
   const created = nowISO();
+  const voice = tradeCopy(businessType);
   const [user] = await db()
     .insert(users)
     .values({ name, email, passwordHash: await hashPassword(password), createdAt: created })
     .returning();
   const [org] = await db()
     .insert(organizations)
-    .values({ name: company, slug: slugify(company), email, createdAt: created })
+    .values({
+      name: company,
+      slug: slugify(company),
+      email,
+      businessType,
+      defaultInvoiceNotes: voice.defaultNotes,
+      createdAt: created,
+    })
     .returning();
   await db().insert(memberships).values({ userId: user.id, organizationId: org.id, role: "owner", createdAt: created });
-  for (const [n, d, p] of [
-    ["Diagnostic visit", "Inspection", 12900],
-    ["AC tune-up", "Seasonal clean", 18900],
-    ["Capacitor replacement", "Parts and labor", 28500],
-  ] as const) {
+  for (const [n, d, p] of voice.services) {
     await db().insert(serviceItems).values({ organizationId: org.id, name: n, description: d, unitPriceCents: p });
   }
   await createSession(user.id, org.id);
@@ -463,6 +470,7 @@ export async function saveSettingsAction(form: FormData) {
         state: str(form, "state"),
         postalCode: str(form, "postal_code"),
         taxId: str(form, "tax_id"),
+        businessType: parseBusinessType(str(form, "business_type") || org.businessType),
       })
       .where(eq(organizations.id, org.id));
   }
@@ -500,8 +508,33 @@ export async function saveSettingsAction(form: FormData) {
 
 const INTEGRATIONS_TAB = "/settings?tab=integrations";
 
+function demoBlocked(): string {
+  return `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
+    "Create your own shop to connect Stripe. The demo is shared, so keys cannot be saved here.",
+  )}`;
+}
+
+export async function startStripeConnectAction() {
+  const { org, user } = await requireContext();
+  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
+  if (!stripeConnectEnabled()) {
+    redirect(
+      `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
+        "One-click Connect is not enabled on this deployment. Paste a Stripe secret key below.",
+      )}`,
+    );
+  }
+  const base = await absoluteBaseUrl();
+  if (!base) {
+    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Could not determine this site's public address.")}`);
+  }
+  const state = signConnectState(org.id, user.id);
+  redirect(stripeConnectAuthorizeUrl({ state, redirectUri: `${base}/api/integrations/stripe/callback` }));
+}
+
 export async function connectStripeAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org, user } = await requireContext();
+  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
   const secretKey = str(form, "stripe_secret_key");
   const publishableKey = str(form, "stripe_publishable_key");
   const webhookSecret = str(form, "stripe_webhook_secret");
@@ -525,7 +558,12 @@ export async function connectStripeAction(form: FormData) {
   }
   if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
 
-  await saveIntegration(org.id, "stripe", { secretKey, publishableKey, webhookSecret }, label);
+  await saveIntegration(org.id, "stripe", {
+    secretKey,
+    publishableKey,
+    webhookSecret,
+    connectedVia: "keys",
+  }, label);
   redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Stripe connected to ${label}.`)}`);
 }
 

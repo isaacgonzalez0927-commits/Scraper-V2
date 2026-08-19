@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { decryptSecret, encryptSecret } from "./crypto";
 import { db, nowISO } from "./db";
 import { integrations, organizations } from "./schema";
+import { deauthorizeStripeConnect, stripePlatformSecret } from "./stripe";
 
 /**
  * Each shop connects its own accounts. Sere never holds a shared merchant
@@ -17,6 +18,18 @@ export type StripeConfig = {
   secretKey: string;
   publishableKey: string;
   webhookSecret: string;
+  stripeAccount?: string;
+  connectedVia?: "oauth" | "keys" | "env";
+};
+
+type StoredStripe = {
+  secretKey?: string;
+  publishableKey?: string;
+  webhookSecret?: string;
+  accountId?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  connectedVia?: string;
 };
 
 export type EmailConfig = {
@@ -99,6 +112,10 @@ export async function saveIntegration(
 }
 
 export async function disconnectIntegration(organizationId: number, provider: Provider): Promise<void> {
+  if (provider === "stripe") {
+    const saved = await readConfig<StoredStripe>(organizationId, "stripe");
+    if (saved?.accountId) await deauthorizeStripeConnect(saved.accountId);
+  }
   await db()
     .update(integrations)
     .set({ status: "disconnected", secretCipher: "", label: "", updatedAt: nowISO() })
@@ -113,18 +130,48 @@ export async function disconnectIntegration(organizationId: number, provider: Pr
 
 /** Deployment-wide Stripe keys. A single-shop install can skip the connect screen. */
 export function stripeEnvConfig(): StripeConfig | null {
+  // When Connect is on, STRIPE_SECRET_KEY is Sere's platform key, not a shop account.
+  if (process.env.STRIPE_CONNECT_CLIENT_ID) return null;
   const secretKey = process.env.STRIPE_SECRET_KEY || "";
   if (!secretKey) return null;
   return {
     secretKey,
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "",
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+    connectedVia: "env",
   };
 }
 
+function fromStoredStripe(saved: StoredStripe): StripeConfig | null {
+  if (saved.accountId && saved.connectedVia === "oauth") {
+    const platform = stripePlatformSecret();
+    const secretKey = platform || saved.accessToken || "";
+    if (!secretKey) return null;
+    return {
+      secretKey,
+      publishableKey: saved.publishableKey || "",
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || saved.webhookSecret || "",
+      stripeAccount: platform ? saved.accountId : undefined,
+      connectedVia: "oauth",
+    };
+  }
+  if (saved.secretKey) {
+    return {
+      secretKey: saved.secretKey,
+      publishableKey: saved.publishableKey || "",
+      webhookSecret: saved.webhookSecret || "",
+      connectedVia: "keys",
+    };
+  }
+  return null;
+}
+
 export async function stripeConfig(organizationId: number): Promise<StripeConfig | null> {
-  const saved = await readConfig<StripeConfig>(organizationId, "stripe");
-  if (saved?.secretKey) return saved;
+  const saved = await readConfig<StoredStripe>(organizationId, "stripe");
+  if (saved) {
+    const resolved = fromStoredStripe(saved);
+    if (resolved) return resolved;
+  }
   return stripeEnvConfig();
 }
 
@@ -152,6 +199,7 @@ export type ProviderStatus = {
   fromEnv: boolean;
   /** True when a row says connected but its secret no longer decrypts. */
   unreadable: boolean;
+  viaOAuth: boolean;
   label: string;
   updatedAt: string;
 };
@@ -167,12 +215,13 @@ export async function integrationStatus(
   const [stripeRow, emailRow, stripeSaved, emailSaved] = await Promise.all([
     readIntegration(organizationId, "stripe"),
     readIntegration(organizationId, "email"),
-    readConfig<StripeConfig>(organizationId, "stripe"),
+    readConfig<StoredStripe>(organizationId, "stripe"),
     readConfig<EmailConfig>(organizationId, "email"),
   ]);
   const stripeEnv = stripeEnvConfig();
   const emailEnv = emailEnvConfig();
-  const stripeUnreadable = Boolean(stripeRow) && !stripeSaved?.secretKey;
+  const stripeReady = Boolean(stripeSaved && fromStoredStripe(stripeSaved));
+  const stripeUnreadable = Boolean(stripeRow) && !stripeReady;
   const emailUnreadable = Boolean(emailRow) && !emailSaved?.apiKey;
 
   return {
@@ -180,6 +229,7 @@ export async function integrationStatus(
       connected: (Boolean(stripeRow) && !stripeUnreadable) || Boolean(stripeEnv),
       fromEnv: !stripeRow && Boolean(stripeEnv),
       unreadable: stripeUnreadable && !stripeEnv,
+      viaOAuth: stripeSaved?.connectedVia === "oauth" && stripeReady,
       label: stripeRow?.label || (stripeEnv ? "Deployment environment keys" : ""),
       updatedAt: stripeRow?.updatedAt || "",
     },
@@ -187,6 +237,7 @@ export async function integrationStatus(
       connected: (Boolean(emailRow) && !emailUnreadable) || Boolean(emailEnv?.fromEmail),
       fromEnv: !emailRow && Boolean(emailEnv?.fromEmail),
       unreadable: emailUnreadable && !emailEnv?.fromEmail,
+      viaOAuth: false,
       label: emailRow?.label || emailEnv?.fromEmail || "",
       updatedAt: emailRow?.updatedAt || "",
     },

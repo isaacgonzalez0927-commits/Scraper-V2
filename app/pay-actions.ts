@@ -47,6 +47,7 @@ export async function startInvoiceCheckoutAction(form: FormData) {
       successUrl: `${base}${back}?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${base}${back}?cancelled=1`,
       customerEmail: customer?.email || undefined,
+      stripeAccount: config.stripeAccount,
       metadata: {
         organization_id: String(invoice.organizationId),
         invoice_id: String(invoice.id),

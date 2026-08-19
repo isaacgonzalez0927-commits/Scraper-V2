@@ -12,10 +12,14 @@ export function JobForm({
   job,
   customerRows,
   error,
+  jobPlaceholder = "Service visit",
+  workerLabel = "Technician",
 }: {
   job?: Partial<Job>;
   customerRows: Customer[];
   error?: string;
+  jobPlaceholder?: string;
+  workerLabel?: string;
 }) {
   return (
     <form action={saveJobAction} className="grid narrow">
@@ -37,7 +41,7 @@ export function JobForm({
         </div>
         <div className="field">
           <label>Job title</label>
-          <input name="title" defaultValue={job?.title || ""} required placeholder="AC replacement" />
+          <input name="title" defaultValue={job?.title || ""} required placeholder={jobPlaceholder} />
         </div>
         <div className="field full">
           <label>Work to perform</label>
@@ -57,7 +61,7 @@ export function JobForm({
           <p className="help">Setting a start time schedules the job automatically.</p>
         </div>
         <div className="field">
-          <label>Technician</label>
+          <label>{workerLabel}</label>
           <input name="technician_name" defaultValue={job?.technicianName || ""} />
         </div>
         <div className="field">

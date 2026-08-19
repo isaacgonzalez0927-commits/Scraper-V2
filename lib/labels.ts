@@ -16,7 +16,7 @@ export const INVOICE_STATUSES = [
   "void",
 ] as const;
 
-export const PAYMENT_METHODS = ["card", "ach", "cash", "check", "other"] as const;
+export const PAYMENT_METHODS = ["card", "ach", "cash", "check", "zelle", "venmo", "other"] as const;
 export const COST_CATEGORIES = [
   "materials",
   "equipment",
@@ -42,6 +42,8 @@ export const LABELS: Record<string, string> = {
   ach: "ACH / bank",
   cash: "Cash",
   check: "Check",
+  zelle: "Zelle",
+  venmo: "Venmo",
   other: "Other",
   materials: "Materials",
   equipment: "Equipment",

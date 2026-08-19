@@ -1,7 +1,8 @@
 # Sere
 
-Sere helps HVAC businesses manage jobs, invoices, payments, and cash flow in one simple
-place.
+Sere helps local service businesses manage jobs, invoices, payments, and cash in one
+place. HVAC, plumbing, electrical, landscaping, and the rest of the trades each get
+language and starter services that match the shop.
 
 Primary domain: [sere.cash](https://sere.cash)
 
@@ -70,7 +71,9 @@ Two rules the code keeps:
 | `SERE_PUBLIC_BASE_URL` | Recommended | Public origin for invoice links, for example `https://sere.cash` |
 | `SERE_AUTO_SEED` | Optional | Set to `0` to skip the Harbor Air demo data |
 | `SERE_DEMO` | Optional | Set to `0` to close the no sign in demo door at `/demo` |
-| `STRIPE_SECRET_KEY` | Optional | Deployment-wide Stripe fallback for a single-shop install |
+| `STRIPE_SECRET_KEY` | Optional | Platform key for Connect, or a single-shop fallback if Connect is off |
+| `STRIPE_CONNECT_CLIENT_ID` | Optional | Enables the one-click **Connect Stripe** button (`ca_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Optional | Platform webhook signing secret for Connect shops |
 | `RESEND_API_KEY` and `SERE_EMAIL_FROM` | Optional | Deployment-wide email fallback |
 
 Keep `SERE_SECRET_KEY` stable. Rotating it signs everyone out and makes saved Stripe and
@@ -88,17 +91,17 @@ record for the apex and a CNAME for `www` at the values Vercel shows you; then s
 
 Full walkthrough: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
 
-Each shop connects its own accounts from **Settings**, then **Integrations**, so money
-lands in their Stripe account and email leaves from their domain. Sere stores those
-credentials encrypted and never displays them again.
+Each shop connects its own accounts from **Settings**, then **Integrations**, or from
+the **Connect Stripe** button on Overview, Invoices, and Payments. Money lands in their
+Stripe account. Credentials are stored encrypted and never displayed again.
 
-- **Stripe.** Paste a secret key to turn on **Pay this invoice** on the customer facing
-  invoice page. Add the webhook endpoint `https://yourdomain.com/api/webhooks/stripe`
-  with the event `checkout.session.completed` so a payment is recorded even if the
-  customer closes the tab. Payments are keyed on the Stripe session id, so no double
-  entries.
+- **Stripe.** Connect Stripe (one click when `STRIPE_CONNECT_CLIENT_ID` is set, or paste
+  a secret key) to turn on **Pay this invoice** on the customer facing invoice page.
+  Add the webhook endpoint `https://yourdomain.com/api/webhooks/stripe` with the event
+  `checkout.session.completed` so a payment is recorded even if the customer closes the
+  tab. Payments are keyed on the Stripe session id, so no double entries.
 - **Email.** Paste a Resend API key and a verified from address to email invoices
   instead of copying links.
 
-Without Stripe, payments are recorded by hand as card, bank transfer, cash, or check.
-Without email, sending an invoice marks it sent and shows the shareable link.
+Without Stripe, payments are recorded by hand as card, bank transfer, cash, check,
+Zelle, or Venmo.

@@ -7,7 +7,7 @@ import { loadApp } from "@/lib/page";
 import { customers, jobs } from "@/lib/schema";
 
 export default async function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
-  const { org, shell } = await loadApp();
+  const { org, shell, voice } = await loadApp();
   const { id } = await params;
   const [job] = await db()
     .select()
@@ -25,7 +25,12 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
       title={`Edit ${job.title}`}
       actions={<a className="btn btn-secondary" href={`/jobs/${job.id}`}>Cancel</a>}
     >
-      <JobForm job={job} customerRows={customerRows} />
+      <JobForm
+        job={job}
+        customerRows={customerRows}
+        jobPlaceholder={voice.jobPlaceholder}
+        workerLabel={voice.worker}
+      />
     </Shell>
   );
 }

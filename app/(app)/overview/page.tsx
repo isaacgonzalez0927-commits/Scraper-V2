@@ -1,9 +1,11 @@
 import { desc, eq } from "drizzle-orm";
+import { ConnectStripeCallout } from "@/components/ConnectStripe";
 import { Badge, Card, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
 import { formatMoney } from "@/lib/money";
+import { integrationStatus } from "@/lib/integrations";
 import { label, prettyWhen } from "@/lib/labels";
 import { loadApp } from "@/lib/page";
 import {
@@ -19,11 +21,11 @@ import {
 import { activities, customers, invoices, jobs } from "@/lib/schema";
 
 export default async function OverviewPage() {
-  const { org, shell } = await loadApp();
+  const { org, shell, brief } = await loadApp();
   const month = monthBounds();
   const week = weekBounds();
   const today = isoDate(new Date());
-  const [revenue, collected, { outstanding, overdue }, jobRows, activity, invoiceRows] = await Promise.all([
+  const [revenue, collected, { outstanding, overdue }, jobRows, activity, invoiceRows, integrations] = await Promise.all([
     invoicedRevenueCents(org.id, month.start, month.end),
     collectedCents(org.id, month.start, month.end),
     outstandingTotals(org.id),
@@ -39,6 +41,7 @@ export default async function OverviewPage() {
       .orderBy(desc(activities.createdAt))
       .limit(8),
     db().select().from(invoices).where(eq(invoices.organizationId, org.id)),
+    integrationStatus(org.id),
   ]);
 
   const jobsToday = jobRows.filter((r) => r.job.scheduledStart?.slice(0, 10) === today);
@@ -64,16 +67,26 @@ export default async function OverviewPage() {
     invoiceCounts[invoice.status] = (invoiceCounts[invoice.status] || 0) + 1;
   }
 
-  const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
-
   return (
     <Shell
       {...shell}
       path="/overview"
-      title="Overview"
-      sub={<p className="page-sub">{monthLabel}. What came in, what is still out, and what is on the board.</p>}
+      title={brief.greeting}
+      sub={<p className="page-sub">{brief.summary}</p>}
       actions={<a className="btn" href="/jobs/new">New job</a>}
     >
+      {!shell.isDemo && !integrations.stripe.connected ? <ConnectStripeCallout /> : null}
+      {brief.alerts.length ? (
+        <div className="brief-row">
+          {brief.alerts.map((alert) => (
+            <a key={alert.title} className={`brief-chip tone-${alert.tone}`} href={alert.href}>
+              <strong>{alert.title}</strong>
+              <span>{alert.body}</span>
+            </a>
+          ))}
+        </div>
+      ) : null}
+
       <section className="grid grid-5">
         <Stat
           label="Collected this month"

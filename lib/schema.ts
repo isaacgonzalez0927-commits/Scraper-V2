@@ -18,6 +18,7 @@ export const organizations = sqliteTable("organizations", {
   defaultInvoiceNotes: text("default_invoice_notes").notNull().default(""),
   defaultTaxBps: integer("default_tax_bps").notNull().default(0),
   stripeStatus: text("stripe_status").notNull().default("not_connected"),
+  businessType: text("business_type").notNull().default("general"),
   createdAt: text("created_at").notNull(),
 });
 

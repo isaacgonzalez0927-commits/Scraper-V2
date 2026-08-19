@@ -8,6 +8,7 @@ import {
   saveSettingsAction,
   sendTestEmailAction,
 } from "@/app/actions";
+import { ConnectStripeButton } from "@/components/ConnectStripe";
 import { Banner, Card } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -15,7 +16,9 @@ import { integrationStatus } from "@/lib/integrations";
 import { prettyDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
+import { stripeConnectEnabled } from "@/lib/stripe";
 import { absoluteBaseUrl } from "@/lib/url";
+import { TRADE_LIST } from "@/lib/business";
 import { serviceItems } from "@/lib/schema";
 
 const TABS = [
@@ -39,6 +42,8 @@ export default async function SettingsPage({
     absoluteBaseUrl(),
   ]);
   const webhookUrl = `${base}/api/webhooks/stripe`;
+  const oneClick = stripeConnectEnabled();
+  const demoShop = shell.isDemo;
 
   return (
     <Shell
@@ -68,6 +73,15 @@ export default async function SettingsPage({
           <div className="field"><label>Phone</label><input name="phone" defaultValue={org.phone} /></div>
           <div className="field"><label>Email</label><input name="email" defaultValue={org.email} /></div>
           <div className="field"><label>Tax ID</label><input name="tax_id" defaultValue={org.taxId} /></div>
+          <div className="field full">
+            <label>What you do</label>
+            <select name="business_type" defaultValue={org.businessType || "general"}>
+              {TRADE_LIST.map((trade) => (
+                <option key={trade.key} value={trade.key}>{trade.name}</option>
+              ))}
+            </select>
+            <p className="help">Changes labels, starter language, and how the assistant talks about jobs.</p>
+          </div>
           <div className="field full"><label>Street address</label><input name="address_line1" defaultValue={org.addressLine1} /></div>
           <div className="field"><label>City</label><input name="city" defaultValue={org.city} /></div>
           <div className="field">
@@ -131,7 +145,7 @@ export default async function SettingsPage({
         <div className="grid narrow">
           <Card
             title="Stripe"
-            note="Let customers pay an invoice by card. The money lands in your own Stripe account."
+            note="Let customers pay an invoice by card. The money lands in the shop's own Stripe account."
             action={
               <span
                 className={`badge badge-${
@@ -146,6 +160,20 @@ export default async function SettingsPage({
               </span>
             }
           >
+            {demoShop ? (
+              <Banner>
+                <div>
+                  <strong>This is the shared demo shop.</strong>
+                  <p className="mt-1">
+                    Connect Stripe from your own shop so keys are not saved where anyone can open the demo.
+                  </p>
+                  <p className="mt-1">
+                    <a className="btn" href="/signup">Create your shop</a>
+                  </p>
+                </div>
+              </Banner>
+            ) : null}
+
             {integrations.stripe.connected ? (
               <>
                 <div className="kv">
@@ -153,65 +181,90 @@ export default async function SettingsPage({
                   {integrations.stripe.updatedAt ? (
                     <div className="kv-row"><span className="kv-key">Connected on</span><span className="kv-value">{prettyDate(integrations.stripe.updatedAt)}</span></div>
                   ) : null}
-                  <div className="kv-row"><span className="kv-key">Source</span><span className="kv-value">{integrations.stripe.fromEnv ? "Deployment environment variables" : "Saved in Sere"}</span></div>
-                </div>
-                <Banner>
-                  <div>
-                    <strong>Send Stripe your webhook.</strong>
-                    <p className="mt-1">
-                      In Stripe, open Developers, then Webhooks, then add this endpoint and select the
-                      event <code>checkout.session.completed</code>.
-                    </p>
-                    <div className="copy-row mt-1">
-                      <span className="copy-value">{webhookUrl}</span>
-                      <button className="btn btn-secondary btn-sm" type="button" data-copy={webhookUrl}>Copy</button>
-                    </div>
-                    <p className="mt-1">
-                      Paste the signing secret it gives you (<code>whsec_...</code>) into the form below.
-                      Payments still get recorded without it, but the webhook is what catches a customer
-                      who closes the tab mid payment.
-                    </p>
+                  <div className="kv-row">
+                    <span className="kv-key">Connected with</span>
+                    <span className="kv-value">
+                      {integrations.stripe.fromEnv
+                        ? "Deployment environment variables"
+                        : integrations.stripe.viaOAuth
+                          ? "Connect Stripe"
+                          : "API keys"}
+                    </span>
                   </div>
-                </Banner>
+                </div>
+                {integrations.stripe.viaOAuth && process.env.STRIPE_WEBHOOK_SECRET ? (
+                  <Banner>
+                    <div>
+                      <strong>Online payments post on their own.</strong>
+                      <p className="mt-1">
+                        Sere records the payment when Stripe confirms it. You do not need to add a
+                        webhook in the shop's Stripe account.
+                      </p>
+                    </div>
+                  </Banner>
+                ) : (
+                  <Banner>
+                    <div>
+                      <strong>Send Stripe your webhook.</strong>
+                      <p className="mt-1">
+                        In Stripe, open Developers, then Webhooks, then add this endpoint and select the
+                        event <code>checkout.session.completed</code>.
+                      </p>
+                      <div className="copy-row mt-1">
+                        <span className="copy-value">{webhookUrl}</span>
+                        <button className="btn btn-secondary btn-sm" type="button" data-copy={webhookUrl}>Copy</button>
+                      </div>
+                      <p className="mt-1">
+                        Paste the signing secret it gives you (<code>whsec_...</code>) into the form below.
+                        Payments still get recorded without it, but the webhook is what catches a customer
+                        who closes the tab mid payment.
+                      </p>
+                    </div>
+                  </Banner>
+                )}
               </>
-            ) : (
-              <Banner>
+            ) : !demoShop ? (
+              <div className="connect-cta connect-cta-flush">
                 <div>
-                  <strong>Three steps.</strong>
-                  <p className="mt-1">
-                    1. Create a Stripe account at stripe.com and finish their business verification.
-                    <br />
-                    2. In Stripe, open Developers, then API keys, and copy your secret key.
-                    <br />
-                    3. Paste it below. Use a test key first if you want to try a fake card.
+                  <strong>Connect the shop's Stripe.</strong>
+                  <p>
+                    {oneClick
+                      ? "One click. Stripe asks the shop to approve Sere, then invoice links show Pay this invoice. Money goes to their account."
+                      : "Paste the shop's Stripe secret key. Customers then pay invoice links by card, and the money goes to that Stripe account."}
                   </p>
                 </div>
-              </Banner>
-            )}
+                {oneClick ? <ConnectStripeButton /> : null}
+              </div>
+            ) : null}
 
-            <form action={connectStripeAction} className="form-grid">
-              <div className="field full">
-                <label>Secret key</label>
-                <input name="stripe_secret_key" type="password" placeholder="sk_live_..." autoComplete="off" />
-                <p className="help">Stored encrypted. Sere shows it back to nobody, including us.</p>
-              </div>
-              <div className="field">
-                <label>Publishable key (optional)</label>
-                <input name="stripe_publishable_key" placeholder="pk_live_..." autoComplete="off" />
-              </div>
-              <div className="field">
-                <label>Webhook signing secret (optional)</label>
-                <input name="stripe_webhook_secret" type="password" placeholder="whsec_..." autoComplete="off" />
-              </div>
-              <div className="form-actions">
-                <button className="btn" type="submit">
-                  {integrations.stripe.connected ? "Update Stripe keys" : "Connect Stripe"}
-                </button>
-                <p className="help">Sere calls Stripe once to confirm the key before saving it.</p>
-              </div>
-            </form>
+            {!demoShop ? (
+              <details className="disclosure" open={!oneClick && !integrations.stripe.connected}>
+                <summary>{integrations.stripe.connected ? "Update with API keys" : "Or paste API keys"}</summary>
+                <form action={connectStripeAction} className="form-grid mt-2">
+                  <div className="field full">
+                    <label>Secret key</label>
+                    <input name="stripe_secret_key" type="password" placeholder="sk_live_..." autoComplete="off" />
+                    <p className="help">Stored encrypted. Sere shows it back to nobody, including us.</p>
+                  </div>
+                  <div className="field">
+                    <label>Publishable key (optional)</label>
+                    <input name="stripe_publishable_key" placeholder="pk_live_..." autoComplete="off" />
+                  </div>
+                  <div className="field">
+                    <label>Webhook signing secret (optional)</label>
+                    <input name="stripe_webhook_secret" type="password" placeholder="whsec_..." autoComplete="off" />
+                  </div>
+                  <div className="form-actions">
+                    <button className="btn" type="submit">
+                      {integrations.stripe.connected ? "Update Stripe keys" : "Connect Stripe"}
+                    </button>
+                    <p className="help">Sere calls Stripe once to confirm the key before saving it.</p>
+                  </div>
+                </form>
+              </details>
+            ) : null}
 
-            {integrations.stripe.connected && !integrations.stripe.fromEnv ? (
+            {integrations.stripe.connected && !integrations.stripe.fromEnv && !demoShop ? (
               <form action={disconnectStripeAction} className="mt-2">
                 <button className="btn btn-ghost btn-sm" type="submit">Disconnect Stripe</button>
               </form>

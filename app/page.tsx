@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Card } from "@/components/ui";
+import { TRADE_LIST } from "@/lib/business";
 
 const POINTS = [
   {
@@ -12,8 +13,12 @@ const POINTS = [
     body: "Schedule the work, log the parts and labor, then bill it without retyping anything.",
   },
   {
+    title: "An assistant that does the small stuff",
+    body: "Sere watches overdue invoices and today's jobs, and can move a date when you ask.",
+  },
+  {
     title: "Get paid online",
-    body: "Connect your own Stripe account and your customers can pay the invoice by card or bank.",
+    body: "Connect the shop's own Stripe account. Card payments land in their bank, not yours.",
   },
 ];
 
@@ -31,21 +36,26 @@ export default function LandingPage() {
       </header>
 
       <section className="hero">
-        <p className="hero-eyebrow">Built for HVAC shops</p>
+        <p className="hero-eyebrow">For local service businesses</p>
         <h1>Know what you billed, what you collected, and what is still owed.</h1>
         <p className="hero-lede">
           Sere keeps jobs, invoices, and payments in one place, so the number on your
-          screen is the number in your bank account.
+          screen is the number in the bank. Built for HVAC, plumbing, electrical, and
+          the rest of the trades.
         </p>
         <div className="hero-actions">
           <Link className="btn" href="/signup">Create your shop</Link>
-          {/* A route handler, not a page, so keep it a plain anchor and skip prefetch. */}
           <a className="btn btn-secondary" href="/demo">Open the demo</a>
         </div>
         <p className="hero-note">
-          The demo opens a real shop with a month of jobs, invoices, and payments.
-          No sign in, no email, nothing to fill in.
+          Two minutes to a shop that speaks your trade. Or open the Harbor Air HVAC demo,
+          no sign in.
         </p>
+        <ul className="trade-strip">
+          {TRADE_LIST.filter((t) => t.key !== "other").map((trade) => (
+            <li key={trade.key}>{trade.name}</li>
+          ))}
+        </ul>
       </section>
 
       <div className="landing-dock">
@@ -53,7 +63,7 @@ export default function LandingPage() {
         <a className="btn btn-secondary" href="/demo">Open the demo</a>
       </div>
 
-      <section className="landing-grid">
+      <section className="landing-grid landing-grid-4">
         {POINTS.map((point) => (
           <Card key={point.title} title={point.title}>
             <p className="muted">{point.body}</p>

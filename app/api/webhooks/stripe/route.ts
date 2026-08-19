@@ -52,14 +52,16 @@ export async function POST(request: Request) {
   }
 
   const config = await stripeConfig(organizationId);
-  if (!config?.webhookSecret) {
+  const secrets = Array.from(
+    new Set([config?.webhookSecret || "", process.env.STRIPE_WEBHOOK_SECRET || ""].filter(Boolean)),
+  );
+  if (!secrets.length) {
     return Response.json({ error: "No webhook secret is saved for this business." }, { status: 400 });
   }
-  const verified = verifyWebhookSignature({
-    payload,
-    header: request.headers.get("stripe-signature"),
-    secret: config.webhookSecret,
-  });
+  const header = request.headers.get("stripe-signature");
+  const verified = secrets.some((secret) =>
+    verifyWebhookSignature({ payload, header, secret }),
+  );
   if (!verified) {
     return Response.json({ error: "Signature check failed." }, { status: 400 });
   }

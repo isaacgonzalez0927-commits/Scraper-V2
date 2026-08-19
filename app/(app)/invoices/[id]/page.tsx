@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { sendInvoiceAction, voidInvoiceAction } from "@/app/actions";
+import { ConnectStripeButton } from "@/components/ConnectStripe";
 import { Badge, Banner, Card, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -140,7 +141,13 @@ export default async function InvoiceDetailPage({
               <div className="kv-row">
                 <span className="kv-key">Card payments</span>
                 <span className="kv-value">
-                  {integrations.stripe.connected ? "On through Stripe" : <a href="/settings?tab=integrations">Connect Stripe</a>}
+                  {integrations.stripe.connected ? (
+                    "On through Stripe"
+                  ) : shell.isDemo ? (
+                    <a href="/signup">Create your shop</a>
+                  ) : (
+                    <ConnectStripeButton secondary label="Connect Stripe" />
+                  )}
                 </span>
               </div>
               <div className="kv-row">

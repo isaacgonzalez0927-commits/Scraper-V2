@@ -1,6 +1,8 @@
 import { logoutAction } from "@/app/actions";
+import { AssistantDock } from "@/components/Assistant";
 import { BrandLogo } from "@/components/BrandLogo";
 import { SearchIcon } from "@/components/ui";
+import type { AssistantBrief } from "@/lib/assistant";
 
 const NAV = [
   ["/overview", "Overview", "grid"],
@@ -75,6 +77,9 @@ export function Shell({
   userName,
   unread,
   isDemo,
+  tradeName,
+  worker,
+  brief,
   path,
   title,
   sub,
@@ -85,6 +90,9 @@ export function Shell({
   userName: string;
   unread: number;
   isDemo?: boolean;
+  tradeName?: string;
+  worker?: string;
+  brief?: AssistantBrief;
   path: string;
   title: string;
   sub?: React.ReactNode;
@@ -115,7 +123,7 @@ export function Shell({
           ) : null}
           <a className="org-chip" href="/settings">
             <strong>{orgName}</strong>
-            <span>{userName}</span>
+            <span>{tradeName ? `${tradeName} · ${userName}` : userName}</span>
           </a>
           <form action={logoutAction}>
             <button className="btn btn-ghost btn-sm btn-block" type="submit">
@@ -146,6 +154,7 @@ export function Shell({
             <kbd>⌘K</kbd>
           </button>
           <div className="topbar-right">
+            {brief ? <AssistantDock brief={brief} tradeName={tradeName || "shop"} /> : null}
             <a className="icon-btn" href="/notifications" aria-label="Alerts">
               <Icon name="bell" className="" />
               {unread ? <span className="dot">{unread > 9 ? "9+" : unread}</span> : null}
