@@ -17,6 +17,7 @@ import {
   sendTestEmailAction,
 } from "@/app/actions";
 import { ConnectStripeButton, OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, StripeKeyLink } from "@/components/ConnectStripe";
+import { ThemeChooser } from "@/components/ThemeToggle";
 import { Banner, Card } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -820,6 +821,14 @@ export default async function SettingsPage({
               <p className="help">Leave the password fields empty to keep your current password.</p>
             </div>
           </form>
+          <Card title="Appearance">
+            <p className="help">
+              Light, dark, or match the phone. This stays on this browser.
+            </p>
+            <div className="mt-2">
+              <ThemeChooser />
+            </div>
+          </Card>
           <Card title="Session">
             <form action={logoutAction}>
               <button className="btn btn-secondary" type="submit">Sign out</button>

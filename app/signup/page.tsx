@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signupAction } from "../actions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Banner } from "@/components/ui";
 import { TRADE_LIST } from "@/lib/business";
 
@@ -21,6 +22,7 @@ export default async function SignupPage({
       <div className="auth-card auth-wide">
         <div className="brand">
           <BrandLogo className="brand-lockup" />
+          <ThemeToggle />
         </div>
         <h1 className="auth-title">Create your shop</h1>
         <p className="auth-sub">

@@ -1,6 +1,7 @@
 import { logoutAction } from "@/app/actions";
 import { AssistantDock } from "@/components/Assistant";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchIcon } from "@/components/ui";
 import type { AssistantBrief } from "@/lib/assistant";
 
@@ -154,6 +155,7 @@ export function Shell({
             <kbd>⌘K</kbd>
           </button>
           <div className="topbar-right">
+            <ThemeToggle />
             {brief ? <AssistantDock brief={brief} tradeName={tradeName || "shop"} /> : null}
             <a className="icon-btn" href="/notifications" aria-label="Alerts">
               <Icon name="bell" className="" />
