@@ -28,19 +28,20 @@ export default async function SignupPage({
         </div>
         <h1 className="auth-title">Create your shop</h1>
         <p className="auth-sub">
-          Shop name and an account are enough. Trade, Stripe, Square, and OpenAI
-          are optional — skip them and set them later.
+          14 days of the book. Shop name and an account are enough. Trade,
+          Stripe, Square, and OpenAI are optional — skip them and set them later.
         </p>
         {picked ? (
           <p className="signup-plan">
-            You picked <strong>{picked.name}</strong>
-            {picked.price > 0 ? ` at $${picked.price}/month` : ""}. Create the shop
-            now. We will not charge a card until billing is live.
+            You picked <strong>{picked.name}</strong> at ${picked.price}/month
+            after the trial. Create the shop now. We will not charge a card
+            until billing is live.
           </p>
         ) : (
           <p className="signup-plan">
-            Free to open. Shop is $39/month for two people and live Stripe cash.
-            Crew is $79. We are not billing Sere yet.
+            14 days of Shop. Then $39/month for two people and live Stripe cash.
+            Crew is $79. We are not taking cards yet — after 14 days the shop
+            freezes until billing opens.
           </p>
         )}
         <Banner error={q.error} />

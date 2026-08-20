@@ -44,7 +44,7 @@ export default function LandingPage() {
           <ThemeToggle />
           <a href="#pricing">Pricing</a>
           <Link href="/login">Sign in</Link>
-          <Link className="btn" href="/signup">Start free</Link>
+          <Link className="btn" href="/signup">Start 14-day trial</Link>
         </nav>
       </header>
 
@@ -57,7 +57,7 @@ export default function LandingPage() {
               together, so the number on the screen is the number in the bank.
             </p>
             <div className="hero-actions">
-              <Link className="btn" href="/signup">Create your shop</Link>
+              <Link className="btn" href="/signup">Start 14-day trial</Link>
               <a className="btn btn-secondary" href="/demo">Try Harbor Air</a>
             </div>
             <p className="hero-note">HVAC shop in Fort Myers. Open it with no account.</p>
@@ -127,7 +127,8 @@ export default function LandingPage() {
             <p>
               Housecall Pro starts around $65 a person. Jobber Core is $49 for
               one login. Sere is the book for the office — priced like that, not
-              like a full dispatch OS we have not built.
+              like a full dispatch OS we have not built. 14 days on us, then
+              Shop or Crew.
             </p>
           </div>
           <div className="plan-grid">
@@ -172,7 +173,7 @@ export default function LandingPage() {
       </main>
 
       <div className="landing-dock">
-        <Link className="btn" href="/signup">Create your shop</Link>
+        <Link className="btn" href="/signup">Start 14-day trial</Link>
         <a className="btn btn-secondary" href="/demo">Try Harbor Air</a>
       </div>
     </div>

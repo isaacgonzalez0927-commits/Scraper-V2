@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { boot } from "@/lib/boot";
-import { requireContext } from "@/lib/auth";
+import { requireWritableContext } from "@/lib/trial";
 import { db } from "@/lib/db";
 import { jobs } from "@/lib/schema";
 
@@ -13,7 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   await boot();
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/calendar");
   const { id } = await params;
   const form = await req.formData();
   const scheduledStart = String(form.get("scheduled_start") || "");

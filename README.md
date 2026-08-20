@@ -6,6 +6,9 @@ language and starter services that match the shop.
 
 Primary domain: [sere.cash](https://sere.cash)
 
+Signup is a **14-day trial** of the book. After that the shop freezes (you can look,
+not add) until billing opens. Harbor Air at `/demo` is not on a trial.
+
 This is a **Next.js** app. Deploy it on **Vercel**.
 
 ## Run locally

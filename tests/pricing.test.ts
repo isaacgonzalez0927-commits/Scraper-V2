@@ -9,19 +9,21 @@ import {
 } from "../lib/pricing";
 
 test("plans get more expensive and more seats as you go up", () => {
-  const [free, shop, crew] = PLANS;
-  assert.equal(free.price, 0);
+  const [shop, crew] = PLANS;
+  assert.equal(PLANS.length, 2);
+  assert.equal(shop.key, "shop");
   assert.equal(shop.price, 39);
   assert.equal(crew.price, 79);
-  assert.ok(free.seats < shop.seats && shop.seats < crew.seats);
+  assert.ok(shop.seats < crew.seats);
   assert.equal(shop.featured, true);
-  assert.equal(formatPlanPrice(free), "Free");
   assert.equal(formatPlanPrice(shop), "$39");
+  assert.ok(shop.cta.toLowerCase().includes("14-day"));
 });
 
 test("Shop is the office book; Crew is what $79 should buy", () => {
   const shop = planByKey("shop");
   const crew = planByKey("crew");
+  assert.ok(shop?.features.some((f) => /14 days/i.test(f.text)));
   assert.ok(shop?.features.some((f) => /stripe or square/i.test(f.text)));
   assert.ok(shop?.features.some((f) => /does not take a cut/i.test(f.text)));
   assert.ok(!shop?.features.some((f) => f.soon));
@@ -31,8 +33,9 @@ test("Shop is the office book; Crew is what $79 should buy", () => {
 
 test("unknown plan keys do not invent a product", () => {
   assert.equal(parsePlanKey(""), null);
+  assert.equal(parsePlanKey("free"), null);
   assert.equal(parsePlanKey("enterprise"), null);
   assert.equal(planByKey("shop")?.name, "Shop");
-  assert.equal(signupHref(PLANS[0]), "/signup");
-  assert.equal(signupHref(PLANS[1]), "/signup?plan=shop");
+  assert.equal(signupHref(PLANS[0]), "/signup?plan=shop");
+  assert.equal(signupHref(PLANS[1]), "/signup?plan=crew");
 });

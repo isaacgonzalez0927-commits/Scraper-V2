@@ -43,7 +43,7 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<{ tab?: string; error?: string; ok?: string }>;
 }) {
-  const { org, user, shell, voice } = await loadApp();
+  const { org, user, shell, voice, access } = await loadApp();
   const q = await searchParams;
   const tab = TABS.some((t) => t.key === q.tab) ? (q.tab as string) : "company";
   const [services, integrations, base] = await Promise.all([
@@ -824,7 +824,18 @@ export default async function SettingsPage({
               <p className="help">Leave the password fields empty to keep your current password.</p>
             </div>
           </form>
-          <Card title="Plan" note="You are on Free. We are not charging for Sere yet.">
+          <Card
+            title="Plan"
+            note={
+              demoShop
+                ? "Harbor Air is the demo. It is not on a trial."
+                : access.status === "expired"
+                  ? "Trial ended. You can look. When billing opens, pick Shop or Crew and the shop opens again."
+                  : access.status === "trial"
+                    ? `${access.banner} Shop is $39/month after that. We are not taking cards yet.`
+                    : `You are on ${access.plan === "crew" ? "Crew" : "Shop"}.`
+            }
+          >
             <ul className="plan-settings">
               {PLANS.map((plan) => (
                 <li key={plan.key}>
@@ -832,16 +843,14 @@ export default async function SettingsPage({
                     <strong>{plan.name}</strong>
                     <span className="tiny">{plan.priceNote}</span>
                   </div>
-                  <span className="money">
-                    {plan.price > 0 ? `${formatPlanPrice(plan)}/mo` : "Free"}
-                  </span>
+                  <span className="money">{formatPlanPrice(plan)}/mo</span>
                 </li>
               ))}
             </ul>
             <p className="help mt-2">
-              Shop is the office book with live Stripe or Square cash. Crew is
-              seats plus the assistant; texts and the tech phone are next and
-              stay on Crew when they ship. Card fees stay with your processor.
+              14 days of the book, then the shop freezes. Shop is live Stripe or
+              Square cash. Crew is seats plus the assistant; texts and the tech
+              phone are next. Card fees stay with your processor.
             </p>
           </Card>
           <Card title="Appearance">

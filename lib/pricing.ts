@@ -1,9 +1,10 @@
 /**
  * What a local shop would actually pay, and what that money should buy.
  * Checkout is not live — these are the prices we will charge, not a paywall.
+ * Signup is a 14-day trial of the book. Free is not a plan.
  */
 
-export const PLAN_KEYS = ["free", "shop", "crew"] as const;
+export const PLAN_KEYS = ["shop", "crew"] as const;
 
 export type PlanKey = (typeof PLAN_KEYS)[number];
 
@@ -26,23 +27,6 @@ export type Plan = {
 
 export const PLANS: readonly Plan[] = [
   {
-    key: "free",
-    name: "Free",
-    price: 0,
-    seats: 1,
-    priceNote: "One person, no time limit",
-    blurb:
-      "The book on your phone while you see if it fits. Harbor Air is this with sample work.",
-    cta: "Start free",
-    features: [
-      { text: "1 login — you" },
-      { text: "Jobs, invoices, and payments" },
-      { text: "Your trade's words and site fields" },
-      { text: "Invoice links customers can open" },
-      { text: "Log cash, check, and card by hand" },
-    ],
-  },
-  {
     key: "shop",
     name: "Shop",
     price: 39,
@@ -50,11 +34,12 @@ export const PLANS: readonly Plan[] = [
     priceNote: "Owner plus whoever answers the phone",
     blurb:
       "What a 1–2 truck shop should pay for an office book that shows cash, not just invoices.",
-    cta: "Use Shop",
+    cta: "Start 14-day trial",
     featured: true,
     features: [
+      { text: "14 days of the book, then $39/month" },
       { text: "2 logins" },
-      { text: "Everything on Free" },
+      { text: "Jobs, invoices, and payments" },
       { text: "Live cash from your Stripe or Square" },
       { text: "Email the invoice" },
       { text: "CSV of jobs, invoices, and payments" },
@@ -70,7 +55,7 @@ export const PLANS: readonly Plan[] = [
     blurb:
       "What you would pay to stop texting the board around. Seats and the assistant " +
       "are here; texts and the tech phone are next.",
-    cta: "Use Crew",
+    cta: "Start 14-day trial",
     features: [
       { text: "5 logins" },
       { text: "Everything on Shop" },
@@ -84,9 +69,9 @@ export const PLANS: readonly Plan[] = [
 ];
 
 export const PRICING_NOTE =
-  "Card fees stay with Stripe or Square. Sere does not take a cut. " +
-  "We are not charging for Sere yet — create the shop free. " +
-  "When billing opens, you pick a plan. No annual lock.";
+  "14 days of the book. Then the shop freezes until you pick Shop or Crew. " +
+  "We are not taking cards yet — when billing opens, you pay and the shop opens again. " +
+  "Card fees stay with Stripe or Square. Sere does not take a cut. No annual lock.";
 
 export function isPlanKey(value: string | null | undefined): value is PlanKey {
   return (PLAN_KEYS as readonly string[]).includes(value || "");
@@ -103,10 +88,9 @@ export function planByKey(value: string | null | undefined): Plan | null {
 }
 
 export function formatPlanPrice(plan: Plan): string {
-  if (plan.price === 0) return "Free";
   return `$${plan.price}`;
 }
 
 export function signupHref(plan: Plan): string {
-  return plan.key === "free" ? "/signup" : `/signup?plan=${plan.key}`;
+  return `/signup?plan=${plan.key}`;
 }

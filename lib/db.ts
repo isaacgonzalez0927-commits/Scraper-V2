@@ -69,6 +69,8 @@ export async function ensureSchema(): Promise<void> {
       default_tax_bps INTEGER NOT NULL DEFAULT 0,
       stripe_status TEXT NOT NULL DEFAULT 'not_connected',
       business_type TEXT NOT NULL DEFAULT 'general',
+      plan TEXT NOT NULL DEFAULT 'trial',
+      trial_ends_at TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS integrations (
@@ -245,6 +247,8 @@ export async function ensureSchema(): Promise<void> {
     );
   `);
   await addColumnIfMissing("organizations", "business_type", "TEXT NOT NULL DEFAULT 'general'");
+  await addColumnIfMissing("organizations", "plan", "TEXT NOT NULL DEFAULT 'trial'");
+  await addColumnIfMissing("organizations", "trial_ends_at", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing("customers", "details", "TEXT NOT NULL DEFAULT '{}'");
   await addColumnIfMissing("jobs", "details", "TEXT NOT NULL DEFAULT '{}'");
 }
