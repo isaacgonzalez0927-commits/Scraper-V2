@@ -9,7 +9,7 @@ export async function loadApp() {
   const voice = tradeCopy(ctx.org.businessType);
   const [unread, brief] = await Promise.all([
     unreadCount(ctx.org.id),
-    buildBrief(ctx.org.id, ctx.user.name, ctx.org.businessType),
+    buildBrief(ctx.org.id, ctx.user.name, ctx.org.businessType, new Date(), ctx.user.email === DEMO_EMAIL),
   ]);
   return {
     ...ctx,

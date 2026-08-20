@@ -193,13 +193,14 @@ fallback, so money cannot land in the wrong account.
 | `RESEND_API_KEY` | Resend API key |
 | `SERE_EMAIL_FROM` | From address for outgoing email |
 | `SERE_EMAIL_FROM_NAME` | From name for outgoing email |
-| `OPENAI_API_KEY` | Turns on GPT for the Sere assistant on every shop |
+| `OPENAI_API_KEY` | Turns on GPT for signed-up shops. Not used by the public demo |
 | `OPENAI_MODEL` | Optional. Defaults to `gpt-4o-mini` |
 
-The Integrations screen labels these as coming from the deployment environment and does
-not let you disconnect them from inside the app. For OpenAI, set a monthly budget in
-[Usage limits](https://platform.openai.com/settings/organization/limits). $5 is enough
-for gpt-4o-mini on a shop this size.
+OpenAI is not a shop connect. Sere pays the key. Set a monthly budget in
+[Usage limits](https://platform.openai.com/settings/organization/limits).
+
+The Integrations screen labels Stripe and email environment fallbacks as coming from
+the deployment and does not let you disconnect them from inside the app.
 
 ---
 

@@ -7,8 +7,8 @@ import { prettyDate, prettyWhen } from "./labels";
 import { formatMoney } from "./money";
 import { collectedCents, isoDate, outstandingTotals, weekBounds } from "./queries";
 import { customers, invoices, jobs, organizations } from "./schema";
-import { integrationStatus, openaiConfig } from "./integrations";
-import { completeShopJson, DEFAULT_OPENAI_MODEL, type OpenAIChatJson } from "./openai";
+import { integrationStatus } from "./integrations";
+import { completeShopJson, DEFAULT_OPENAI_MODEL, openaiForShop, type OpenAIChatJson } from "./openai";
 import { loadStripeCash } from "./stripe-cash";
 import { loadSquareCash } from "./square-cash";
 
@@ -26,7 +26,7 @@ export type AssistantBrief = {
   summary: string;
   alerts: AssistantAlert[];
   suggestions: string[];
-  /** True when this shop has its own OpenAI key connected. */
+  /** True when Sere's OpenAI key is on and this is not the public demo. */
   gpt: boolean;
 };
 
@@ -235,7 +235,7 @@ export function parseAssistant(message: string, now = new Date()): AssistantInte
 }
 
 /**
- * Maps a JSON plan from the shop's OpenAI model onto a known Sere intent.
+ * Maps a JSON plan from Sere's OpenAI model onto a known Sere intent.
  * Completing or rescheduling still goes through findJobs + SQL in this file.
  */
 export function planToIntent(plan: OpenAIChatJson, now = new Date()): AssistantIntent {
@@ -286,6 +286,7 @@ export async function buildBrief(
   userName: string,
   businessType: string,
   now = new Date(),
+  isDemo = false,
 ): Promise<AssistantBrief> {
   const voice = tradeCopy(businessType);
   const today = isoDate(now);
@@ -393,7 +394,7 @@ export async function buildBrief(
       overdue > 0 ? "Show overdue invoices" : dueSoon.length ? "What's due soon" : voice.suggestions[1],
       unscheduled[0] ? `Move ${unscheduled[0].title} to tomorrow` : voice.suggestions[2],
     ].slice(0, 3),
-    gpt: integrations.openai.connected,
+    gpt: Boolean(openaiForShop(isDemo)),
   };
 }
 
@@ -515,8 +516,9 @@ async function askOpenAIForIntent(
   organizationId: number,
   message: string,
   now: Date,
+  isDemo: boolean,
 ): Promise<AssistantIntent | null> {
-  const config = await openaiConfig(organizationId);
+  const config = openaiForShop(isDemo);
   if (!config) return null;
   try {
     const { shop, snapshot } = await shopSnapshot(organizationId, now);
@@ -548,10 +550,11 @@ export async function runAssistant(
   businessType: string,
   message: string,
   now = new Date(),
+  isDemo = false,
 ): Promise<AssistantReply> {
   let intent = parseAssistant(message, now);
   if (intent.kind === "unknown") {
-    const mapped = await askOpenAIForIntent(organizationId, message, now);
+    const mapped = await askOpenAIForIntent(organizationId, message, now, isDemo);
     if (mapped) intent = mapped;
   }
 
@@ -564,7 +567,7 @@ export async function runAssistant(
   }
 
   if (intent.kind === "help" || intent.kind === "unknown") {
-    const gpt = Boolean(await openaiConfig(organizationId));
+    const gpt = Boolean(openaiForShop(isDemo));
     const work = voice.jobs.toLowerCase();
     const unit = voice.job.toLowerCase();
     return {
@@ -574,23 +577,19 @@ export async function runAssistant(
             ? `I did not catch that. Try today's ${work}, overdue invoices, or move a ${unit} to Friday.`
             : [
                 `I did not catch that. I can show today's ${work}, catch you up,`,
-                `list overdue invoices, or move a ${unit}. Connect an OpenAI key`,
-                `in Settings if you want me to answer in plain English.`,
+                `list overdue invoices, or move a ${unit}.`,
                 `Try: move the next ${unit} to Friday.`,
               ].join(" ")
           : [
               `I watch ${shop} for you. Ask for today's ${work}, overdue invoices,`,
               `or cash this week. Or say move the next ${unit} to Friday.`,
             ].join(" "),
-      links:
-        intent.kind === "unknown" && !gpt
-          ? [{ href: "/settings?tab=integrations#openai", label: "Connect OpenAI" }]
-          : [],
+      links: [],
     };
   }
 
   if (intent.kind === "brief") {
-    const brief = await buildBrief(organizationId, userName, businessType, now);
+    const brief = await buildBrief(organizationId, userName, businessType, now, isDemo);
     const lines = brief.alerts.length
       ? brief.alerts.map((a) => `• ${a.title}: ${a.body}`).join("\n")
       : "Nothing needs you right now.";

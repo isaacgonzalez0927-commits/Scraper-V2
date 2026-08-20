@@ -164,10 +164,7 @@ export function AssistantDock({
                 <p className="muted">Nothing needs you right now. Ask me to move a job or pull cash numbers.</p>
               )}
               {!brief.gpt ? (
-                <p className="tiny">
-                  Sere is on rules. <a href="/settings?tab=integrations#openai">Connect OpenAI</a> to
-                  answer in English about this shop.
-                </p>
+                <p className="tiny">Sere is on rules for this shop. Ask for today&apos;s jobs or overdue invoices.</p>
               ) : null}
 
               {items.map((item, i) => (

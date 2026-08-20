@@ -76,7 +76,7 @@ Two rules the code keeps:
 | `STRIPE_CONNECT_CLIENT_ID` | Optional | Enables the one-click **Connect Stripe** button (`ca_...`) |
 | `STRIPE_WEBHOOK_SECRET` | Optional | Platform webhook signing secret for Connect shops |
 | `RESEND_API_KEY` and `SERE_EMAIL_FROM` | Optional | Deployment-wide email fallback |
-| `OPENAI_API_KEY` | Optional | Turns on GPT for the Sere assistant on every shop. Use gpt-4o-mini and a $5 monthly budget in OpenAI |
+| `OPENAI_API_KEY` | Optional | Turns on GPT for signed-up shops. Harbor Air demo never uses it. gpt-4o-mini and a monthly budget in OpenAI |
 | `OPENAI_MODEL` | Optional | Defaults to `gpt-4o-mini` |
 
 Keep `SERE_SECRET_KEY` stable. Rotating it signs everyone out and makes saved payment
@@ -114,8 +114,9 @@ displayed again.
 - **Email.** Paste a Resend API key and a verified from address to email invoices
   instead of copying links.
 - **Sere assistant.** Set `OPENAI_API_KEY` on the deployment (gpt-4o-mini) and a
-  $5 monthly budget in OpenAI. Every shop, including the demo, then gets GPT
-  answers. A shop can still paste its own key in Settings to bill separately.
+  monthly budget in OpenAI. Signed-up shops then get GPT answers. The public
+  Harbor Air demo stays on rules so it cannot spend that key. Shops do not
+  paste their own OpenAI keys.
 
 Without an online processor, payments are recorded by hand as card, bank transfer, cash,
 check, Zelle, or Venmo.
