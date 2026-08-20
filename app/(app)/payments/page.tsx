@@ -42,7 +42,12 @@ export default async function PaymentsPage({
       path="/payments"
       title="Payments"
       sub={<p className="page-sub">Cash that actually arrived. Voided payments drop out of every report.</p>}
-      actions={<a className="btn" href="/payments/new">Record payment</a>}
+      actions={
+        <>
+          <a className="btn btn-secondary" href="/api/export/payments">Export CSV</a>
+          <a className="btn" href="/payments/new">Record payment</a>
+        </>
+      }
     >
       <Banner error={error} ok={ok} />
       {!shell.isDemo ? (

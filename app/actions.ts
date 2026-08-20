@@ -20,6 +20,7 @@ import { disconnectIntegration, emailConfig, saveIntegration } from "@/lib/integ
 import { parseBusinessType, tradeCopy } from "@/lib/business";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
+import { looksLikeOpenAIKey, validateOpenAIKey, DEFAULT_OPENAI_MODEL } from "@/lib/openai";
 import { paypalAccountLabel } from "@/lib/paypal";
 import { quickBooksCompanyName } from "@/lib/quickbooks";
 import { listSquareLocations, squareAccountLabel } from "@/lib/square";
@@ -87,6 +88,21 @@ async function maybeSaveSquare(organizationId: number, accessToken: string): Pro
   }
 }
 
+async function maybeSaveOpenAI(organizationId: number, apiKey: string): Promise<void> {
+  if (!looksLikeOpenAIKey(apiKey)) return;
+  try {
+    const label = await validateOpenAIKey(apiKey);
+    await saveIntegration(
+      organizationId,
+      "openai",
+      { apiKey, model: DEFAULT_OPENAI_MODEL },
+      label,
+    );
+  } catch {
+    // Shop is created either way. They can paste a working key in Settings.
+  }
+}
+
 export async function loginAction(form: FormData) {
   await boot();
   const email = str(form, "email").toLowerCase();
@@ -137,6 +153,7 @@ export async function signupAction(form: FormData) {
   }
   await maybeSaveStripe(org.id, str(form, "stripe_secret_key"));
   await maybeSaveSquare(org.id, str(form, "square_access_token"));
+  await maybeSaveOpenAI(org.id, str(form, "openai_api_key"));
   await createSession(user.id, org.id);
   redirect("/overview");
 }
@@ -676,6 +693,39 @@ export async function disconnectSquareAction() {
   const { org } = await requireContext();
   await disconnectIntegration(org.id, "square");
   redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("Square disconnected.")}`);
+}
+
+export async function connectOpenAIAction(form: FormData) {
+  const { org, user } = await requireContext();
+  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
+  const apiKey = str(form, "openai_api_key");
+  const model = str(form, "openai_model") || DEFAULT_OPENAI_MODEL;
+  if (!apiKey) {
+    connectRedirect(form, "error", "Paste your OpenAI API key first.");
+  }
+  if (!looksLikeOpenAIKey(apiKey)) {
+    connectRedirect(
+      form,
+      "error",
+      "That does not look like an OpenAI key. It starts with sk- or sk-proj-.",
+    );
+  }
+  let failure = "";
+  let label = "";
+  try {
+    label = await validateOpenAIKey(apiKey);
+  } catch (error) {
+    failure = (error as Error).message;
+  }
+  if (failure) connectRedirect(form, "error", failure);
+  await saveIntegration(org.id, "openai", { apiKey, model }, label);
+  connectRedirect(form, "ok", `OpenAI connected. The Sere assistant can use GPT now.`);
+}
+
+export async function disconnectOpenAIAction() {
+  const { org } = await requireContext();
+  await disconnectIntegration(org.id, "openai");
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("OpenAI disconnected. The assistant is rules-only again.")}`);
 }
 
 export async function connectPaypalAction(form: FormData) {

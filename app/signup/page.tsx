@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 const STRIPE_KEYS = "https://dashboard.stripe.com/apikeys";
 const SQUARE_KEYS = "https://developer.squareup.com/apps";
+const OPENAI_KEYS = "https://platform.openai.com/api-keys";
 
 export default async function SignupPage({
   searchParams,
@@ -23,8 +24,8 @@ export default async function SignupPage({
         </div>
         <h1 className="auth-title">Create your shop</h1>
         <p className="auth-sub">
-          Shop name and an account are enough. Trade and Stripe or Square are
-          optional — skip them and set them later.
+          Shop name and an account are enough. Trade, Stripe, Square, and OpenAI
+          are optional — skip them and set them later.
         </p>
         <Banner error={q.error} />
         <form action={signupAction} className="stack">
@@ -109,6 +110,35 @@ export default async function SignupPage({
                 <p className="help">
                   Credentials, then Production, copy Access token, paste it here.{" "}
                   <a href={SQUARE_KEYS} target="_blank" rel="noreferrer">Get the key from Square</a>.
+                </p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="choice-set signup-optional">
+            <legend>
+              Sere assistant <span className="optional-tag">Optional</span>
+            </legend>
+            <p className="signup-benefit">
+              Paste your OpenAI API key if you want the assistant to answer in
+              English about this shop. Completing or moving a job still goes
+              through Sere. Skip and connect later in Settings.
+            </p>
+            <div className="signup-keys">
+              <div className="signup-key">
+                <label>
+                  Connect OpenAI
+                  <input
+                    name="openai_api_key"
+                    type="password"
+                    autoComplete="off"
+                    placeholder="sk-... or sk-proj-..."
+                    spellCheck={false}
+                  />
+                </label>
+                <p className="help">
+                  Your key, your OpenAI bill. Sere stores it encrypted.{" "}
+                  <a href={OPENAI_KEYS} target="_blank" rel="noreferrer">Get an API key from OpenAI</a>.
                 </p>
               </div>
             </div>

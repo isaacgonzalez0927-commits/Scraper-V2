@@ -12,7 +12,7 @@ import { deauthorizeStripeConnect, stripePlatformSecret } from "./stripe";
  * provider never needs a database migration.
  */
 
-export type Provider = "stripe" | "email" | "square" | "paypal" | "quickbooks";
+export type Provider = "stripe" | "email" | "square" | "paypal" | "quickbooks" | "openai";
 
 export type StripeConfig = {
   secretKey: string;
@@ -60,6 +60,11 @@ export type EmailConfig = {
   replyTo: string;
 };
 
+export type OpenAIConfig = {
+  apiKey: string;
+  model: string;
+};
+
 export type IntegrationRecord = {
   provider: Provider;
   status: string;
@@ -73,6 +78,7 @@ export const PROVIDER_NAMES: Record<Provider, string> = {
   square: "Square",
   paypal: "PayPal",
   quickbooks: "QuickBooks",
+  openai: "OpenAI",
 };
 
 export async function readIntegration(
@@ -255,6 +261,17 @@ export async function quickbooksConfig(organizationId: number): Promise<QuickBoo
   return null;
 }
 
+export async function openaiConfig(organizationId: number): Promise<OpenAIConfig | null> {
+  const saved = await readConfig<OpenAIConfig>(organizationId, "openai");
+  if (saved?.apiKey) {
+    return {
+      apiKey: saved.apiKey,
+      model: saved.model || "gpt-4o-mini",
+    };
+  }
+  return null;
+}
+
 export type OnlinePayMethods = {
   stripe: boolean;
   square: boolean;
@@ -297,19 +314,34 @@ export async function integrationStatus(
   square: ProviderStatus;
   paypal: ProviderStatus;
   quickbooks: ProviderStatus;
+  openai: ProviderStatus;
 }> {
-  const [stripeRow, emailRow, squareRow, paypalRow, qbRow, stripeSaved, emailSaved, squareSaved, paypalSaved, qbSaved] =
-    await Promise.all([
+  const [
+    stripeRow,
+    emailRow,
+    squareRow,
+    paypalRow,
+    qbRow,
+    openaiRow,
+    stripeSaved,
+    emailSaved,
+    squareSaved,
+    paypalSaved,
+    qbSaved,
+    openaiSaved,
+  ] = await Promise.all([
       readIntegration(organizationId, "stripe"),
       readIntegration(organizationId, "email"),
       readIntegration(organizationId, "square"),
       readIntegration(organizationId, "paypal"),
       readIntegration(organizationId, "quickbooks"),
+      readIntegration(organizationId, "openai"),
       readConfig<StoredStripe>(organizationId, "stripe"),
       readConfig<EmailConfig>(organizationId, "email"),
       readConfig<SquareConfig>(organizationId, "square"),
       readConfig<PayPalConfig>(organizationId, "paypal"),
       readConfig<QuickBooksConfig>(organizationId, "quickbooks"),
+      readConfig<OpenAIConfig>(organizationId, "openai"),
     ]);
   const stripeEnv = stripeEnvConfig();
   const emailEnv = emailEnvConfig();
@@ -319,6 +351,7 @@ export async function integrationStatus(
   const squareUnreadable = Boolean(squareRow) && !squareSaved?.accessToken;
   const paypalUnreadable = Boolean(paypalRow) && !(paypalSaved?.clientId && paypalSaved?.clientSecret);
   const qbUnreadable = Boolean(qbRow) && !(qbSaved?.accessToken && qbSaved?.realmId);
+  const openaiUnreadable = Boolean(openaiRow) && !openaiSaved?.apiKey;
 
   function status(
     row: IntegrationRecord | null,
@@ -361,5 +394,6 @@ export async function integrationStatus(
       paypalUnreadable,
     ),
     quickbooks: status(qbRow, Boolean(qbSaved?.accessToken && qbSaved?.realmId), qbUnreadable),
+    openai: status(openaiRow, Boolean(openaiSaved?.apiKey), openaiUnreadable),
   };
 }

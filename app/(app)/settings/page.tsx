@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import {
   connectEmailAction,
+  connectOpenAIAction,
   connectPaypalAction,
   connectQuickbooksAction,
   connectSquareAction,
   connectStripeAction,
   disconnectEmailAction,
+  disconnectOpenAIAction,
   disconnectPaypalAction,
   disconnectQuickbooksAction,
   disconnectSquareAction,
@@ -14,7 +16,7 @@ import {
   saveSettingsAction,
   sendTestEmailAction,
 } from "@/app/actions";
-import { ConnectStripeButton, SquareKeyLink, StripeKeyLink } from "@/components/ConnectStripe";
+import { ConnectStripeButton, OpenAIKeyLink, SquareKeyLink, StripeKeyLink } from "@/components/ConnectStripe";
 import { Banner, Card } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -73,7 +75,8 @@ export default async function SettingsPage({
         integrations.email.unreadable ||
         integrations.square.unreadable ||
         integrations.paypal.unreadable ||
-        integrations.quickbooks.unreadable) ? (
+        integrations.quickbooks.unreadable ||
+        integrations.openai.unreadable) ? (
         <Banner warn="Saved credentials could not be read. This happens when SERE_SECRET_KEY changes. Paste the keys again to reconnect." />
       ) : null}
 
@@ -329,8 +332,8 @@ export default async function SettingsPage({
           <p className="section-label mt-1">Also works with</p>
           <p className="muted">
             Square is the same idea: paste the access token and tap Connect Square.
-            Overview then shows cash that actually landed in Square. PayPal and
-            QuickBooks stay optional extras.
+            Overview then shows cash that actually landed in Square. OpenAI is for
+            the Sere assistant. PayPal and QuickBooks stay optional extras.
           </p>
 
           <Card
@@ -436,6 +439,102 @@ export default async function SettingsPage({
                   </form>
                 </>
               )}
+          </Card>
+
+          <Card
+            id="openai"
+            title="Sere assistant"
+            note="Paste your OpenAI API key so the assistant can answer in English about this shop. Completing or moving a job still goes through Sere."
+            action={
+              <span
+                className={`badge badge-${
+                  integrations.openai.connected ? "paid" : integrations.openai.unreadable ? "partial" : "draft"
+                }`}
+              >
+                {integrations.openai.connected
+                  ? "Connected"
+                  : integrations.openai.unreadable
+                    ? "Needs reconnecting"
+                    : "Not connected"}
+              </span>
+            }
+          >
+            {integrations.openai.connected ? (
+              <>
+                <div className="kv">
+                  <div className="kv-row">
+                    <span className="kv-key">Account</span>
+                    <span className="kv-value">{integrations.openai.label}</span>
+                  </div>
+                  {integrations.openai.updatedAt ? (
+                    <div className="kv-row">
+                      <span className="kv-key">Connected on</span>
+                      <span className="kv-value">{prettyDate(integrations.openai.updatedAt)}</span>
+                    </div>
+                  ) : null}
+                </div>
+                <Banner>
+                  <div>
+                    <strong>The assistant can use GPT on this shop.</strong>
+                    <p className="mt-1">
+                      Questions about the board go to your OpenAI account. Sere
+                      never uses a shared key. The model cannot write jobs or
+                      invoices on its own.
+                    </p>
+                  </div>
+                </Banner>
+                {!demoShop ? (
+                  <form action={disconnectOpenAIAction} className="mt-2">
+                    <button className="btn btn-ghost btn-sm" type="submit">Disconnect OpenAI</button>
+                  </form>
+                ) : null}
+              </>
+            ) : demoShop ? (
+              <p className="muted">Create your shop to connect an OpenAI key.</p>
+            ) : (
+              <>
+                <p className="help">
+                  Create a key in OpenAI, copy it, paste it below, tap Connect
+                  OpenAI. Starts with <code>sk-</code> or <code>sk-proj-</code>.{" "}
+                  <OpenAIKeyLink />.
+                </p>
+                <form action={connectOpenAIAction} className="form-grid mt-2">
+                  <div className="field full">
+                    <label>API key</label>
+                    <input
+                      name="openai_api_key"
+                      type="password"
+                      autoComplete="off"
+                      required
+                      placeholder="sk-... or sk-proj-..."
+                      spellCheck={false}
+                    />
+                    <p className="help">
+                      Stored encrypted. Sere never shows it again. Used only for
+                      the assistant on this shop.
+                    </p>
+                  </div>
+                  <details className="disclosure">
+                    <summary>Optional: model</summary>
+                    <div className="field full mt-2">
+                      <label>Model</label>
+                      <input
+                        name="openai_model"
+                        defaultValue="gpt-4o-mini"
+                        placeholder="gpt-4o-mini"
+                        autoComplete="off"
+                      />
+                      <p className="help">gpt-4o-mini is the default. Change if your account uses another chat model.</p>
+                    </div>
+                  </details>
+                  <div className="form-actions">
+                    <button className="btn btn-openai btn-connect-lg" type="submit">
+                      Connect OpenAI
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </Card>
 
           <Card

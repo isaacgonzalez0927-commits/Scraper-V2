@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { ConnectCashCallout } from "@/components/ConnectStripe";
+import { ConnectAssistantCallout, ConnectCashCallout } from "@/components/ConnectStripe";
 import { Badge, Banner, Card, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -54,7 +54,15 @@ export default async function OverviewPage({
     loadSquareCash(org.id, month.start, month.end),
   ]);
 
-  const jobsToday = jobRows.filter((r) => r.job.scheduledStart?.slice(0, 10) === today);
+  const jobsToday = jobRows.filter(
+    (r) => r.job.scheduledStart?.slice(0, 10) === today && r.job.status !== "cancelled",
+  );
+  const nextDay = new Date();
+  nextDay.setDate(nextDay.getDate() + 1);
+  const tomorrow = isoDate(nextDay);
+  const jobsTomorrow = jobRows.filter(
+    (r) => r.job.scheduledStart?.slice(0, 10) === tomorrow && r.job.status !== "cancelled",
+  );
   const jobsWeek = jobRows.filter((r) => {
     const day = r.job.scheduledStart?.slice(0, 10);
     return day && day >= week.start && day <= week.end;
@@ -87,11 +95,14 @@ export default async function OverviewPage({
     >
       <Banner error={q.error} ok={q.ok} />
       {!shell.isDemo ? (
-        <ConnectCashCallout
-          next="/overview"
-          stripe={integrations.stripe.connected}
-          square={integrations.square.connected}
-        />
+        <>
+          <ConnectCashCallout
+            next="/overview"
+            stripe={integrations.stripe.connected}
+            square={integrations.square.connected}
+          />
+          <ConnectAssistantCallout next="/overview" connected={integrations.openai.connected} />
+        </>
       ) : null}
       {brief.alerts.length ? (
         <div className="brief-row">
@@ -223,13 +234,14 @@ export default async function OverviewPage({
         >
           <ul className="list">
             <li><span className="muted">Today</span><strong>{jobsToday.length}</strong></li>
+            <li><span className="muted">Tomorrow</span><strong>{jobsTomorrow.length}</strong></li>
             <li><span className="muted">This week</span><strong>{jobsWeek.length}</strong></li>
             <li><span className="muted">Waiting to finish</span><strong>{awaiting.length}</strong></li>
           </ul>
-          <p className="section-label mt-2">Next up</p>
-          {awaiting.length ? (
+          <p className="section-label mt-2">{jobsToday.length ? "Next up" : jobsTomorrow.length ? "Tomorrow" : "Next up"}</p>
+          {(jobsToday.length ? awaiting : jobsTomorrow.length ? jobsTomorrow.slice(0, 6) : awaiting).length ? (
             <Rows>
-              {awaiting.map(({ job, customer }) => (
+              {(jobsToday.length ? awaiting : jobsTomorrow.length ? jobsTomorrow.slice(0, 6) : awaiting).map(({ job, customer }) => (
                 <RowLink
                   key={job.id}
                   href={`/jobs/${job.id}`}

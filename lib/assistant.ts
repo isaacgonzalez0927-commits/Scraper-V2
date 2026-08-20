@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { tradeCopy } from "./business";
 import { db } from "./db";
 import { displayName } from "./display";
@@ -7,7 +7,8 @@ import { prettyDate, prettyWhen } from "./labels";
 import { formatMoney } from "./money";
 import { collectedCents, isoDate, outstandingTotals, weekBounds } from "./queries";
 import { customers, invoices, jobs, organizations } from "./schema";
-import { integrationStatus } from "./integrations";
+import { integrationStatus, openaiConfig } from "./integrations";
+import { completeShopJson, DEFAULT_OPENAI_MODEL, type OpenAIChatJson } from "./openai";
 import { loadStripeCash } from "./stripe-cash";
 import { loadSquareCash } from "./square-cash";
 
@@ -25,6 +26,8 @@ export type AssistantBrief = {
   summary: string;
   alerts: AssistantAlert[];
   suggestions: string[];
+  /** True when this shop has its own OpenAI key connected. */
+  gpt: boolean;
 };
 
 export type AssistantReply = {
@@ -36,7 +39,8 @@ export type AssistantReply = {
 type RescheduleIntent = { kind: "reschedule"; query: string; when: string };
 type CompleteIntent = { kind: "complete"; query: string };
 type JobsIntent = { kind: "jobs"; when: "today" | "tomorrow" | "week" | "unscheduled" };
-type InvoicesIntent = { kind: "invoices"; filter: "overdue" | "unpaid" | "draft" };
+type InvoicesIntent = { kind: "invoices"; filter: "overdue" | "unpaid" | "draft" | "due_soon" };
+type AnswerIntent = { kind: "answer"; text: string };
 type BriefIntent = { kind: "brief" };
 type CashIntent = { kind: "cash" };
 type HelpIntent = { kind: "help" };
@@ -50,6 +54,7 @@ export type AssistantIntent =
   | BriefIntent
   | CashIntent
   | HelpIntent
+  | AnswerIntent
   | UnknownIntent;
 
 const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -162,6 +167,9 @@ export function parseAssistant(message: string, now = new Date()): AssistantInte
   if (/\b(overdue|past due|late invoices?)\b/.test(lower)) {
     return { kind: "invoices", filter: "overdue" };
   }
+  if (/\b(due soon|coming due|due this week)\b/.test(lower)) {
+    return { kind: "invoices", filter: "due_soon" };
+  }
   if (/\b(unpaid|outstanding invoices?|who owes|still owe)\b/.test(lower)) {
     return { kind: "invoices", filter: "unpaid" };
   }
@@ -169,22 +177,6 @@ export function parseAssistant(message: string, now = new Date()): AssistantInte
 
   if (/\b(cash|collected|money in|what came in|revenue)\b/.test(lower)) {
     return { kind: "cash" };
-  }
-
-  if (/\bunscheduled\b/.test(lower) || /\bnot scheduled\b/.test(lower)) {
-    return { kind: "jobs", when: "unscheduled" };
-  }
-  if (/\bthis week\b/.test(lower) || /\bweek's jobs\b/.test(lower)) {
-    return { kind: "jobs", when: "week" };
-  }
-  if (/\btomorrow\b/.test(lower) && /\b(jobs?|calendar|schedule|board)\b/.test(lower)) {
-    return { kind: "jobs", when: "tomorrow" };
-  }
-  if (
-    /\b(jobs? today|today's jobs?|on the board|what's on|what is on|calendar today)\b/.test(lower) ||
-    lower === "today"
-  ) {
-    return { kind: "jobs", when: "today" };
   }
 
   const complete = lower.match(
@@ -208,6 +200,27 @@ export function parseAssistant(message: string, now = new Date()): AssistantInte
     if (when) return { kind: "reschedule", query: cleanJobQuery(changeDate[1]), when };
   }
 
+  if (/\bunscheduled\b/.test(lower) || /\bnot scheduled\b/.test(lower)) {
+    return { kind: "jobs", when: "unscheduled" };
+  }
+  if (/\bthis week\b/.test(lower) || /\bweek's jobs\b/.test(lower)) {
+    return { kind: "jobs", when: "week" };
+  }
+  if (
+    (/\btomorrow\b/.test(lower) && /\b(jobs?|calendar|schedule|board)\b/.test(lower)) ||
+    lower === "tomorrow" ||
+    lower === "what's on tomorrow" ||
+    lower === "whats on tomorrow"
+  ) {
+    return { kind: "jobs", when: "tomorrow" };
+  }
+  if (
+    /\b(jobs? today|today's jobs?|on the board|what's on|what is on|calendar today)\b/.test(lower) ||
+    lower === "today"
+  ) {
+    return { kind: "jobs", when: "today" };
+  }
+
   if (
     /^(brief|overview|how are we|how am i|catch me up|summary|status)/.test(lower) ||
     lower.includes("need me") ||
@@ -218,6 +231,42 @@ export function parseAssistant(message: string, now = new Date()): AssistantInte
     return { kind: "brief" };
   }
 
+  return { kind: "unknown" };
+}
+
+/**
+ * Maps a JSON plan from the shop's OpenAI model onto a known Sere intent.
+ * Completing or rescheduling still goes through findJobs + SQL in this file.
+ */
+export function planToIntent(plan: OpenAIChatJson, now = new Date()): AssistantIntent {
+  const intent = String(plan.intent || "").toLowerCase().trim();
+  const reply = String(plan.reply || "").trim();
+  if (intent === "help") return { kind: "help" };
+  if (intent === "brief") return { kind: "brief" };
+  if (intent === "cash") return { kind: "cash" };
+  if (intent === "jobs") {
+    const when =
+      plan.when === "tomorrow" || plan.when === "week" || plan.when === "unscheduled"
+        ? plan.when
+        : "today";
+    return { kind: "jobs", when };
+  }
+  if (intent === "invoices") {
+    const filter =
+      plan.filter === "overdue" || plan.filter === "draft" || plan.filter === "due_soon"
+        ? plan.filter
+        : "unpaid";
+    return { kind: "invoices", filter };
+  }
+  if (intent === "complete" && plan.query) {
+    return { kind: "complete", query: cleanJobQuery(String(plan.query)) };
+  }
+  if (intent === "reschedule" && plan.query) {
+    const when = parseWhen(String(plan.date || ""), now);
+    if (when) return { kind: "reschedule", query: cleanJobQuery(String(plan.query)), when };
+  }
+  if (intent === "answer" && reply) return { kind: "answer", text: reply };
+  if (reply) return { kind: "answer", text: reply };
   return { kind: "unknown" };
 }
 
@@ -250,9 +299,19 @@ export async function buildBrief(
   ]);
 
   const jobsToday = jobRows.filter((j) => j.scheduledStart?.slice(0, 10) === today && j.status !== "cancelled");
+  const tomorrow = isoDate(addDays(now, 1));
+  const jobsTomorrow = jobRows.filter(
+    (j) => j.scheduledStart?.slice(0, 10) === tomorrow && j.status !== "cancelled",
+  );
   const unscheduled = jobRows.filter((j) => !j.scheduledStart && j.status !== "cancelled" && j.status !== "completed");
   const drafts = invoiceRows.filter((i) => i.status === "draft");
   const overdueInvoices = invoiceRows.filter((i) => i.status === "overdue");
+  const until = isoDate(addDays(now, 3));
+  const dueSoon = invoiceRows.filter((i) => {
+    if (!["sent", "viewed", "partial"].includes(i.status)) return false;
+    const due = i.dueDate?.slice(0, 10) || "";
+    return due >= today && due <= until;
+  });
 
   const alerts: AssistantAlert[] = [];
   if (overdue > 0) {
@@ -265,11 +324,26 @@ export async function buildBrief(
       href: "/invoices?status=overdue",
     });
   }
+  if (dueSoon.length) {
+    alerts.push({
+      tone: "warn",
+      title: `${dueSoon.length} due in 3 days`,
+      body: dueSoon.slice(0, 3).map((i) => i.number).join(", "),
+      href: "/invoices",
+    });
+  }
   if (jobsToday.length) {
     alerts.push({
       tone: "info",
       title: `${jobsToday.length} ${jobsToday.length === 1 ? "job" : "jobs"} today`,
       body: jobsToday.slice(0, 3).map((j) => j.title).join(", "),
+      href: "/calendar",
+    });
+  } else if (jobsTomorrow.length) {
+    alerts.push({
+      tone: "info",
+      title: `${jobsTomorrow.length} ${jobsTomorrow.length === 1 ? "job" : "jobs"} tomorrow`,
+      body: jobsTomorrow.slice(0, 3).map((j) => j.title).join(", "),
       href: "/calendar",
     });
   }
@@ -300,6 +374,7 @@ export async function buildBrief(
 
   const bits: string[] = [];
   if (jobsToday.length) bits.push(`${jobsToday.length} on the board today`);
+  else if (jobsTomorrow.length) bits.push(`${jobsTomorrow.length} tomorrow, nothing today`);
   else bits.push("nothing scheduled today");
   if (overdue > 0) bits.push(`${formatMoney(overdue)} overdue`);
   else bits.push("nothing overdue");
@@ -310,10 +385,11 @@ export async function buildBrief(
     summary: `${voice.name}. ${bits.join(". ")}.`,
     alerts,
     suggestions: [
-      jobsToday.length ? "What's on today" : "Unscheduled jobs",
-      overdue > 0 ? "Show overdue invoices" : "Who still owes me",
+      jobsToday.length ? "What's on today" : jobsTomorrow.length ? "What's on tomorrow" : "Unscheduled jobs",
+      overdue > 0 ? "Show overdue invoices" : dueSoon.length ? "What's due soon" : "Who still owes me",
       unscheduled[0] ? `Move ${unscheduled[0].title} to tomorrow` : "Jobs this week",
     ].slice(0, 3),
+    gpt: integrations.openai.connected,
   };
 }
 
@@ -357,6 +433,111 @@ function jobLinks(hits: JobHit[]): AssistantLink[] {
   }));
 }
 
+type SnapshotJob = { id: number; title: string; customer: string; when: string; status: string };
+type SnapshotInvoice = { number: string; due: string; amount: string; status: string };
+
+async function shopSnapshot(
+  organizationId: number,
+  now: Date,
+): Promise<{ shop: string; today: string; snapshot: string }> {
+  const [org] = await db().select().from(organizations).where(eq(organizations.id, organizationId));
+  const shop = org?.name || "your shop";
+  const today = isoDate(now);
+  const tomorrow = isoDate(addDays(now, 1));
+  const until = isoDate(addDays(now, 3));
+  const week = weekBounds(now);
+  const [jobRows, invoiceRows, collected, stripeCash, squareCash] = await Promise.all([
+    db()
+      .select({ job: jobs, customer: customers })
+      .from(jobs)
+      .innerJoin(customers, eq(customers.id, jobs.customerId))
+      .where(and(eq(jobs.organizationId, organizationId), ne(jobs.status, "cancelled"))),
+    db().select().from(invoices).where(eq(invoices.organizationId, organizationId)),
+    collectedCents(organizationId, week.start, week.end),
+    loadStripeCash(organizationId, `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, today),
+    loadSquareCash(organizationId, `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, today),
+  ]);
+
+  function packJob(row: { job: typeof jobs.$inferSelect; customer: typeof customers.$inferSelect }): SnapshotJob {
+    return {
+      id: row.job.id,
+      title: row.job.title,
+      customer: displayName(row.customer),
+      when: prettyWhen(row.job.scheduledStart) || "unscheduled",
+      status: row.job.status,
+    };
+  }
+
+  function packInvoice(row: typeof invoices.$inferSelect): SnapshotInvoice {
+    return {
+      number: row.number,
+      due: prettyDate(row.dueDate),
+      amount: formatMoney(row.totalCents),
+      status: row.status,
+    };
+  }
+
+  const data = {
+    shop,
+    today,
+    tomorrow,
+    collectedThisWeek: formatMoney(collected),
+    jobsToday: jobRows.filter((r) => r.job.scheduledStart?.slice(0, 10) === today).slice(0, 8).map(packJob),
+    jobsTomorrow: jobRows.filter((r) => r.job.scheduledStart?.slice(0, 10) === tomorrow).slice(0, 8).map(packJob),
+    unscheduled: jobRows
+      .filter((r) => !r.job.scheduledStart && r.job.status !== "completed")
+      .slice(0, 8)
+      .map(packJob),
+    overdueInvoices: invoiceRows.filter((i) => i.status === "overdue").slice(0, 8).map(packInvoice),
+    dueSoon: invoiceRows
+      .filter((i) => {
+        if (!["sent", "viewed", "partial"].includes(i.status)) return false;
+        const due = i.dueDate?.slice(0, 10) || "";
+        return due >= today && due <= until;
+      })
+      .slice(0, 8)
+      .map(packInvoice),
+    stripe: stripeCash.connected && !stripeCash.error
+      ? { available: formatMoney(stripeCash.availableCents), pending: formatMoney(stripeCash.pendingCents) }
+      : null,
+    square: squareCash.connected && !squareCash.error
+      ? { takenThisMonth: formatMoney(squareCash.monthInCents) }
+      : null,
+  };
+  return { shop, today, snapshot: JSON.stringify(data) };
+}
+
+async function askOpenAIForIntent(
+  organizationId: number,
+  message: string,
+  now: Date,
+): Promise<AssistantIntent | null> {
+  const config = await openaiConfig(organizationId);
+  if (!config) return null;
+  try {
+    const { shop, snapshot } = await shopSnapshot(organizationId, now);
+    const plan = await completeShopJson(
+      config.apiKey,
+      config.model || DEFAULT_OPENAI_MODEL,
+      [
+        `You are Sere, the ${shop} shop OS assistant.`,
+        "Use only the JSON snapshot. Never invent customers, jobs, invoices, or amounts.",
+        "You cannot send email, take card payments, or write to the database.",
+        "If they want to complete or reschedule a job, set intent to complete or reschedule",
+        "with query (title or job id) and date (e.g. Friday, tomorrow, 2026-08-21).",
+        "If they ask a question, set intent to answer and a short reply from the snapshot.",
+        "JSON keys: intent, when, filter, query, date, reply.",
+        "intent is one of: jobs, invoices, cash, brief, complete, reschedule, help, answer.",
+        "when is today, tomorrow, week, or unscheduled. filter is overdue, unpaid, draft, or due_soon.",
+      ].join(" "),
+      `Snapshot:\n${snapshot}\n\nOwner said:\n${message}`,
+    );
+    return planToIntent(plan, now);
+  } catch {
+    return null;
+  }
+}
+
 export async function runAssistant(
   organizationId: number,
   userName: string,
@@ -364,17 +545,32 @@ export async function runAssistant(
   message: string,
   now = new Date(),
 ): Promise<AssistantReply> {
-  const intent = parseAssistant(message, now);
+  let intent = parseAssistant(message, now);
+  if (intent.kind === "unknown") {
+    const mapped = await askOpenAIForIntent(organizationId, message, now);
+    if (mapped) intent = mapped;
+  }
+
   const [org] = await db().select().from(organizations).where(eq(organizations.id, organizationId));
   const shop = org?.name || "your shop";
 
+  if (intent.kind === "answer") {
+    return { text: intent.text, links: [] };
+  }
+
   if (intent.kind === "help" || intent.kind === "unknown") {
+    const gpt = Boolean(await openaiConfig(organizationId));
     return {
       text:
         intent.kind === "unknown"
-          ? `I did not catch that. I can show today's jobs, catch you up, list overdue invoices, or move a job. Try: move the next job to Friday.`
+          ? gpt
+            ? `I did not catch that. Try today's jobs, overdue invoices, or move a job to Friday.`
+            : `I did not catch that. I can show today's jobs, catch you up, list overdue invoices, or move a job. Connect an OpenAI key in Settings if you want me to answer in plain English. Try: move the next job to Friday.`
           : `I watch ${shop} for you. Ask for today's jobs, overdue invoices, or cash this week. Or say move the Johnson job to Friday, or mark the leak repair complete.`,
-      links: [],
+      links:
+        intent.kind === "unknown" && !gpt
+          ? [{ href: "/settings?tab=integrations#openai", label: "Connect OpenAI" }]
+          : [],
     };
   }
 
@@ -441,6 +637,12 @@ export async function runAssistant(
     const filtered = rows.filter((row) => {
       if (intent.filter === "overdue") return row.status === "overdue";
       if (intent.filter === "draft") return row.status === "draft";
+      if (intent.filter === "due_soon") {
+        const today = isoDate(now);
+        const until = isoDate(addDays(now, 3));
+        const due = row.dueDate?.slice(0, 10) || "";
+        return ["sent", "viewed", "partial"].includes(row.status) && due >= today && due <= until;
+      }
       return ["sent", "viewed", "partial", "overdue"].includes(row.status);
     });
     if (!filtered.length) {
@@ -534,12 +736,19 @@ export async function unreadAlertCount(organizationId: number): Promise<number> 
       .from(jobs)
       .where(eq(jobs.organizationId, organizationId)),
     db()
-      .select({ id: invoices.id, status: invoices.status })
+      .select({ id: invoices.id, status: invoices.status, dueDate: invoices.dueDate })
       .from(invoices)
-      .where(and(eq(invoices.organizationId, organizationId), inArray(invoices.status, ["overdue", "draft"]))),
+      .where(eq(invoices.organizationId, organizationId)),
   ]);
   const today = isoDate(new Date());
+  const until = isoDate(addDays(new Date(), 3));
   const unscheduled = jobRows.filter((j) => !j.scheduledStart && j.status !== "cancelled" && j.status !== "completed").length;
   const todayCount = jobRows.filter((j) => j.scheduledStart?.slice(0, 10) === today && j.status !== "cancelled").length;
-  return (totals.overdue > 0 ? 1 : 0) + (unscheduled ? 1 : 0) + (todayCount ? 1 : 0) + (invoiceRows.length ? 1 : 0);
+  const draftsOverdue = invoiceRows.filter((i) => i.status === "overdue" || i.status === "draft").length;
+  const dueSoon = invoiceRows.filter((i) => {
+    if (!["sent", "viewed", "partial"].includes(i.status)) return false;
+    const due = i.dueDate?.slice(0, 10) || "";
+    return due >= today && due <= until;
+  }).length;
+  return (totals.overdue > 0 ? 1 : 0) + (unscheduled ? 1 : 0) + (todayCount ? 1 : 0) + (draftsOverdue ? 1 : 0) + (dueSoon ? 1 : 0);
 }

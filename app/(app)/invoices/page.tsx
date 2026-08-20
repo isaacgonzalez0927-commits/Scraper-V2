@@ -37,7 +37,12 @@ export default async function InvoicesPage({
       path="/invoices"
       title="Invoices"
       sub={<p className="page-sub">An invoice is paid only when the balance reaches zero.</p>}
-      actions={<a className="btn" href="/invoices/new">New invoice</a>}
+      actions={
+        <>
+          <a className="btn btn-secondary" href="/api/export/invoices">Export CSV</a>
+          <a className="btn" href="/invoices/new">New invoice</a>
+        </>
+      }
     >
       <Tabs tabs={tabs} active={status || ""} />
       {rows.length ? (
