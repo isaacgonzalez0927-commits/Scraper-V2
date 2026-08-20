@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { ConnectAssistantCallout, ConnectCashCallout } from "@/components/ConnectStripe";
 import { Badge, Banner, Card, RowLink, Rows, Stat } from "@/components/ui";
+import { OwnerBrief } from "@/components/OwnerBrief";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -10,6 +11,7 @@ import { label, prettyDate, prettyWhen } from "@/lib/labels";
 import { loadApp } from "@/lib/page";
 import { loadStripeCash } from "@/lib/stripe-cash";
 import { loadSquareCash } from "@/lib/square-cash";
+import { loadOwnerIntelligence } from "@/lib/owner-intelligence";
 import {
   collectedCents,
   invoicedRevenueCents,
@@ -32,8 +34,18 @@ export default async function OverviewPage({
   const month = monthBounds();
   const week = weekBounds();
   const today = isoDate(new Date());
-  const [revenue, collected, { outstanding, overdue }, jobRows, activity, invoiceRows, integrations, stripeCash, squareCash] =
-    await Promise.all([
+  const [
+    revenue,
+    collected,
+    { outstanding, overdue },
+    jobRows,
+    activity,
+    invoiceRows,
+    integrations,
+    stripeCash,
+    squareCash,
+    intelligence,
+  ] = await Promise.all([
     invoicedRevenueCents(org.id, month.start, month.end),
     collectedCents(org.id, month.start, month.end),
     outstandingTotals(org.id),
@@ -52,6 +64,7 @@ export default async function OverviewPage({
     integrationStatus(org.id),
     loadStripeCash(org.id, month.start, month.end),
     loadSquareCash(org.id, month.start, month.end),
+    loadOwnerIntelligence(org.id),
   ]);
 
   const jobsToday = jobRows.filter(
@@ -132,6 +145,12 @@ export default async function OverviewPage({
           tone="accent"
         />
       </section>
+
+      <OwnerBrief
+        intelligence={intelligence}
+        processorCashCents={stripeCash.monthInCents + squareCash.monthInCents}
+        emailConnected={integrations.email.connected}
+      />
 
       {stripeCash.connected ? (
         <Card

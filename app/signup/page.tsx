@@ -141,7 +141,7 @@ export default async function SignupPage({
 
           <fieldset className="choice-set signup-optional">
             <legend>
-              Sere assistant <span className="optional-tag">Optional</span>
+              Nova assistant <span className="optional-tag">Optional</span>
             </legend>
             <p className="signup-benefit">
               Skip this if Sere already has an OpenAI key on the server. Paste

@@ -127,7 +127,7 @@ export function AssistantDock({
       <button
         className="icon-btn assistant-launch"
         type="button"
-        aria-label="Open Sere assistant"
+        aria-label="Open Nova assistant"
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
@@ -138,10 +138,10 @@ export function AssistantDock({
       {open ? (
         <div className="assistant-root">
           <button className="assistant-scrim" type="button" aria-label="Close assistant" onClick={() => setOpen(false)} />
-          <section className="assistant-panel" role="dialog" aria-label="Sere assistant">
+          <section className="assistant-panel" role="dialog" aria-label="Nova assistant">
             <header className="assistant-head">
               <div>
-                <p className="assistant-kicker">{brief.gpt ? "Sere · GPT" : "Sere"}</p>
+                <p className="assistant-kicker">{brief.gpt ? "Nova · GPT" : "Nova"}</p>
                 <h2>{brief.greeting}</h2>
                 <p className="tiny">{brief.summary}</p>
               </div>
@@ -165,7 +165,7 @@ export function AssistantDock({
               )}
               {!brief.gpt ? (
                 <p className="tiny">
-                  Sere is on rules. <a href="/settings?tab=integrations#openai">Connect OpenAI</a> to
+                  Nova is on rules. <a href="/settings?tab=integrations#openai">Connect OpenAI</a> to
                   answer in English about this shop.
                 </p>
               ) : null}

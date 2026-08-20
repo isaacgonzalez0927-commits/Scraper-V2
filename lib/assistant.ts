@@ -9,6 +9,7 @@ import { collectedCents, isoDate, outstandingTotals, weekBounds } from "./querie
 import { customers, invoices, jobs, organizations } from "./schema";
 import { integrationStatus, openaiConfig } from "./integrations";
 import { completeShopJson, DEFAULT_OPENAI_MODEL, type OpenAIChatJson } from "./openai";
+import { loadOwnerIntelligence } from "./owner-intelligence";
 import { loadStripeCash } from "./stripe-cash";
 import { loadSquareCash } from "./square-cash";
 
@@ -450,7 +451,7 @@ async function shopSnapshot(
   const tomorrow = isoDate(addDays(now, 1));
   const until = isoDate(addDays(now, 3));
   const week = weekBounds(now);
-  const [jobRows, invoiceRows, collected, stripeCash, squareCash] = await Promise.all([
+  const [jobRows, invoiceRows, collected, stripeCash, squareCash, owner] = await Promise.all([
     db()
       .select({ job: jobs, customer: customers })
       .from(jobs)
@@ -460,6 +461,7 @@ async function shopSnapshot(
     collectedCents(organizationId, week.start, week.end),
     loadStripeCash(organizationId, `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, today),
     loadSquareCash(organizationId, `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, today),
+    loadOwnerIntelligence(organizationId, now),
   ]);
 
   function packJob(row: { job: typeof jobs.$inferSelect; customer: typeof customers.$inferSelect }): SnapshotJob {
@@ -507,6 +509,33 @@ async function shopSnapshot(
     square: squareCash.connected && !squareCash.error
       ? { takenThisMonth: formatMoney(squareCash.monthInCents) }
       : null,
+    owner: {
+      collectedThisMonth: formatMoney(owner.collectedThisMonthCents),
+      tracedToJobs: formatMoney(owner.mappedToJobsCents),
+      unassigned: formatMoney(owner.unmappedCents),
+      profitOnTracedJobs: formatMoney(owner.mappedJobProfitCents),
+      cashTrendPercent: owner.trendPercent,
+      overdue: formatMoney(owner.overdueCents),
+      paymentTrails: owner.trails.slice(0, 6).map((row) => ({
+        amount: formatMoney(row.amountCents),
+        source: row.source,
+        customer: row.customerName,
+        invoice: row.invoiceNumber || null,
+        job: row.jobTitle || null,
+        jobRevenue: row.jobId ? formatMoney(row.jobRevenueCents) : null,
+        jobCosts: row.jobId ? formatMoney(row.jobCostCents) : null,
+        jobProfit: row.jobId ? formatMoney(row.jobProfitCents) : null,
+      })),
+      followUpToday: owner.followUps
+        .filter((row) => !row.remindedToday)
+        .slice(0, 5)
+        .map((row) => ({
+          customer: row.customerName,
+          invoice: row.invoiceNumber,
+          balance: formatMoney(row.balanceCents),
+          daysOverdue: row.daysOverdue,
+        })),
+    },
   };
   return { shop, today, snapshot: JSON.stringify(data) };
 }
@@ -524,7 +553,7 @@ async function askOpenAIForIntent(
       config.apiKey,
       config.model || DEFAULT_OPENAI_MODEL,
       [
-        `You are Sere, the ${shop} shop OS assistant.`,
+        `You are Nova, Sere's owner assistant for ${shop}.`,
         "Use only the JSON snapshot. Never invent customers, jobs, invoices, or amounts.",
         "You cannot send email, take card payments, or write to the database.",
         "If they want to complete or reschedule a job, set intent to complete or reschedule",
