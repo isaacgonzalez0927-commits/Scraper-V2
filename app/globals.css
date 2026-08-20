@@ -920,16 +920,28 @@ a.copy-value:hover { color: var(--accent); border-color: var(--accent-line); }
 }
 a.btn-square, a.btn-square:hover { color: #fff; }
 
-.connect-cta-actions {
+.connect-cta-stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.connect-cta-block + .connect-cta-block {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--accent-line);
+}
+.connect-paste {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  align-items: center;
-  flex-shrink: 0;
+  align-items: stretch;
+  margin-top: 10px;
 }
-.connect-cta .btn-connect-lg { min-height: 48px; }
-.open-keys { margin: 0 0 10px; }
-.open-keys .btn { min-width: 12rem; }
+.connect-paste .input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  min-height: 48px;
+}
+.connect-paste .btn { flex-shrink: 0; }
 
 .disclosure {
   border-top: 1px solid var(--line);
@@ -1678,11 +1690,10 @@ a.btn-square, a.btn-square:hover { color: #fff; }
   .form-actions .btn { width: 100%; }
   .form-actions .help { text-align: center; }
   .connect-cta { align-items: stretch; }
-  .connect-cta-actions,
   .connect-cta form,
-  .connect-cta .btn { width: 100%; }
-  .connect-cta-actions { flex-direction: column; align-items: stretch; }
-  .open-keys .btn { width: 100%; min-width: 0; }
+  .connect-cta .btn,
+  .connect-paste { width: 100%; }
+  .connect-paste { flex-direction: column; }
   .help { font-size: 13px; }
   .checkbox { min-height: 44px; font-size: 16px; }
   .checkbox input { width: 22px; height: 22px; }

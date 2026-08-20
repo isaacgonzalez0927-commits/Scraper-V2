@@ -4,9 +4,10 @@ Every shop connects its own accounts. Stripe and Square are for the shop's books
 Sere reads live payments and payouts so Overview is accurate. Email goes out from
 the shop's own domain.
 
-Shop owners do this from **Settings**, then **Integrations**, or tap **Connect Stripe**
-/ **Connect Square** on Overview, Reports, and Payments. Copy the key from Stripe or
-Square, paste it, tap Connect.
+Shop owners paste the secret on **Overview** (or Reports, Payments, Settings) and tap
+**Connect Stripe**. That is the connect action. A small **Get the key from Stripe**
+link opens Stripe in a new tab so they can copy it — that link is not the button
+that connects.
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
 key derived from `SERE_SECRET_KEY`. Nothing shows a saved secret back on screen. If you

@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { ConnectCashCallout } from "@/components/ConnectStripe";
-import { Badge, Card, RowLink, Rows, Stat } from "@/components/ui";
+import { Badge, Banner, Card, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -22,8 +22,13 @@ import {
 } from "@/lib/queries";
 import { activities, customers, invoices, jobs } from "@/lib/schema";
 
-export default async function OverviewPage() {
+export default async function OverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; ok?: string }>;
+}) {
   const { org, shell, brief } = await loadApp();
+  const q = await searchParams;
   const month = monthBounds();
   const week = weekBounds();
   const today = isoDate(new Date());
@@ -80,8 +85,10 @@ export default async function OverviewPage() {
       sub={<p className="page-sub">{brief.summary}</p>}
       actions={<a className="btn" href="/jobs/new">New job</a>}
     >
+      <Banner error={q.error} ok={q.ok} />
       {!shell.isDemo ? (
         <ConnectCashCallout
+          next="/overview"
           stripe={integrations.stripe.connected}
           square={integrations.square.connected}
         />

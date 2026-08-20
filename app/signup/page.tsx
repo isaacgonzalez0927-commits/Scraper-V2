@@ -73,10 +73,10 @@ export default async function SignupPage({
               Stripe or Square <span className="optional-tag">Optional</span>
             </legend>
             <p className="signup-benefit">
-              If the shop already takes cards in Stripe or Square, paste a key
-              so Overview shows cash that actually landed — available, pending,
-              and payouts to the bank — next to invoices you type in Sere. This
-              is for you, not your customers. Skip and connect later in Settings.
+              If the shop already takes cards in Stripe or Square, paste the key
+              here. Overview then shows cash that actually landed. This is for
+              you, not your customers. Skip and connect later — the paste box
+              is on Overview too.
             </p>
             <div className="signup-keys">
               <div className="signup-key">
@@ -91,7 +91,7 @@ export default async function SignupPage({
                   />
                 </label>
                 <p className="help">
-                  Paste the secret key so Overview can show live Stripe cash.{" "}
+                  Reveal Secret key in Stripe, copy it, paste it here.{" "}
                   <a href={STRIPE_KEYS} target="_blank" rel="noreferrer">Get the key from Stripe</a>.
                 </p>
               </div>
@@ -107,7 +107,7 @@ export default async function SignupPage({
                   />
                 </label>
                 <p className="help">
-                  Paste the access token so Overview can show live Square cash.{" "}
+                  Credentials, then Production, copy Access token, paste it here.{" "}
                   <a href={SQUARE_KEYS} target="_blank" rel="noreferrer">Get the key from Square</a>.
                 </p>
               </div>

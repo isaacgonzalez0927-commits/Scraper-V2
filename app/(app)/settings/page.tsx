@@ -243,9 +243,9 @@ export default async function SettingsPage({
             ) : !demoShop ? (
               <>
                 <p className="help">
-                  Copy the Secret key from Stripe, paste it below, tap Connect Stripe.
-                  Test keys start with <code>sk_test_</code>. Live keys start with{" "}
-                  <code>sk_live_</code>. <StripeKeyLink />.
+                  Reveal <strong>Secret key</strong>, copy it, paste it below, tap
+                  Connect Stripe. Test keys start with <code>sk_test_</code>. Live
+                  keys start with <code>sk_live_</code>. Need it? <StripeKeyLink />.
                 </p>
                 <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
                   <div className="field full">
@@ -328,8 +328,8 @@ export default async function SettingsPage({
 
           <p className="section-label mt-1">Also works with</p>
           <p className="muted">
-            Square is the same idea: open the keys page, paste the access token,
-            then Overview shows cash that actually landed in Square. PayPal and
+            Square is the same idea: paste the access token and tap Connect Square.
+            Overview then shows cash that actually landed in Square. PayPal and
             QuickBooks stay optional extras.
           </p>
 

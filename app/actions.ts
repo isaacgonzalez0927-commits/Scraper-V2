@@ -551,6 +551,19 @@ export async function saveSettingsAction(form: FormData) {
 
 const INTEGRATIONS_TAB = "/settings?tab=integrations";
 
+const CONNECT_RETURNS = new Set(["/overview", "/reports", "/payments", INTEGRATIONS_TAB]);
+
+function connectReturn(form: FormData): string {
+  const next = str(form, "next");
+  return CONNECT_RETURNS.has(next) ? next : INTEGRATIONS_TAB;
+}
+
+function connectRedirect(form: FormData, kind: "ok" | "error", message: string): never {
+  const base = connectReturn(form);
+  const join = base.includes("?") ? "&" : "?";
+  redirect(`${base}${join}${kind}=${encodeURIComponent(message)}`);
+}
+
 function demoBlocked(): string {
   return `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
     "Create your own shop to connect accounts. The demo is shared, so keys cannot be saved here.",
@@ -582,13 +595,13 @@ export async function connectStripeAction(form: FormData) {
   const publishableKey = str(form, "stripe_publishable_key");
   const webhookSecret = str(form, "stripe_webhook_secret");
   if (!secretKey) {
-    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Paste your Stripe secret key first.")}`);
+    connectRedirect(form, "error", "Paste your Stripe secret key first.");
   }
   if (!looksLikeStripeSecret(secretKey)) {
-    redirect(
-      `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
-        "That does not look like a Stripe secret key. It starts with sk_live_, sk_test_, or rk_live_.",
-      )}`,
+    connectRedirect(
+      form,
+      "error",
+      "That does not look like a Stripe secret key. It starts with sk_live_, sk_test_, or rk_live_.",
     );
   }
 
@@ -599,7 +612,7 @@ export async function connectStripeAction(form: FormData) {
   } catch (error) {
     failure = (error as Error).message;
   }
-  if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
+  if (failure) connectRedirect(form, "error", failure);
 
   await saveIntegration(org.id, "stripe", {
     secretKey,
@@ -607,7 +620,7 @@ export async function connectStripeAction(form: FormData) {
     webhookSecret,
     connectedVia: "keys",
   }, label);
-  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Stripe connected to ${label}.`)}`);
+  connectRedirect(form, "ok", `Stripe connected to ${label}.`);
 }
 
 export async function disconnectStripeAction() {
@@ -627,28 +640,36 @@ export async function connectSquareAction(form: FormData) {
   const accessToken = str(form, "square_access_token");
   let locationId = str(form, "square_location_id");
   const webhookSignatureKey = str(form, "square_webhook_key");
-  const sandbox = on(form, "square_sandbox");
+  const sandboxChosen = str(form, "square_sandbox") !== "";
+  const sandboxOnly = on(form, "square_sandbox");
   if (!accessToken) {
-    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Paste your Square access token first.")}`);
+    connectRedirect(form, "error", "Paste your Square access token first.");
   }
   let failure = "";
   let label = "";
-  try {
-    const locations = await listSquareLocations(accessToken, sandbox);
-    if (!locationId) locationId = locations[0]?.id || "";
-    if (!locationId) throw new Error("This Square account has no active location.");
-    label = await squareAccountLabel(accessToken, sandbox);
-  } catch (error) {
-    failure = (error as Error).message;
+  let sandbox = sandboxOnly;
+  const tries = sandboxChosen ? [sandboxOnly] : [false, true];
+  for (const env of tries) {
+    try {
+      const locations = await listSquareLocations(accessToken, env);
+      if (!locationId) locationId = locations[0]?.id || "";
+      if (!locationId) throw new Error("This Square account has no active location.");
+      label = await squareAccountLabel(accessToken, env);
+      sandbox = env;
+      failure = "";
+      break;
+    } catch (error) {
+      failure = (error as Error).message;
+    }
   }
-  if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
+  if (failure) connectRedirect(form, "error", failure);
   await saveIntegration(
     org.id,
     "square",
     { accessToken, locationId, webhookSignatureKey, sandbox },
     label,
   );
-  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Square connected to ${label}.`)}`);
+  connectRedirect(form, "ok", `Square connected to ${label}.`);
 }
 
 export async function disconnectSquareAction() {

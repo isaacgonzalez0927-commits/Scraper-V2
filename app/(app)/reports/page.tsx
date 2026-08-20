@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { Card, KeyValue, Stat, Tabs } from "@/components/ui";
+import { Card, KeyValue, Stat, Tabs, Banner } from "@/components/ui";
 import { ConnectCashCallout } from "@/components/ConnectStripe";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -29,7 +29,7 @@ const PERIODS = [
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; start?: string; end?: string }>;
+  searchParams: Promise<{ period?: string; start?: string; end?: string; error?: string; ok?: string }>;
 }) {
   const { org, shell } = await loadApp();
   const q = await searchParams;
@@ -93,8 +93,13 @@ export default async function ReportsPage({
         ) : null}
       </div>
 
+      <Banner error={q.error} ok={q.ok} />
       {!shell.isDemo ? (
-        <ConnectCashCallout stripe={stripeCash.connected} square={squareCash.connected} />
+        <ConnectCashCallout
+          next="/reports"
+          stripe={stripeCash.connected}
+          square={squareCash.connected}
+        />
       ) : null}
 
       <div className="grid grid-4">
