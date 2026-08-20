@@ -21,6 +21,11 @@ import { customers, jobs, organizations } from "../schema";
 import { shopAccess } from "../trial";
 import { dossierHeadline, loadDossier, recentPayments } from "./dossier";
 import { rememberNova } from "./memory";
+import { enqueueJob } from "../nexus/jobs";
+import { TRADE_QUERIES } from "../nexus/lead-filter";
+import { isSendEnabled } from "../nexus/policy";
+import { runTick } from "../nexus/runner";
+import { loadOutreachState, recordDraftOutcome } from "../nexus/state";
 
 export type ToolContext = {
   organizationId: number;
@@ -116,6 +121,74 @@ export const NOVA_TOOLS: NovaToolDef[] = [
   {
     type: "function",
     function: {
+      name: "outreach",
+      description:
+        "The state of Sere's own cold outreach: how many shops are in the " +
+        "pipeline and at what stage, lead runway by city, drafts waiting on " +
+        "review, whether sending is switched on and safe, today's cap and how " +
+        "much is used, reply and signup rates by trade, which emails are " +
+        "working, and the job queue. Call this before saying anything about " +
+        "outreach numbers or whether mail actually went out.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_leads",
+      description:
+        "Queue a Google Places search for local shops in one city. Costs Places " +
+        "quota, so one city and one trade at a time, and rotate cities rather " +
+        "than re-scraping the same one.",
+      parameters: {
+        type: "object",
+        properties: {
+          city: { type: "string", description: 'City, e.g. "Fort Myers FL"' },
+          trade: {
+            type: "string",
+            description: `One of: ${TRADE_QUERIES.map((t) => t.trade).join(", ")}`,
+          },
+        },
+        required: ["city"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "work",
+      description:
+        "Run the pipeline forward one tick: research shops, write drafts, review " +
+        "them, and queue whatever is clear to send. Returns immediately with what " +
+        "it did. Costs model calls, so do not loop on it.",
+      parameters: {
+        type: "object",
+        properties: {
+          jobs: { type: "number", description: "How many jobs this tick, default 4, max 12" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "outcome",
+      description:
+        "Record what came back from a cold email, by the address it went to. " +
+        "This is the only thing that teaches the drafting hand anything.",
+      parameters: {
+        type: "object",
+        properties: {
+          email: { type: "string" },
+          kind: { type: "string", enum: ["replied", "demo", "signup", "bounced", "complained"] },
+        },
+        required: ["email", "kind"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "remember",
       description:
         "Save something durable: a lesson about this shop, or a preference the " +
@@ -168,6 +241,60 @@ export async function runNovaTool(
 
     case "complete_job":
       return JSON.stringify(await completeJob(ctx, Number(args.job_id)));
+
+    case "outreach":
+      return JSON.stringify(await loadOutreachState());
+
+    case "find_leads": {
+      const city = String(args.city || "").trim();
+      if (!city) return JSON.stringify({ ok: false, error: "Which city?" });
+      const tradeKey = String(args.trade || "").trim().toLowerCase();
+      const entry = TRADE_QUERIES.find((t) => t.trade === tradeKey) || TRADE_QUERIES[0];
+      const query = `${entry.query} in ${city}`;
+      const id = await enqueueJob(
+        "lead.search",
+        { query, cityHint: city, maxResults: 20 },
+        { dedupeKey: `search:${query.toLowerCase()}` },
+      );
+      return JSON.stringify({
+        ok: true,
+        queued: Boolean(id),
+        query,
+        trade: entry.trade,
+        note: id
+          ? "Queued. Run work to process it."
+          : "That exact search is already queued or running.",
+      });
+    }
+
+    case "work": {
+      const raw = Number(args.jobs);
+      const jobs = Number.isFinite(raw) ? Math.min(12, Math.max(1, raw)) : 4;
+      const tick = await runTick({ jobs });
+      return JSON.stringify({
+        ...tick,
+        sendEnabled: isSendEnabled(),
+        note: isSendEnabled()
+          ? "Sending is armed."
+          : "NEXUS_SEND_ENABLED is not true, so nothing transmits. Drafting and queueing only — do not claim mail went out.",
+      });
+    }
+
+    case "outcome": {
+      const email = String(args.email || "").trim();
+      const kind = String(args.kind || "") as
+        | "replied"
+        | "demo"
+        | "signup"
+        | "bounced"
+        | "complained";
+      if (!email || !kind) return JSON.stringify({ ok: false, error: "Need an email and a kind." });
+      const done = await recordDraftOutcome(email, kind);
+      return JSON.stringify({
+        ok: done,
+        error: done ? undefined : `No sent email found for ${email}.`,
+      });
+    }
 
     case "remember": {
       const content = String(args.content || "").trim();

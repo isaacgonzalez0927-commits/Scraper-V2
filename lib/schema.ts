@@ -90,6 +90,124 @@ export const novaMemory = sqliteTable(
   (t) => [index("nova_memory_org").on(t.organizationId, t.updatedAt)],
 );
 
+/**
+ * Nexus: the outreach pipeline Nova commands. Ported from RideBy.
+ *
+ * These rows are Sere's own prospects, not any shop's customers, so they carry
+ * no organizationId. A company moves new → researching → ready → queued →
+ * contacted, and every draft waits for a review score before it can send.
+ */
+export const nexusCompanies = sqliteTable(
+  "nexus_companies",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    placeId: text("place_id").notNull().default(""),
+    name: text("name").notNull(),
+    website: text("website").notNull().default(""),
+    phone: text("phone").notNull().default(""),
+    address: text("address").notNull().default(""),
+    city: text("city").notNull().default(""),
+    state: text("state").notNull().default(""),
+    /** The trade we think they are, which decides the words in the email. */
+    trade: text("trade").notNull().default(""),
+    reviewCount: integer("review_count").notNull().default(0),
+    source: text("source").notNull().default("places"),
+    searchQuery: text("search_query").notNull().default(""),
+    stage: text("stage").notNull().default("new"),
+    disqualifiedReason: text("disqualified_reason").notNull().default(""),
+    researchStatus: text("research_status").notNull().default("pending"),
+    researchError: text("research_error").notNull().default(""),
+    researchPages: integer("research_pages").notNull().default(0),
+    /** The one true, specific thing worth opening an email with. */
+    fact: text("fact").notNull().default(""),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("nexus_companies_place").on(t.placeId),
+    index("nexus_companies_stage").on(t.stage),
+  ],
+);
+
+export const nexusContacts = sqliteTable(
+  "nexus_contacts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    companyId: integer("company_id").notNull().references(() => nexusCompanies.id),
+    email: text("email").notNull(),
+    name: text("name").notNull().default(""),
+    role: text("role").notNull().default(""),
+    sourceUrl: text("source_url").notNull().default(""),
+    confidence: integer("confidence").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("nexus_contacts_email").on(t.email)],
+);
+
+export const nexusDrafts = sqliteTable(
+  "nexus_drafts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    companyId: integer("company_id").notNull().references(() => nexusCompanies.id),
+    contactId: integer("contact_id"),
+    toEmail: text("to_email").notNull(),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    model: text("model").notNull().default(""),
+    variant: text("variant").notNull().default("a"),
+    status: text("status").notNull().default("pending_review"),
+    /** 0-100 from the review hand. Below the floor it never sends. */
+    confidence: integer("confidence").notNull().default(0),
+    rejectionReason: text("rejection_reason").notNull().default(""),
+    reviewedAt: text("reviewed_at"),
+    sentAt: text("sent_at"),
+    providerId: text("provider_id").notNull().default(""),
+    openedDemoAt: text("opened_demo_at"),
+    repliedAt: text("replied_at"),
+    signedUpAt: text("signed_up_at"),
+    bouncedAt: text("bounced_at"),
+    complainedAt: text("complained_at"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [index("nexus_drafts_status").on(t.status), index("nexus_drafts_sent").on(t.sentAt)],
+);
+
+/** The work queue. One row per unit of work, with backoff and dedupe. */
+export const nexusJobs = sqliteTable(
+  "nexus_jobs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    type: text("type").notNull(),
+    payload: text("payload").notNull().default("{}"),
+    status: text("status").notNull().default("queued"),
+    runAfter: text("run_after").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(4),
+    lockedAt: text("locked_at"),
+    lastError: text("last_error").notNull().default(""),
+    dedupeKey: text("dedupe_key").notNull().default(""),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [index("nexus_jobs_ready").on(t.status, t.runAfter)],
+);
+
+/** Audit trail. Nova reads this to say what she actually did. */
+export const nexusActions = sqliteTable(
+  "nexus_actions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    actor: text("actor").notNull().default("nova"),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull().default(""),
+    entityId: text("entity_id").notNull().default(""),
+    detail: text("detail").notNull().default(""),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("nexus_actions_at").on(t.createdAt)],
+);
+
 export const passwordResets = sqliteTable("password_resets", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
