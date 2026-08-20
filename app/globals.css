@@ -1301,63 +1301,109 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: 32px 16px;
-  background:
-    radial-gradient(720px 420px at 12% 0%, rgba(91, 56, 214, 0.09), transparent 60%),
-    radial-gradient(680px 420px at 100% 100%, rgba(91, 56, 214, 0.06), transparent 60%),
-    var(--bg);
+  padding: 40px 20px;
+  background: var(--bg);
 }
 .auth-card {
-  width: min(400px, 100%);
+  width: min(392px, 100%);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  border-radius: 16px;
   box-shadow: var(--shadow-md);
-  padding: 28px;
+  padding: 32px;
 }
-.auth-card .brand { padding: 0 0 20px; justify-content: space-between; width: 100%; }
-.auth-title { font-size: 20px; }
-.auth-sub { margin: 6px 0 18px; color: var(--ink-3); font-size: 13px; }
+.auth-card-wide { width: min(600px, 100%); }
+.auth-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.auth-title {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+.auth-sub {
+  margin: 7px 0 22px;
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.auth-hint {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.auth-fine {
+  margin: 16px 0 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
 .auth-foot {
-  margin-top: 18px;
-  padding-top: 16px;
+  margin-top: 24px;
+  padding-top: 18px;
   border-top: 1px solid var(--line);
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--ink-3);
 }
 
-.or {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 16px 0;
-  color: var(--ink-4);
-  font-size: 12px;
+.stack { display: grid; gap: 16px; }
+.stack > label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink-2);
 }
-.or::before,
-.or::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
-.stack { display: grid; gap: 14px; }
-.stack > label { display: grid; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
 .stack input {
-  min-height: 36px;
-  padding: 6px 10px;
+  min-height: 42px;
+  padding: 8px 12px;
   background: var(--surface);
   border: 1px solid var(--line-2);
-  border-radius: var(--r-sm);
-  font-size: 13.5px;
+  border-radius: var(--r-md);
+  font-size: 14px;
   outline: none;
   transition: border-color 0.14s var(--ease), box-shadow 0.14s var(--ease);
 }
 .stack input:focus { border-color: var(--accent); box-shadow: var(--ring); }
+.stack .btn { min-height: 42px; font-size: 14px; }
+
+/* The one setup question: pick a trade, one tap, no Save button. */
+.trade-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.trade-pick {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 14px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.14s var(--ease), background 0.14s var(--ease),
+    transform 0.08s var(--ease);
+}
+.trade-pick:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.trade-pick:active { transform: scale(0.99); }
+.trade-pick strong { font-size: 14px; font-weight: 600; }
+.trade-pick span { color: var(--ink-3); font-size: 12.5px; line-height: 1.4; }
+.trade-skip { margin-top: 12px; }
 
 /* Landing */
 
@@ -1640,17 +1686,6 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   line-height: 1.45;
 }
 
-.signup-plan {
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
 .plan-settings {
   list-style: none;
   margin: 0;
@@ -1732,9 +1767,9 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 }
 
 /*
-  Phone and portrait tablet. Laid out like a first-party iOS app: 44pt taps,
-  34pt large titles, grouped lists, a tab bar, and a frosted nav. 16px inside
-  fields so Safari does not zoom on focus.
+  Phone and portrait tablet. 44pt taps, grouped lists, a tab bar, a frosted
+  nav. One type scale: 27px titles, 16px body, 13px meta. 16px inside fields
+  so Safari does not zoom on focus.
 */
 @media (max-width: 900px) {
   .wide-only { display: none; }
@@ -1757,7 +1792,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
     overscroll-behavior: contain;
   }
   .sidebar.open { transform: none; }
-  .nav a { min-height: 48px; font-size: 17px; border-radius: 12px; }
+  .nav a { min-height: 48px; font-size: 16px; border-radius: 12px; }
   .nav-icon { width: 22px; height: 22px; flex-basis: 22px; }
   .org-chip { padding: 12px; border-radius: 12px; }
   .org-chip strong { font-size: 16px; }
@@ -1809,13 +1844,13 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
     margin-bottom: 18px;
   }
   .page-title {
-    font-size: 34px;
-    font-weight: 700;
-    letter-spacing: -0.04em;
-    line-height: 1.12;
+    font-size: 27px;
+    font-weight: 680;
+    letter-spacing: -0.03em;
+    line-height: 1.16;
     overflow-wrap: anywhere;
   }
-  .page-sub { font-size: 15px; line-height: 1.4; }
+  .page-sub { font-size: 14.5px; line-height: 1.45; }
   .page-actions { width: 100%; justify-content: stretch; }
   .page-actions > .btn,
   .page-actions > form {
@@ -1883,14 +1918,14 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
     padding: 12px 16px;
     gap: 12px;
   }
-  .row-title { font-size: 17px; font-weight: 400; }
+  .row-title { font-size: 16px; font-weight: 500; }
   .row-meta { font-size: 13px; }
-  .row-amount { font-size: 17px; font-weight: 400; font-variant-numeric: tabular-nums; }
+  .row-amount { font-size: 16px; font-weight: 550; font-variant-numeric: tabular-nums; }
   .row-chevron { width: 12px; height: 12px; color: var(--ink-4); }
 
-  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -0.04em; }
-  .stat-value-sm { font-size: 20px; }
-  .stat-label { font-size: 13px; }
+  .stat-value { font-size: 25px; font-weight: 680; letter-spacing: -0.03em; }
+  .stat-value-sm { font-size: 19px; }
+  .stat-label { font-size: 12.5px; }
   .stat-note { font-size: 12px; }
 
   .tabs {
@@ -1953,15 +1988,14 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .btn:active { transform: scale(0.98); }
   .icon-btn { width: 44px; height: 44px; }
 
-  .field > label { font-size: 13px; color: var(--ink-3); }
+  .field > label { font-size: 13px; font-weight: 550; color: var(--ink-3); }
   .field input,
   .field select,
   .field textarea,
   .input,
-  .stack input,
   .stack select {
-    min-height: 50px;
-    font-size: 17px;
+    min-height: 48px;
+    font-size: 16px;
     border-radius: 12px;
   }
   .field textarea { min-height: 108px; }
@@ -2024,7 +2058,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .field-pair { flex-wrap: wrap; }
   .field-pair > * { flex: 1 1 120px; min-width: 0; }
 
-  .list > li { padding: 14px 0; font-size: 17px; min-height: 44px; }
+  .list > li { padding: 14px 0; font-size: 16px; min-height: 44px; }
   .kv { gap: 0; }
   .kv-row {
     min-height: 44px;
@@ -2033,10 +2067,10 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
     align-items: center;
   }
   .kv-row:last-child { border-bottom: 0; }
-  .kv-key { font-size: 17px; color: var(--ink); }
-  .kv-value { font-size: 17px; color: var(--ink-3); text-align: right; }
+  .kv-key { font-size: 15.5px; color: var(--ink-2); }
+  .kv-value { font-size: 15.5px; color: var(--ink); text-align: right; font-weight: 550; }
   .tiny { font-size: 13px; }
-  .banner { font-size: 15px; padding: 14px; border-radius: 12px; }
+  .banner { font-size: 14.5px; padding: 14px; border-radius: 12px; }
   .trial-banner { padding: 12px 14px; border-radius: 12px; }
   .empty { padding: 40px 20px; }
   .empty h3 { font-size: 20px; }
@@ -2258,24 +2292,34 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 
   .auth {
     display: block;
-    padding: calc(16px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+    padding: calc(20px + env(safe-area-inset-top)) 20px calc(32px + env(safe-area-inset-bottom));
     background: var(--bg);
   }
   .auth-card {
     width: 100%;
     max-width: none;
-    padding: 12px 0 0;
+    padding: 8px 0 0;
     border: 0;
     border-radius: 0;
     box-shadow: none;
     background: transparent;
   }
-  .auth-title { font-size: 34px; font-weight: 700; letter-spacing: -0.04em; }
-  .auth-sub { font-size: 16px; }
-  .stack > label { font-size: 13px; color: var(--ink-3); }
-  .stack input { min-height: 50px; font-size: 17px; border-radius: 12px; }
-  .stack .btn { min-height: 44px; font-size: 15px; border-radius: 10px; }
+  .auth-head { margin-bottom: 32px; }
+  .auth-title { font-size: 28px; font-weight: 680; letter-spacing: -0.03em; }
+  .auth-sub { margin: 8px 0 24px; font-size: 15px; }
+  .stack { gap: 18px; }
+  .stack > label { font-size: 14px; font-weight: 550; color: var(--ink-2); }
+  .stack input { min-height: 48px; font-size: 16px; border-radius: 12px; padding: 10px 14px; }
+  .stack .btn { min-height: 48px; font-size: 16px; border-radius: 12px; }
+  .auth-hint { font-size: 13px; }
+  .auth-fine { font-size: 14px; }
   .auth-foot { font-size: 15px; justify-content: space-between; }
+
+  .trade-grid { grid-template-columns: 1fr; gap: 8px; }
+  .trade-pick { padding: 14px 16px; border-radius: 12px; }
+  .trade-pick strong { font-size: 16px; }
+  .trade-pick span { font-size: 13.5px; }
+  .trade-skip .btn { min-height: 48px; font-size: 16px; }
 
   .bottom-nav {
     position: fixed;
@@ -2389,81 +2433,6 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
     transition-duration: 0.01ms !important;
   }
 }
-
-.auth-wide { width: min(560px, 100%); }
-.choice-set {
-  border: 0;
-  margin: 0;
-  padding: 0;
-}
-.choice-set legend {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.choice-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-.choice {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-height: 44px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-  font-size: 13px;
-  font-weight: 550;
-  cursor: pointer;
-}
-.choice:has(input:checked) {
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--accent-strong);
-}
-.choice input { accent-color: var(--accent); margin-top: 2px; }
-.choice-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.choice-copy strong {
-  font-weight: 550;
-  font-size: 13px;
-}
-.choice-copy span {
-  font-weight: 400;
-  font-size: 12px;
-  color: var(--ink-3);
-  line-height: 1.35;
-}
-.choice:has(input:checked) .choice-copy span {
-  color: inherit;
-  opacity: 0.82;
-}
-.choice-span { grid-column: 1 / -1; }
-.signup-optional { margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
-.signup-benefit {
-  margin: 0 0 10px;
-  color: var(--ink-3);
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.45;
-}
-.optional-tag {
-  margin-left: 6px;
-  color: var(--ink-3);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.signup-keys { display: grid; gap: 14px; }
-.signup-key .btn { margin-bottom: 8px; }
 
 .brief-row {
   display: grid;
@@ -2649,7 +2618,6 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
     border-top-left-radius: 18px;
     border-top-right-radius: 18px;
   }
-  .choice-grid { grid-template-columns: 1fr 1fr; }
 }
 
 /* Print */

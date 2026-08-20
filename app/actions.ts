@@ -62,57 +62,6 @@ function slugify(name: string) {
   return `${base}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-async function maybeSaveStripe(organizationId: number, secretKey: string): Promise<void> {
-  if (!looksLikeStripeSecret(secretKey)) return;
-  try {
-    const label = accountLabel(await retrieveAccount(secretKey));
-    await saveIntegration(
-      organizationId,
-      "stripe",
-      { secretKey, publishableKey: "", webhookSecret: "", connectedVia: "keys" },
-      label,
-    );
-  } catch {
-    // Shop is created either way. They can paste a working key in Settings.
-  }
-}
-
-async function maybeSaveSquare(organizationId: number, accessToken: string): Promise<void> {
-  if (!accessToken) return;
-  for (const sandbox of [false, true]) {
-    try {
-      const locations = await listSquareLocations(accessToken, sandbox);
-      const locationId = locations[0]?.id || "";
-      if (!locationId) continue;
-      const label = await squareAccountLabel(accessToken, sandbox);
-      await saveIntegration(
-        organizationId,
-        "square",
-        { accessToken, locationId, webhookSignatureKey: "", sandbox },
-        label,
-      );
-      return;
-    } catch {
-      // Try the other environment, then give up.
-    }
-  }
-}
-
-async function maybeSaveOpenAI(organizationId: number, apiKey: string): Promise<void> {
-  if (!looksLikeOpenAIKey(apiKey)) return;
-  try {
-    const label = await validateOpenAIKey(apiKey);
-    await saveIntegration(
-      organizationId,
-      "openai",
-      { apiKey, model: DEFAULT_OPENAI_MODEL },
-      label,
-    );
-  } catch {
-    // Shop is created either way. They can paste a working key in Settings.
-  }
-}
-
 export async function loginAction(form: FormData) {
   await boot();
   const email = str(form, "email").toLowerCase();
@@ -133,7 +82,6 @@ export async function signupAction(form: FormData) {
   const email = str(form, "email").toLowerCase();
   const password = str(form, "password");
   const company = str(form, "company");
-  const businessType = parseBusinessType(str(form, "business_type"));
   if (!name || !email || !password || !company) {
     redirect("/signup?error=Shop+name,+your+name,+email,+and+password+are+required.");
   }
@@ -141,7 +89,6 @@ export async function signupAction(form: FormData) {
   const existing = await db().select().from(users).where(eq(users.email, email));
   if (existing.length) redirect("/signup?error=An+account+with+that+email+already+exists.");
   const created = nowISO();
-  const voice = tradeCopy(businessType);
   const [user] = await db()
     .insert(users)
     .values({ name, email, passwordHash: await hashPassword(password), createdAt: created })
@@ -152,21 +99,42 @@ export async function signupAction(form: FormData) {
       name: company,
       slug: slugify(company),
       email,
-      businessType,
-      defaultInvoiceNotes: voice.defaultNotes,
       plan: "trial",
       trialEndsAt: trialEndsISO(new Date(created)),
       createdAt: created,
     })
     .returning();
   await db().insert(memberships).values({ userId: user.id, organizationId: org.id, role: "owner", createdAt: created });
-  for (const [n, d, p] of voice.services) {
-    await db().insert(serviceItems).values({ organizationId: org.id, name: n, description: d, unitPriceCents: p });
-  }
-  await maybeSaveStripe(org.id, str(form, "stripe_secret_key"));
-  await maybeSaveSquare(org.id, str(form, "square_access_token"));
-  await maybeSaveOpenAI(org.id, str(form, "openai_api_key"));
   await createSession(user.id, org.id);
+  redirect("/welcome");
+}
+
+/**
+ * The one setup question. Picking the trade sets the words Sere uses and drops
+ * in that trade's starter price list, but only while the shop is still empty.
+ */
+export async function chooseTradeAction(form: FormData) {
+  const { org } = await requireContext();
+  const businessType = parseBusinessType(str(form, "business_type"));
+  const voice = tradeCopy(businessType);
+  await db()
+    .update(organizations)
+    .set({ businessType, defaultInvoiceNotes: voice.defaultNotes })
+    .where(eq(organizations.id, org.id));
+  const existing = await db()
+    .select({ id: serviceItems.id })
+    .from(serviceItems)
+    .where(eq(serviceItems.organizationId, org.id));
+  if (!existing.length) {
+    for (const [n, d, p] of voice.services) {
+      await db().insert(serviceItems).values({
+        organizationId: org.id,
+        name: n,
+        description: d,
+        unitPriceCents: p,
+      });
+    }
+  }
   redirect("/overview");
 }
 
