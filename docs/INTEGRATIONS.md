@@ -1,11 +1,12 @@
 # Integrations
 
-Every shop connects its own accounts. Stripe is for the shop's books: Sere reads
-the live balance, pending funds, and payouts so Overview is accurate. Email goes
-out from the shop's own domain.
+Every shop connects its own accounts. Stripe and Square are for the shop's books:
+Sere reads live payments and payouts so Overview is accurate. Email goes out from
+the shop's own domain.
 
-Shop owners do this from **Settings**, then **Integrations**, or from the **Connect
-Stripe** button on Overview, Reports, and Payments.
+Shop owners do this from **Settings**, then **Integrations**. Overview, Reports, and
+Payments show **Open Stripe keys** and **Open Square keys** — those go straight to
+the page where you copy the secret. Then paste it in Settings.
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
 key derived from `SERE_SECRET_KEY`. Nothing shows a saved secret back on screen. If you
@@ -23,10 +24,9 @@ accurate than invoices typed in by hand.
 
 ### What the shop owner does
 
-1. Open [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) and sign
-   in as the shop.
+1. Tap **Open Stripe keys** (or open [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys)) and sign in as the shop.
 2. Copy the Secret key (`sk_test_...` while trying it, `sk_live_...` for real cash).
-3. In Sere, **Settings → Integrations**, paste it, tap **Connect Stripe**.
+3. Paste it in Sere and tap **Connect Stripe**.
 
 Overview then shows **In Stripe**. Reports shows Stripe charges next to money logged
 in Sere. The two will not always match, and that is the point.
@@ -112,25 +112,26 @@ directly.
 
 ---
 
-## Square and PayPal: shops already on other processors
+## Square: same cash view, same paste
 
-Stripe is the shop cash view. If a shop already takes cards in Square or PayPal,
-they can connect those too for invoice checkout. The customer invoice then shows
-those buttons. Connecting them is unrelated to seeing Stripe cash on Overview.
+Square shops tap **Open Square keys**, which goes to
+[developer.squareup.com/apps](https://developer.squareup.com/apps). Open the app
+(create one if needed), **Credentials**, **Production**, copy the access token, paste
+it in Sere. Overview then shows completed payments this month and payouts to the
+bank. Square has no available-balance endpoint, so the live numbers are take and
+payouts, not a wallet total.
 
-### Square
+Location ID is optional. Blank uses the first active location. Sandbox and webhook
+are optional, under a disclosure. The webhook is only if you also want invoice
+checkout recorded.
 
-1. In Square, create an access token (sandbox or production) with Payments and Orders
-   permissions.
-2. In Sere, open **Settings**, then **Integrations**, then **Connect Square**. Paste the
-   token. Location ID is optional; Sere uses the first active location if it is blank.
-3. Add a webhook in Square for `payment.updated` pointing at
-   `https://yourdomain.com/api/webhooks/square`, and paste the signature key into Sere.
+Webhook URL if you want it: `https://yourdomain.com/api/webhooks/square`, event
+`payment.updated`.
 
 The payment link note stores `sere:organizationId:invoiceId:customerId` so the webhook
 can post the payment even if the customer closes the tab.
 
-### PayPal
+## PayPal: shops already on that processor
 
 1. In the PayPal developer dashboard, create a REST app and copy the client id and
    secret.

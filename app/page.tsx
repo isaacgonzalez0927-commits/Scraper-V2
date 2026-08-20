@@ -24,8 +24,8 @@ const POINTS = [
     body: "Overdue cash and today's jobs sit up top. Say “move the Johnson job to Friday” and it does.",
   },
   {
-    title: "See the cash in Stripe",
-    body: "Connect the shop's Stripe. Overview then shows what's available, what's pending, and what paid out to the bank.",
+    title: "See the cash in Stripe or Square",
+    body: "Tap Open Stripe keys or Open Square keys, paste, and Overview shows what actually landed.",
   },
 ];
 

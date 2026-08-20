@@ -136,12 +136,21 @@ export type StripeCharge = {
 
 export async function listCharges(
   secretKey: string,
-  opts: { createdGte?: number; limit?: number; stripeAccount?: string } = {},
+  opts: {
+    createdGte?: number;
+    createdLt?: number;
+    limit?: number;
+    stripeAccount?: string;
+  } = {},
 ): Promise<StripeCharge[]> {
   const rows: StripeCharge[] = [];
   let startingAfter: string | undefined;
   const pageSize = 100;
   const max = opts.limit && opts.limit > 0 ? opts.limit : 1000;
+  const created =
+    opts.createdGte || opts.createdLt
+      ? { gte: opts.createdGte, lt: opts.createdLt }
+      : undefined;
   while (rows.length < max) {
     const payload = await request<{ data?: StripeCharge[]; has_more?: boolean }>(
       secretKey,
@@ -151,7 +160,7 @@ export async function listCharges(
         params: {
           limit: Math.min(pageSize, max - rows.length),
           starting_after: startingAfter,
-          created: opts.createdGte ? { gte: opts.createdGte } : undefined,
+          created,
         },
       },
     );
