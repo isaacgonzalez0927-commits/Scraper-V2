@@ -102,8 +102,11 @@ displayed again.
   real cash next to invoices typed in Sere. Invoice **Pay with Stripe** is optional
   leftover checkout, not the product. Webhook
   `https://yourdomain.com/api/webhooks/stripe` is only needed for that checkout path.
-- **Square.** Optional. Payment links for shops already on Square. Webhook:
-  `https://yourdomain.com/api/webhooks/square`.
+- **Square.** Same cash view as Stripe. Open
+  [developer.squareup.com/apps](https://developer.squareup.com/apps), copy the
+  production access token, paste it. Overview then shows Square payments and
+  payouts. Webhook `https://yourdomain.com/api/webhooks/square` is only for
+  optional invoice checkout.
 - **PayPal.** Optional. Invoice checkout if that shop already uses PayPal. Webhook:
   `https://yourdomain.com/api/webhooks/paypal`.
 - **QuickBooks.** Optional books link. Not used for customer checkout.

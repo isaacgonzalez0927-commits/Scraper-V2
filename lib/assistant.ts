@@ -9,6 +9,7 @@ import { collectedCents, isoDate, outstandingTotals, weekBounds } from "./querie
 import { customers, invoices, jobs, organizations } from "./schema";
 import { integrationStatus } from "./integrations";
 import { loadStripeCash } from "./stripe-cash";
+import { loadSquareCash } from "./square-cash";
 
 export type AssistantLink = { href: string; label: string };
 
@@ -288,11 +289,11 @@ export async function buildBrief(
       href: "/invoices?status=draft",
     });
   }
-  if (!integrations.stripe.connected) {
+  if (!integrations.stripe.connected && !integrations.square.connected) {
     alerts.push({
       tone: "info",
-      title: "Stripe cash is off",
-      body: "Connect Stripe to see the real balance and payouts, not just logged invoices.",
+      title: "Processor cash is off",
+      body: "Connect Stripe or Square to see the real cash, not just logged invoices.",
       href: "/settings?tab=integrations",
     });
   }
@@ -391,11 +392,12 @@ export async function runAssistant(
   if (intent.kind === "cash") {
     const monthStart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
     const today = isoDate(now);
-    const [monthIn, weekIn, totals, stripeCash] = await Promise.all([
+    const [monthIn, weekIn, totals, stripeCash, squareCash] = await Promise.all([
       collectedCents(organizationId, monthStart, today),
       collectedCents(organizationId, weekBounds(now).start, weekBounds(now).end),
       outstandingTotals(organizationId),
-      loadStripeCash(organizationId, monthStart),
+      loadStripeCash(organizationId, monthStart, today),
+      loadSquareCash(organizationId, monthStart, today),
     ]);
     let text =
       `This week ${formatMoney(weekIn)} came in on the Sere ledger. This month ` +
@@ -408,8 +410,17 @@ export async function runAssistant(
           ? ` and ${formatMoney(stripeCash.pendingCents)} pending`
           : "") +
         `. Charged this month ${formatMoney(stripeCash.monthInCents)}.`;
-    } else if (!stripeCash.connected) {
-      text += " Connect Stripe in Settings to see the live Stripe balance next to this.";
+    }
+    if (squareCash.connected && !squareCash.error) {
+      text +=
+        ` Square took ${formatMoney(squareCash.monthInCents)} this month` +
+        (squareCash.inTransitCents
+          ? `, ${formatMoney(squareCash.inTransitCents)} in transit`
+          : "") +
+        ".";
+    }
+    if (!stripeCash.connected && !squareCash.connected) {
+      text += " Connect Stripe or Square in Settings to see live cash next to this.";
     }
     return {
       text,

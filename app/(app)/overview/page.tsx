@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { ConnectStripeCallout } from "@/components/ConnectStripe";
+import { ConnectCashCallout } from "@/components/ConnectStripe";
 import { Badge, Card, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -9,6 +9,7 @@ import { integrationStatus } from "@/lib/integrations";
 import { label, prettyDate, prettyWhen } from "@/lib/labels";
 import { loadApp } from "@/lib/page";
 import { loadStripeCash } from "@/lib/stripe-cash";
+import { loadSquareCash } from "@/lib/square-cash";
 import {
   collectedCents,
   invoicedRevenueCents,
@@ -26,7 +27,7 @@ export default async function OverviewPage() {
   const month = monthBounds();
   const week = weekBounds();
   const today = isoDate(new Date());
-  const [revenue, collected, { outstanding, overdue }, jobRows, activity, invoiceRows, integrations, stripeCash] =
+  const [revenue, collected, { outstanding, overdue }, jobRows, activity, invoiceRows, integrations, stripeCash, squareCash] =
     await Promise.all([
     invoicedRevenueCents(org.id, month.start, month.end),
     collectedCents(org.id, month.start, month.end),
@@ -44,7 +45,8 @@ export default async function OverviewPage() {
       .limit(8),
     db().select().from(invoices).where(eq(invoices.organizationId, org.id)),
     integrationStatus(org.id),
-    loadStripeCash(org.id, month.start),
+    loadStripeCash(org.id, month.start, month.end),
+    loadSquareCash(org.id, month.start, month.end),
   ]);
 
   const jobsToday = jobRows.filter((r) => r.job.scheduledStart?.slice(0, 10) === today);
@@ -78,7 +80,12 @@ export default async function OverviewPage() {
       sub={<p className="page-sub">{brief.summary}</p>}
       actions={<a className="btn" href="/jobs/new">New job</a>}
     >
-      {!shell.isDemo && !integrations.stripe.connected ? <ConnectStripeCallout /> : null}
+      {!shell.isDemo ? (
+        <ConnectCashCallout
+          stripe={integrations.stripe.connected}
+          square={integrations.square.connected}
+        />
+      ) : null}
       {brief.alerts.length ? (
         <div className="brief-row">
           {brief.alerts.map((alert) => (
@@ -141,6 +148,53 @@ export default async function OverviewPage() {
                     <li key={row.id || row.arrival}>
                       <span>
                         {row.status === "paid" ? "Paid out" : label(row.status) || row.status}
+                        {row.arrival ? ` · ${prettyDate(row.arrival)}` : ""}
+                      </span>
+                      <span className="money">{formatMoney(row.amountCents)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted mt-2">No payouts yet.</p>
+              )}
+            </>
+          )}
+        </Card>
+      ) : null}
+
+      {squareCash.connected ? (
+        <Card
+          className="mt-2"
+          title="In Square"
+          note={squareCash.error || "Live from the shop's Square. This is cash, not invoices."}
+        >
+          {squareCash.error && !squareCash.monthInCents && !squareCash.payouts.length ? (
+            <p className="muted">{squareCash.error}</p>
+          ) : (
+            <>
+              <div className="grid grid-2">
+                <div className="stat-good">
+                  <p className="stat-label">Taken this month</p>
+                  <p className="stat-value">{formatMoney(squareCash.monthInCents)}</p>
+                  <p className="stat-note">Completed payments, minus refunds</p>
+                </div>
+                <div>
+                  <p className="stat-label">In transit</p>
+                  <p className="stat-value">{formatMoney(squareCash.inTransitCents)}</p>
+                  <p className="stat-note">Payouts on the way to the bank</p>
+                </div>
+              </div>
+              {squareCash.error ? <p className="muted mt-2">{squareCash.error}</p> : null}
+              {squareCash.payouts.length ? (
+                <ul className="list mt-2">
+                  {squareCash.payouts.map((row) => (
+                    <li key={row.id || row.arrival}>
+                      <span>
+                        {row.status === "PAID" || row.status === "SENT"
+                          ? row.status === "PAID"
+                            ? "Paid out"
+                            : "In transit"
+                          : label(row.status) || row.status}
                         {row.arrival ? ` · ${prettyDate(row.arrival)}` : ""}
                       </span>
                       <span className="money">{formatMoney(row.amountCents)}</span>

@@ -14,7 +14,7 @@ import {
   saveSettingsAction,
   sendTestEmailAction,
 } from "@/app/actions";
-import { ConnectStripeButton } from "@/components/ConnectStripe";
+import { ConnectStripeButton, OpenSquareKeys, OpenStripeKeys } from "@/components/ConnectStripe";
 import { Banner, Card } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -155,6 +155,7 @@ export default async function SettingsPage({
       {tab === "integrations" ? (
         <div className="grid narrow">
           <Card
+            id="stripe"
             title="Stripe"
             note="Read the shop's Stripe so Overview shows cash that actually landed, not just invoices you typed in."
             action={
@@ -231,27 +232,25 @@ export default async function SettingsPage({
                   <strong>Connect the shop's Stripe.</strong>
                   <p>
                     One click. Stripe asks the shop to approve Sere, then Overview
-                    shows the live Stripe balance and payouts.
+                    shows the live Stripe balance and payouts. Or open the keys page
+                    and paste instead.
                   </p>
                 </div>
-                <ConnectStripeButton large />
+                <div className="connect-cta-actions">
+                  <ConnectStripeButton large />
+                  <OpenStripeKeys large />
+                </div>
               </div>
             ) : !demoShop ? (
               <>
-                <ol className="setup-steps">
-                  <li>
-                    Open{" "}
-                    <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noreferrer">
-                      dashboard.stripe.com/apikeys
-                    </a>
-                    . Sign in as the shop.
-                  </li>
-                  <li>
-                    Reveal <strong>Secret key</strong>. Test keys start with{" "}
-                    <code>sk_test_</code>. Live keys start with <code>sk_live_</code>.
-                  </li>
-                  <li>Paste it below and tap Connect Stripe. Overview then shows the live balance.</li>
-                </ol>
+                <div className="open-keys">
+                  <OpenStripeKeys large />
+                </div>
+                <p className="help">
+                  Sign in as the shop. Copy <strong>Secret key</strong>. Paste it below.
+                  Test keys start with <code>sk_test_</code>. Live keys start with{" "}
+                  <code>sk_live_</code>.
+                </p>
                 <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
                   <div className="field full">
                     <label>Secret key</label>
@@ -333,14 +332,15 @@ export default async function SettingsPage({
 
           <p className="section-label mt-1">Also works with</p>
           <p className="muted">
-            Already on Square, PayPal, or QuickBooks? Connect those too. Stripe is for
-            the shop&apos;s cash view. Square and PayPal stay available if that is how
-            this shop already takes cards.
+            Square is the same idea: open the keys page, paste the access token,
+            then Overview shows cash that actually landed in Square. PayPal and
+            QuickBooks stay optional extras.
           </p>
 
           <Card
+            id="square"
             title="Square"
-              note="Payment links for invoices, if that is what the shop already uses."
+              note="Read the shop's Square so Overview shows payments and payouts, not just invoices you typed in."
               action={
                 <span
                   className={`badge badge-${
@@ -369,6 +369,15 @@ export default async function SettingsPage({
                       </div>
                     ) : null}
                   </div>
+                  <Banner>
+                    <div>
+                      <strong>Overview is reading this Square account.</strong>
+                      <p className="mt-1">
+                        Taken this month and payouts to the bank show on Overview and Reports.
+                        A webhook is only if you also want invoice checkout recorded.
+                      </p>
+                    </div>
+                  </Banner>
                   <div className="copy-row mt-2">
                     <span className="copy-value">{`${base}/api/webhooks/square`}</span>
                     <button className="btn btn-secondary btn-sm" type="button" data-copy={`${base}/api/webhooks/square`}>
@@ -384,27 +393,54 @@ export default async function SettingsPage({
               ) : demoShop ? (
                 <p className="muted">Create your shop to connect Square.</p>
               ) : (
-                <form action={connectSquareAction} className="form-grid">
-                  <div className="field full">
-                    <label>Access token</label>
-                    <input name="square_access_token" type="password" autoComplete="off" required />
+                <>
+                  <div className="open-keys">
+                    <OpenSquareKeys large />
                   </div>
-                  <div className="field">
-                    <label>Location ID (optional)</label>
-                    <input name="square_location_id" placeholder="L..." autoComplete="off" />
-                  </div>
-                  <div className="field">
-                    <label>Webhook signature key</label>
-                    <input name="square_webhook_key" type="password" autoComplete="off" />
-                  </div>
-                  <label className="checkbox">
-                    <input type="checkbox" name="square_sandbox" value="1" />
-                    Sandbox
-                  </label>
-                  <div className="form-actions">
-                    <button className="btn btn-secondary" type="submit">Connect Square</button>
-                  </div>
-                </form>
+                  <p className="help">
+                    Open your app (create one if you do not have one). Credentials,
+                    then Production. Copy <strong>Access token</strong>. Paste it below.
+                  </p>
+                  <form action={connectSquareAction} className="form-grid mt-2">
+                    <div className="field full">
+                      <label>Access token</label>
+                      <input
+                        name="square_access_token"
+                        type="password"
+                        autoComplete="off"
+                        required
+                        placeholder="EAAA..."
+                      />
+                      <p className="help">
+                        Stored encrypted. Sere never shows it again. Used to read
+                        payments and payouts.
+                      </p>
+                    </div>
+                    <details className="disclosure">
+                      <summary>Optional: location, sandbox, webhook</summary>
+                      <div className="form-grid mt-2">
+                        <div className="field">
+                          <label>Location ID (optional)</label>
+                          <input name="square_location_id" placeholder="L..." autoComplete="off" />
+                          <p className="help">Blank uses the first active location.</p>
+                        </div>
+                        <div className="field">
+                          <label>Webhook signature key</label>
+                          <input name="square_webhook_key" type="password" autoComplete="off" />
+                        </div>
+                        <label className="checkbox">
+                          <input type="checkbox" name="square_sandbox" value="1" />
+                          Sandbox token
+                        </label>
+                      </div>
+                    </details>
+                    <div className="form-actions">
+                      <button className="btn btn-square btn-connect-lg" type="submit">
+                        Connect Square
+                      </button>
+                    </div>
+                  </form>
+                </>
               )}
           </Card>
 
