@@ -99,6 +99,25 @@ export async function ensureSchema(): Promise<void> {
       created_at TEXT NOT NULL,
       UNIQUE(user_id, organization_id)
     );
+    CREATE TABLE IF NOT EXISTS nova_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tool_name TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS nova_messages_org ON nova_messages (organization_id, id);
+    CREATE TABLE IF NOT EXISTS nova_memory (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'note',
+      key TEXT NOT NULL DEFAULT '',
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS nova_memory_org ON nova_memory (organization_id, updated_at);
     CREATE TABLE IF NOT EXISTS password_resets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,

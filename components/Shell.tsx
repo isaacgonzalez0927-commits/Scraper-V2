@@ -16,6 +16,7 @@ const PATHS: Record<string, React.ReactNode> = {
   settings: <><circle cx="12" cy="12" r="3.2" /><path d="M12 3.5v2.2M12 18.3v2.2M4.9 7.8l1.9 1.1M17.2 15.1l1.9 1.1M4.9 16.2l1.9-1.1M17.2 8.9l1.9-1.1" /></>,
   bell: <><path d="M18 15.5V11a6 6 0 1 0-12 0v4.5L4.5 18h15z" /><path d="M9.5 18a2.5 2.5 0 0 0 5 0" /></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
+  spark: <><path d="M12 3.2 13.9 9l5.8 2-5.8 2-1.9 5.8L10.1 13 4.3 11l5.8-2z" /><path d="M18.5 4v3M17 5.5h3" /></>,
 };
 
 /* Solid silhouettes for the selected tab, the way SF Symbols fill on iOS. */
@@ -94,6 +95,7 @@ export function Shell({
   const active = (href: string) => path === href || path.startsWith(`${href}/`);
   const nav: [string, string, string][] = [
     ["/overview", "Overview", "grid"],
+    ["/nova", "Nova", "spark"],
     ["/jobs", jobsLabel, "briefcase"],
     ["/customers", customersLabel, "users"],
     ["/invoices", "Invoices", "file"],
@@ -105,7 +107,7 @@ export function Shell({
   const bottom: [string, string, string][] = [
     ["/overview", "Home", "grid"],
     ["/jobs", jobsLabel, "briefcase"],
-    ["/calendar", "Calendar", "calendar"],
+    ["/nova", "Nova", "spark"],
     ["/invoices", "Invoices", "file"],
     ["/settings", "Settings", "settings"],
   ];

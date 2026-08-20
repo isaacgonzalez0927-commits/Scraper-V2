@@ -61,6 +61,35 @@ export const memberships = sqliteTable(
   (t) => [uniqueIndex("memberships_user_org").on(t.userId, t.organizationId)],
 );
 
+/** Nova's running conversation, per shop. */
+export const novaMessages = sqliteTable(
+  "nova_messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    role: text("role").notNull(),
+    content: text("content").notNull(),
+    toolName: text("tool_name").notNull().default(""),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("nova_messages_org").on(t.organizationId, t.id)],
+);
+
+/** Durable lessons and preferences. Keyed rows update in place. */
+export const novaMemory = sqliteTable(
+  "nova_memory",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    kind: text("kind").notNull().default("note"),
+    key: text("key").notNull().default(""),
+    content: text("content").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [index("nova_memory_org").on(t.organizationId, t.updatedAt)],
+);
+
 export const passwordResets = sqliteTable("password_resets", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),

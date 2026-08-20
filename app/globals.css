@@ -2323,6 +2323,26 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .auth-fine { font-size: 14px; }
   .auth-foot { font-size: 15px; justify-content: space-between; }
 
+  .nova { gap: 14px; }
+  .nova-orb { flex-basis: 72px; width: 72px; height: 72px; }
+  .nova-title { font-size: 21px; }
+  .nova-sub { font-size: 13.5px; }
+  .nova-thread {
+    max-height: none;
+    padding: 14px;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 0 0 0.5px var(--hairline);
+  }
+  .nova-line { max-width: 100%; }
+  .nova-line p { font-size: 15px; }
+  .nova-prompts { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .nova-prompts::-webkit-scrollbar { display: none; }
+  .nova-prompt { flex: 0 0 auto; min-height: 34px; }
+  .nova-composer { flex-wrap: wrap; }
+  .nova-composer input { flex: 1 1 100%; min-height: 48px; font-size: 16px; border-radius: 12px; }
+  .nova-composer .btn { flex: 1 1 0; }
+
   .trade-grid { grid-template-columns: 1fr; gap: 8px; }
   .trade-pick { padding: 14px 16px; border-radius: 12px; }
   .trade-pick strong { font-size: 16px; }
@@ -2441,6 +2461,151 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Nova console */
+
+.nova {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 820px;
+}
+.nova-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.nova-orb {
+  flex: 0 0 92px;
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.14s var(--ease);
+}
+.nova-orb:hover { transform: scale(1.03); }
+.nova-orb:active { transform: scale(0.97); }
+.nova-orb-canvas { display: block; width: 100%; height: 100%; }
+.nova-head-copy { min-width: 0; }
+.nova-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+.nova-sub {
+  margin: 3px 0 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.nova-meta {
+  margin: 4px 0 0;
+  color: var(--ink-4);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.nova-flag {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--warn-line);
+  border-radius: var(--r-md);
+  background: var(--warn-soft);
+  color: var(--ink);
+  text-decoration: none;
+}
+.nova-flag strong { font-size: 14px; font-weight: 600; }
+.nova-flag span { color: var(--ink-2); font-size: 13px; }
+
+.nova-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--bad-line);
+  border-radius: var(--r-md);
+  background: var(--bad-soft);
+  color: var(--bad);
+  font-size: 13px;
+}
+
+.nova-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 220px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.nova-empty { color: var(--ink-2); font-size: 14px; line-height: 1.55; }
+.nova-empty p { margin: 0; }
+.nova-followups {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.nova-line { max-width: 46rem; }
+.nova-line p {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.nova-line-you { align-self: flex-end; }
+.nova-line-you p { background: var(--accent); color: var(--on-accent); }
+.nova-line-nova p { background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); }
+.nova-tools {
+  display: block;
+  margin: 4px 0 0 2px;
+  color: var(--ink-4);
+  font-size: 11.5px;
+}
+
+.nova-prompts { display: flex; flex-wrap: wrap; gap: 8px; }
+.nova-prompt {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.14s var(--ease), color 0.14s var(--ease);
+}
+.nova-prompt:hover { border-color: var(--accent-line); color: var(--accent-strong); }
+.nova-prompt:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.nova-composer { display: flex; gap: 8px; align-items: stretch; }
+.nova-composer input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 13px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  outline: none;
+}
+.nova-composer input:focus { border-color: var(--accent); box-shadow: var(--ring); }
+.nova-composer .btn { flex: 0 0 auto; }
+.nova-on { border-color: var(--accent-line); color: var(--accent-strong); }
 
 .brief-row {
   display: grid;
