@@ -25,7 +25,7 @@ const POINTS = [
   },
   {
     title: "See the cash in Stripe or Square",
-    body: "Tap Open Stripe keys or Open Square keys, paste, and Overview shows what actually landed.",
+    body: "Connect Stripe or Square. Overview then shows what actually landed.",
   },
 ];
 

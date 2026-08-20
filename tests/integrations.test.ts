@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { decryptSecret, encryptSecret, maskSecret } from "../lib/crypto";
-import { encodeParams, readConnectState, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled, verifyWebhookSignature, usdCents, chargeNetCents } from "../lib/stripe";
+import { encodeParams, looksLikeStripeSecret, readConnectState, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled, verifyWebhookSignature, usdCents, chargeNetCents } from "../lib/stripe";
 import { paypalAmount } from "../lib/paypal";
 import { squarePaymentNetCents, verifySquareSignature } from "../lib/square";
 
@@ -116,6 +116,14 @@ test("Stripe cash sums the USD balance and net charges", () => {
   );
   assert.equal(chargeNetCents({ amount: 10000, amount_refunded: 1500, status: "succeeded" }), 8500);
   assert.equal(chargeNetCents({ amount: 10000, status: "failed" }), 0);
+});
+
+test("Stripe secret keys are recognised before they are saved", () => {
+  assert.equal(looksLikeStripeSecret("sk_live_abc"), true);
+  assert.equal(looksLikeStripeSecret("sk_test_abc"), true);
+  assert.equal(looksLikeStripeSecret("rk_live_abc"), true);
+  assert.equal(looksLikeStripeSecret(" pk_live_abc"), false);
+  assert.equal(looksLikeStripeSecret(""), false);
 });
 
 test("Square cash nets completed payments minus refunds", () => {

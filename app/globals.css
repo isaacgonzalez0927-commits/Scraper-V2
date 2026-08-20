@@ -2087,6 +2087,25 @@ a.btn-square, a.btn-square:hover { color: #fff; }
   color: var(--accent-strong);
 }
 .choice input { accent-color: var(--accent); }
+.choice-span { grid-column: 1 / -1; }
+.signup-optional { margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+.signup-benefit {
+  margin: 0 0 10px;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+.optional-tag {
+  margin-left: 6px;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.signup-keys { display: grid; gap: 14px; }
+.signup-key .btn { margin-bottom: 8px; }
 
 .brief-row {
   display: grid;

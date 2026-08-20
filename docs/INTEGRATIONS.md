@@ -4,9 +4,9 @@ Every shop connects its own accounts. Stripe and Square are for the shop's books
 Sere reads live payments and payouts so Overview is accurate. Email goes out from
 the shop's own domain.
 
-Shop owners do this from **Settings**, then **Integrations**. Overview, Reports, and
-Payments show **Open Stripe keys** and **Open Square keys** — those go straight to
-the page where you copy the secret. Then paste it in Settings.
+Shop owners do this from **Settings**, then **Integrations**, or tap **Connect Stripe**
+/ **Connect Square** on Overview, Reports, and Payments. Copy the key from Stripe or
+Square, paste it, tap Connect.
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
 key derived from `SERE_SECRET_KEY`. Nothing shows a saved secret back on screen. If you
@@ -24,7 +24,7 @@ accurate than invoices typed in by hand.
 
 ### What the shop owner does
 
-1. Tap **Open Stripe keys** (or open [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys)) and sign in as the shop.
+1. Tap **Connect Stripe**, or open [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) and sign in as the shop.
 2. Copy the Secret key (`sk_test_...` while trying it, `sk_live_...` for real cash).
 3. Paste it in Sere and tap **Connect Stripe**.
 
@@ -114,12 +114,12 @@ directly.
 
 ## Square: same cash view, same paste
 
-Square shops tap **Open Square keys**, which goes to
+Square shops tap **Connect Square**, or open
 [developer.squareup.com/apps](https://developer.squareup.com/apps). Open the app
 (create one if needed), **Credentials**, **Production**, copy the access token, paste
-it in Sere. Overview then shows completed payments this month and payouts to the
-bank. Square has no available-balance endpoint, so the live numbers are take and
-payouts, not a wallet total.
+it in Sere, tap **Connect Square**. Overview then shows completed payments this month
+and payouts to the bank. Square has no available-balance endpoint, so the live numbers
+are take and payouts, not a wallet total.
 
 Location ID is optional. Blank uses the first active location. Sandbox and webhook
 are optional, under a disclosure. The webhook is only if you also want invoice

@@ -17,6 +17,10 @@ export class StripeError extends Error {
   }
 }
 
+export function looksLikeStripeSecret(key: string): boolean {
+  return /^(sk|rk)_(test|live)_/.test(key.trim());
+}
+
 type Params = Record<string, unknown>;
 
 /** Stripe takes nested form data: metadata[invoice_id], line_items[0][quantity]. */

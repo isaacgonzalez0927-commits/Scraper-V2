@@ -6,6 +6,8 @@ import { parseBusinessType, tradeCopy } from "../lib/business";
 test("unknown trades fall back to general contractor", () => {
   assert.equal(parseBusinessType("plumbing"), "plumbing");
   assert.equal(parseBusinessType("nope"), "general");
+  assert.equal(parseBusinessType(""), "general");
+  assert.equal(parseBusinessType(undefined), "general");
   assert.equal(tradeCopy("salon").worker, "Stylist");
   assert.equal(tradeCopy("hvac").services.length > 0, true);
 });
