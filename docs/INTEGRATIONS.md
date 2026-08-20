@@ -1,11 +1,11 @@
 # Integrations
 
-Every shop connects its own accounts. Sere is not a middleman: money goes from the
-customer's card straight into the shop's own Stripe account, and email goes out from
-the shop's own domain.
+Every shop connects its own accounts. Stripe is for the shop's books: Sere reads
+the live balance, pending funds, and payouts so Overview is accurate. Email goes
+out from the shop's own domain.
 
 Shop owners do this from **Settings**, then **Integrations**, or from the **Connect
-Stripe** button on Overview, Invoices, and Payments.
+Stripe** button on Overview, Reports, and Payments.
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
 key derived from `SERE_SECRET_KEY`. Nothing shows a saved secret back on screen. If you
@@ -14,20 +14,29 @@ theirs again.
 
 ---
 
-## Stripe: let customers pay an invoice by card
+## Stripe: see the shop's real cash
+
+Sere does not take the shop's money. Connecting Stripe lets the owner see what is
+actually in that Stripe account: available now, pending, charges this month, and
+payouts to the bank. That is the cashflow on Overview and Reports. It is more
+accurate than invoices typed in by hand.
 
 ### What the shop owner does
 
-1. Create a Stripe account at [stripe.com](https://stripe.com) and finish Stripe's
-   business verification. Stripe pays out to the shop's bank account.
-2. In Sere, select **Connect Stripe**. If one-click Connect is enabled on this
-   deployment, Stripe asks them to approve Sere and they come back connected. If it is
-   not enabled yet, they paste a secret key (`sk_live_...` or `sk_test_...`) on the
-   same screen.
-3. Invoice links then show **Pay with Stripe**. Card details never touch Sere.
+1. Open [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) and sign
+   in as the shop.
+2. Copy the Secret key (`sk_test_...` while trying it, `sk_live_...` for real cash).
+3. In Sere, **Settings → Integrations**, paste it, tap **Connect Stripe**.
+
+Overview then shows **In Stripe**. Reports shows Stripe charges next to money logged
+in Sere. The two will not always match, and that is the point.
+
+Invoice links can still offer card checkout if a secret key is connected. That is
+optional. The reason to connect Stripe is the shop's own cash view.
 
 Cash, check, Zelle, Venmo, and bank transfers are still recorded by hand under
-**Payments**. Stripe is only for the card button on the customer invoice.
+**Payments**. That logged ledger is next to the live Stripe numbers so the shop
+can see the gap.
 
 ### One-click Connect (Sere operator)
 
@@ -66,7 +75,10 @@ Use a test key (`sk_test_...`) and Stripe's test card `4242 4242 4242 4242` with
 future expiry and any CVC. Stripe's test mode has its own webhook endpoints and its own
 signing secret, so add the endpoint in test mode too if you want to exercise pasted keys.
 
-### What the customer sees
+### Optional: invoice card checkout
+
+Connecting Stripe for cashflow can also put **Pay with Stripe** on the public
+invoice. That is extra, not the reason to connect.
 
 1. The customer opens their invoice link, `/p/inv/<token>`.
 2. If the shop has Stripe connected and the balance is above zero, the page shows
@@ -75,7 +87,7 @@ signing secret, so add the endpoint in test mode too if you want to exercise pas
    sends the customer to Stripe. Card details never touch Sere.
 4. Stripe returns the customer to the same invoice page with a success banner.
 
-### How a payment gets recorded
+### How a checkout payment gets recorded
 
 Two independent paths, because customers close tabs:
 
@@ -102,9 +114,9 @@ directly.
 
 ## Square and PayPal: shops already on other processors
 
-Stripe stays the main **Pay with Stripe** button. If a shop already takes cards in
-Square or PayPal, they can connect those too. The customer invoice then shows Stripe
-first (when connected) and Square / PayPal as secondary buttons.
+Stripe is the shop cash view. If a shop already takes cards in Square or PayPal,
+they can connect those too for invoice checkout. The customer invoice then shows
+those buttons. Connecting them is unrelated to seeing Stripe cash on Overview.
 
 ### Square
 

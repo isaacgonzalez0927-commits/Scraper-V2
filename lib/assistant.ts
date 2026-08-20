@@ -8,6 +8,7 @@ import { formatMoney } from "./money";
 import { collectedCents, isoDate, outstandingTotals, weekBounds } from "./queries";
 import { customers, invoices, jobs, organizations } from "./schema";
 import { integrationStatus } from "./integrations";
+import { loadStripeCash } from "./stripe-cash";
 
 export type AssistantLink = { href: string; label: string };
 
@@ -287,11 +288,11 @@ export async function buildBrief(
       href: "/invoices?status=draft",
     });
   }
-  if (!integrations.stripe.connected && !integrations.square.connected && !integrations.paypal.connected) {
+  if (!integrations.stripe.connected) {
     alerts.push({
       tone: "info",
-      title: "Card payments are off",
-      body: "Connect Stripe so customers can pay an invoice online.",
+      title: "Stripe cash is off",
+      body: "Connect Stripe to see the real balance and payouts, not just logged invoices.",
       href: "/settings?tab=integrations",
     });
   }
@@ -390,15 +391,31 @@ export async function runAssistant(
   if (intent.kind === "cash") {
     const monthStart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
     const today = isoDate(now);
-    const [monthIn, weekIn, totals] = await Promise.all([
+    const [monthIn, weekIn, totals, stripeCash] = await Promise.all([
       collectedCents(organizationId, monthStart, today),
       collectedCents(organizationId, weekBounds(now).start, weekBounds(now).end),
       outstandingTotals(organizationId),
+      loadStripeCash(organizationId, monthStart),
     ]);
+    let text =
+      `This week ${formatMoney(weekIn)} came in on the Sere ledger. This month ` +
+      `${formatMoney(monthIn)}. Outstanding ${formatMoney(totals.outstanding)}, overdue ` +
+      `${formatMoney(totals.overdue)}.`;
+    if (stripeCash.connected && !stripeCash.error) {
+      text +=
+        ` Stripe has ${formatMoney(stripeCash.availableCents)} available now` +
+        (stripeCash.pendingCents
+          ? ` and ${formatMoney(stripeCash.pendingCents)} pending`
+          : "") +
+        `. Charged this month ${formatMoney(stripeCash.monthInCents)}.`;
+    } else if (!stripeCash.connected) {
+      text += " Connect Stripe in Settings to see the live Stripe balance next to this.";
+    }
     return {
-      text: `This week ${formatMoney(weekIn)} came in. This month ${formatMoney(monthIn)}. Outstanding ${formatMoney(totals.outstanding)}, overdue ${formatMoney(totals.overdue)}.`,
+      text,
       links: [
         { href: "/reports", label: "Cash and profit" },
+        { href: "/overview", label: "Overview" },
         { href: "/payments", label: "Payments" },
       ],
     };

@@ -1,7 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { sendInvoiceAction, voidInvoiceAction } from "@/app/actions";
-import { ConnectStripeButton } from "@/components/ConnectStripe";
 import { Badge, Banner, Card, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -137,24 +136,13 @@ export default async function InvoiceDetailPage({
                 Copy
               </button>
             </div>
-            {!integrations.stripe.connected && !shell.isDemo ? (
-              <div className="connect-cta connect-cta-flush mt-2">
-                <div>
-                  <strong>Stripe is the main pay button.</strong>
-                  <p>About a minute: copy the shop&apos;s Stripe secret key and paste it in Settings.</p>
-                </div>
-                <ConnectStripeButton large />
-              </div>
-            ) : null}
             <div className="kv mt-2">
               <div className="kv-row">
-                <span className="kv-key">Card payments</span>
+                <span className="kv-key">Stripe cash</span>
                 <span className="kv-value">
                   {integrations.stripe.connected
-                    ? "On through Stripe"
-                    : shell.isDemo
-                      ? <a href="/signup">Create your shop</a>
-                      : "Stripe not connected"}
+                    ? "On · Overview shows the live balance"
+                    : <a href="/settings?tab=integrations">Connect to see the Stripe balance</a>}
                 </span>
               </div>
               {integrations.square.connected ? (

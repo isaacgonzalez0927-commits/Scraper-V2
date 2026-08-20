@@ -35,10 +35,11 @@ export function ConnectStripeCallout() {
   return (
     <div className="connect-cta">
       <div>
-        <strong>Let customers pay invoices online.</strong>
+        <strong>See the cash that is actually in Stripe.</strong>
         <p>
-          About a minute. Open the shop&apos;s Stripe, copy the secret key, paste it
-          in Settings. Money goes to their Stripe, not yours.
+          Overview and Reports then show available balance, pending funds, and
+          payouts to the bank. About a minute: copy the shop&apos;s secret key in
+          Stripe and paste it in Settings.
         </p>
       </div>
       <ConnectStripeButton large />

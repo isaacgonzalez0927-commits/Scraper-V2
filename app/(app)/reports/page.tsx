@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { Card, KeyValue, Stat, Tabs } from "@/components/ui";
+import { ConnectStripeCallout } from "@/components/ConnectStripe";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { formatMargin, formatMoney, marginBps } from "@/lib/money";
@@ -14,6 +15,7 @@ import {
   outstandingTotals,
   periodBounds,
 } from "@/lib/queries";
+import { loadStripeCash } from "@/lib/stripe-cash";
 import { jobs } from "@/lib/schema";
 
 const PERIODS = [
@@ -32,12 +34,13 @@ export default async function ReportsPage({
   const q = await searchParams;
   const period = PERIODS.some((p) => p.key === q.period) ? (q.period as string) : "this_month";
   const { start, end } = periodBounds(period, q.start, q.end);
-  const [moneyIn, invoiced, { outstanding, overdue }, expected, jobRows] = await Promise.all([
+  const [moneyIn, invoiced, { outstanding, overdue }, expected, jobRows, stripeCash] = await Promise.all([
     collectedCents(org.id, start, end),
     invoicedRevenueCents(org.id, start, end),
     outstandingTotals(org.id),
     expectedCash(org.id),
     db().select().from(jobs).where(and(eq(jobs.organizationId, org.id), eq(jobs.status, "completed"))),
+    loadStripeCash(org.id, start),
   ]);
 
   const completed = [];
@@ -68,7 +71,8 @@ export default async function ReportsPage({
       title="Cash and profit"
       sub={
         <p className="page-sub">
-          {prettyDate(start)} to {prettyDate(end)}. Collected cash is not the same as invoiced revenue.
+          {prettyDate(start)} to {prettyDate(end)}. Collected in Sere is what you logged.
+          Stripe is what actually hit the shop's Stripe account.
         </p>
       }
     >
@@ -87,8 +91,10 @@ export default async function ReportsPage({
         ) : null}
       </div>
 
+      {!shell.isDemo && !stripeCash.connected ? <ConnectStripeCallout /> : null}
+
       <div className="grid grid-4">
-        <Stat label="Money in" value={formatMoney(moneyIn)} note="Payments received in this period" tone="good" />
+        <Stat label="Money in" value={formatMoney(moneyIn)} note="Payments logged in Sere" tone="good" />
         <Stat label="Invoiced" value={formatMoney(invoiced)} note="Billed in this period, not cash" />
         <Stat label="Outstanding" value={formatMoney(outstanding)} note="Still owed across all open invoices" />
         <Stat
@@ -98,6 +104,23 @@ export default async function ReportsPage({
           tone={overdue > 0 ? "bad" : undefined}
         />
       </div>
+
+      {stripeCash.connected ? (
+        <div className="grid grid-3 mt-2">
+          <Stat
+            label="In Stripe now"
+            value={formatMoney(stripeCash.availableCents)}
+            note={stripeCash.error || "Available to pay out"}
+            tone="good"
+          />
+          <Stat label="Pending in Stripe" value={formatMoney(stripeCash.pendingCents)} note="Not yet available" />
+          <Stat
+            label="Stripe charges"
+            value={formatMoney(stripeCash.monthInCents)}
+            note="Succeeded charges in this period, minus refunds"
+          />
+        </div>
+      ) : null}
 
       <div className="grid grid-2 mt-2">
         <Card title="Expected cash by due date">
