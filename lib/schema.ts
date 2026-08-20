@@ -19,6 +19,9 @@ export const organizations = sqliteTable("organizations", {
   defaultTaxBps: integer("default_tax_bps").notNull().default(0),
   stripeStatus: text("stripe_status").notNull().default("not_connected"),
   businessType: text("business_type").notNull().default("general"),
+  /** trial until trialEndsAt; shop/crew means billed (or Harbor Air). */
+  plan: text("plan").notNull().default("trial"),
+  trialEndsAt: text("trial_ends_at").notNull().default(""),
   createdAt: text("created_at").notNull(),
 });
 

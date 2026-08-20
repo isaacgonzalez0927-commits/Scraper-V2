@@ -35,6 +35,7 @@ import { quickBooksCompanyName } from "@/lib/quickbooks";
 import { listSquareLocations, squareAccountLabel } from "@/lib/square";
 import { accountLabel, looksLikeStripeSecret, retrieveAccount, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
 import { DEMO_EMAIL } from "@/lib/seed";
+import { requireWritableContext, trialEndsISO } from "@/lib/trial";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
   customers,
@@ -153,6 +154,8 @@ export async function signupAction(form: FormData) {
       email,
       businessType,
       defaultInvoiceNotes: voice.defaultNotes,
+      plan: "trial",
+      trialEndsAt: trialEndsISO(new Date(created)),
       createdAt: created,
     })
     .returning();
@@ -196,7 +199,7 @@ export async function resetAction(form: FormData) {
 }
 
 export async function saveCustomerAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/customers");
   const id = Number(str(form, "id") || 0);
   const same = str(form, "same_as_billing") === "1";
   const fields = tradeFieldsFor(org.businessType, "customer");
@@ -243,7 +246,7 @@ export async function saveCustomerAction(form: FormData) {
 }
 
 export async function archiveCustomerAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/customers");
   const id = Number(str(form, "id"));
   const [c] = await db().select().from(customers).where(and(eq(customers.id, id), eq(customers.organizationId, org.id)));
   if (!c) redirect("/customers");
@@ -255,7 +258,7 @@ export async function archiveCustomerAction(form: FormData) {
 }
 
 export async function addNoteAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/overview");
   const body = str(form, "body");
   const customerId = Number(str(form, "customer_id") || 0) || null;
   const jobId = Number(str(form, "job_id") || 0) || null;
@@ -266,7 +269,7 @@ export async function addNoteAction(form: FormData) {
 }
 
 export async function saveJobAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/jobs");
   const id = Number(str(form, "id") || 0);
   const status = str(form, "status") || "unscheduled";
   const scheduledStart = str(form, "scheduled_start") || null;
@@ -311,7 +314,7 @@ export async function saveJobAction(form: FormData) {
 }
 
 export async function updateJobStatusAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/jobs");
   const id = Number(str(form, "id"));
   const status = str(form, "status");
   const patch: Record<string, string | null> = { status };
@@ -325,7 +328,7 @@ export async function updateJobStatusAction(form: FormData) {
 }
 
 export async function addJobCostAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/jobs");
   const jobId = Number(str(form, "job_id"));
   const amount = dollarsToCents(str(form, "amount"));
   if (amount > 0) {
@@ -342,7 +345,7 @@ export async function addJobCostAction(form: FormData) {
 }
 
 export async function rescheduleJobAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/jobs");
   const id = Number(str(form, "id"));
   const scheduledStart = str(form, "scheduled_start");
   await db()
@@ -427,7 +430,7 @@ async function invoiceForJob(
 }
 
 export async function invoiceFromJobAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/jobs");
   const jobId = Number(str(form, "job_id"));
   const [job] = await db()
     .select()
@@ -439,7 +442,7 @@ export async function invoiceFromJobAction(form: FormData) {
 }
 
 export async function finishJobAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/jobs");
   const jobId = Number(str(form, "job_id"));
   const [job] = await db()
     .select()
@@ -506,7 +509,7 @@ export async function finishJobAction(form: FormData) {
 }
 
 export async function saveInvoiceAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/invoices");
   const id = Number(str(form, "id") || 0);
   const customerId = Number(str(form, "customer_id"));
   if (!customerId) redirect("/invoices/new?error=Choose+a+customer.");
@@ -575,7 +578,7 @@ export async function saveInvoiceAction(form: FormData) {
 }
 
 export async function sendInvoiceAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/invoices");
   const id = Number(str(form, "id"));
   const [invoice] = await db().select().from(invoices).where(and(eq(invoices.id, id), eq(invoices.organizationId, org.id)));
   if (!invoice) redirect("/invoices");
@@ -616,7 +619,7 @@ export async function sendInvoiceAction(form: FormData) {
 }
 
 export async function voidInvoiceAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/invoices");
   const id = Number(str(form, "id"));
   const paid = await db().select().from(payments).where(and(eq(payments.invoiceId, id), isNull(payments.voidedAt)));
   if (paid.length) redirect(`/invoices/${id}?error=Void+the+payments+first.`);
@@ -626,7 +629,7 @@ export async function voidInvoiceAction(form: FormData) {
 }
 
 export async function recordPaymentAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/payments");
   try {
     const id = await applyPayment({
       organizationId: org.id,
@@ -646,7 +649,7 @@ export async function recordPaymentAction(form: FormData) {
 }
 
 export async function voidPaymentAction(form: FormData) {
-  const { org } = await requireContext();
+  const { org } = await requireWritableContext("/payments");
   const id = Number(str(form, "id"));
   const [payment] = await db().select().from(payments).where(and(eq(payments.id, id), eq(payments.organizationId, org.id)));
   if (payment && !payment.voidedAt) {

@@ -47,7 +47,10 @@ export async function seedHarborAir() {
     .where(eq(organizations.slug, "harbor-air"))
     .limit(1);
   if (existingOrg) {
-    await db().update(organizations).set({ businessType: "hvac" }).where(eq(organizations.id, existingOrg.id));
+    await db()
+      .update(organizations)
+      .set({ businessType: "hvac", plan: "shop", trialEndsAt: "" })
+      .where(eq(organizations.id, existingOrg.id));
     const [owner] = await db()
       .insert(users)
       .values({
@@ -84,6 +87,8 @@ export async function seedHarborAir() {
       defaultInvoiceNotes: "Thank you for trusting Harbor Air. Payment is due within 14 days.",
       defaultTaxBps: 650,
       businessType: "hvac",
+      plan: "shop",
+      trialEndsAt: "",
       createdAt: created,
     })
     .returning();

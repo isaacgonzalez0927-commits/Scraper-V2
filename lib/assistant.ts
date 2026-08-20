@@ -11,6 +11,7 @@ import { integrationStatus, openaiConfig } from "./integrations";
 import { completeShopJson, DEFAULT_OPENAI_MODEL, type OpenAIChatJson } from "./openai";
 import { loadStripeCash } from "./stripe-cash";
 import { loadSquareCash } from "./square-cash";
+import { shopAccess } from "./trial";
 
 export type AssistantLink = { href: string; label: string };
 
@@ -548,6 +549,7 @@ export async function runAssistant(
   businessType: string,
   message: string,
   now = new Date(),
+  isDemo = false,
 ): Promise<AssistantReply> {
   let intent = parseAssistant(message, now);
   if (intent.kind === "unknown") {
@@ -558,6 +560,17 @@ export async function runAssistant(
   const [org] = await db().select().from(organizations).where(eq(organizations.id, organizationId));
   const shop = org?.name || "your shop";
   const voice = tradeCopy(businessType || org?.businessType);
+  const access = shopAccess(
+    { plan: org?.plan || "trial", trialEndsAt: org?.trialEndsAt || "" },
+    isDemo,
+    now,
+  );
+  if (access.frozen && (intent.kind === "complete" || intent.kind === "reschedule")) {
+    return {
+      text: access.block,
+      links: [{ href: "/settings?tab=account", label: "Plan" }],
+    };
+  }
 
   if (intent.kind === "answer") {
     return { text: intent.text, links: [] };

@@ -990,6 +990,27 @@ a.copy-value:hover { color: var(--accent); border-color: var(--accent-line); }
 .banner strong { font-weight: 600; }
 .banner-flush { margin-bottom: 0; }
 
+.trial-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--ink);
+  text-decoration: none;
+}
+.trial-banner:hover { color: var(--ink); }
+.trial-banner strong { font-weight: 600; }
+.trial-banner span { color: var(--ink-2); font-size: 13px; }
+.trial-banner-ended {
+  border-color: var(--warn-line);
+  background: var(--warn-soft);
+}
+
 .connect-cta {
   display: flex;
   align-items: center;
@@ -1519,7 +1540,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 }
 .plan-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
   margin-top: 22px;
@@ -2016,6 +2037,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .kv-value { font-size: 17px; color: var(--ink-3); text-align: right; }
   .tiny { font-size: 13px; }
   .banner { font-size: 15px; padding: 14px; border-radius: 12px; }
+  .trial-banner { padding: 12px 14px; border-radius: 12px; }
   .empty { padding: 40px 20px; }
   .empty h3 { font-size: 20px; }
   .empty p { font-size: 15px; }

@@ -3,24 +3,32 @@ import { buildBrief } from "./assistant";
 import { tradeCopy } from "./business";
 import { unreadCount } from "./queries";
 import { DEMO_EMAIL } from "./seed";
+import { ensureTrialClock, shopAccess } from "./trial";
 
 export async function loadApp() {
   const ctx = await requireContext();
-  const voice = tradeCopy(ctx.org.businessType);
+  const isDemo = ctx.user.email === DEMO_EMAIL;
+  const org = await ensureTrialClock(ctx.org, isDemo);
+  const access = shopAccess(org, isDemo);
+  const voice = tradeCopy(org.businessType);
   const [unread, brief] = await Promise.all([
-    unreadCount(ctx.org.id),
-    buildBrief(ctx.org.id, ctx.user.name, ctx.org.businessType),
+    unreadCount(org.id),
+    buildBrief(org.id, ctx.user.name, org.businessType),
   ]);
   return {
     ...ctx,
+    org,
+    access,
     unread,
     voice,
     brief,
     shell: {
-      orgName: ctx.org.name,
+      orgName: org.name,
       userName: ctx.user.name,
       unread,
-      isDemo: ctx.user.email === DEMO_EMAIL,
+      isDemo,
+      frozen: access.frozen,
+      trialBanner: access.banner,
       tradeName: voice.name,
       worker: voice.worker,
       jobsLabel: voice.jobs,

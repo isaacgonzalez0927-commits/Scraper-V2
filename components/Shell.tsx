@@ -59,6 +59,8 @@ export function Shell({
   userName,
   unread,
   isDemo,
+  frozen,
+  trialBanner,
   tradeName,
   worker,
   jobsLabel = "Jobs",
@@ -75,6 +77,8 @@ export function Shell({
   userName: string;
   unread: number;
   isDemo?: boolean;
+  frozen?: boolean;
+  trialBanner?: string;
   tradeName?: string;
   worker?: string;
   jobsLabel?: string;
@@ -169,12 +173,29 @@ export function Shell({
         </header>
 
         <main className="main">
+          {trialBanner && !isDemo ? (
+            <a
+              className={`trial-banner${frozen ? " trial-banner-ended" : ""}`}
+              href="/settings?tab=account"
+            >
+              <strong>{trialBanner}</strong>
+              <span>{frozen ? "Shop is $39/month when billing opens." : "Shop is $39/month after that."}</span>
+            </a>
+          ) : null}
           <div className="page-head">
             <div>
               <h1 className="page-title">{title}</h1>
               {sub}
             </div>
-            {actions ? <div className="page-actions">{actions}</div> : null}
+            {frozen ? (
+              <div className="page-actions">
+                <a className="btn btn-secondary" href="/settings?tab=account">
+                  Trial ended
+                </a>
+              </div>
+            ) : actions ? (
+              <div className="page-actions">{actions}</div>
+            ) : null}
           </div>
           {children}
         </main>
