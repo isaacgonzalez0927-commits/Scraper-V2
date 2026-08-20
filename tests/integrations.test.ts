@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { decryptSecret, encryptSecret, maskSecret } from "../lib/crypto";
 import { encodeParams, readConnectState, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled, verifyWebhookSignature, usdCents, chargeNetCents } from "../lib/stripe";
 import { paypalAmount } from "../lib/paypal";
-import { verifySquareSignature } from "../lib/square";
+import { squarePaymentNetCents, verifySquareSignature } from "../lib/square";
 
 test("stored secrets survive a round trip and never appear in the ciphertext", () => {
   const secret = "sk_live_51NotARealKeyAtAll0000";
@@ -116,6 +116,19 @@ test("Stripe cash sums the USD balance and net charges", () => {
   );
   assert.equal(chargeNetCents({ amount: 10000, amount_refunded: 1500, status: "succeeded" }), 8500);
   assert.equal(chargeNetCents({ amount: 10000, status: "failed" }), 0);
+});
+
+test("Square cash nets completed payments minus refunds", () => {
+  assert.equal(
+    squarePaymentNetCents({
+      status: "COMPLETED",
+      amount_money: { amount: 10000 },
+      refunded_money: { amount: 1500 },
+    }),
+    8500,
+  );
+  assert.equal(squarePaymentNetCents({ status: "FAILED", amount_money: { amount: 10000 } }), 0);
+  assert.equal(squarePaymentNetCents({ status: "COMPLETED", amount_money: { amount: 4200 } }), 4200);
 });
 
 test("Square webhook signatures match HMAC of notification URL plus body", () => {

@@ -45,6 +45,7 @@ export function Card({
   action,
   flush,
   className,
+  id,
   children,
 }: {
   title?: string;
@@ -52,11 +53,12 @@ export function Card({
   action?: React.ReactNode;
   flush?: boolean;
   className?: string;
+  id?: string;
   children: React.ReactNode;
 }) {
   const classes = ["card", flush ? "card-flush" : "", className || ""].filter(Boolean).join(" ");
   return (
-    <section className={classes}>
+    <section className={classes} id={id}>
       {title || action ? (
         <div className="card-head">
           <div>

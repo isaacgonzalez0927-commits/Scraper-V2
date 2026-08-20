@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { Card, KeyValue, Stat, Tabs } from "@/components/ui";
-import { ConnectStripeCallout } from "@/components/ConnectStripe";
+import { ConnectCashCallout } from "@/components/ConnectStripe";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { formatMargin, formatMoney, marginBps } from "@/lib/money";
@@ -16,6 +16,7 @@ import {
   periodBounds,
 } from "@/lib/queries";
 import { loadStripeCash } from "@/lib/stripe-cash";
+import { loadSquareCash } from "@/lib/square-cash";
 import { jobs } from "@/lib/schema";
 
 const PERIODS = [
@@ -34,13 +35,14 @@ export default async function ReportsPage({
   const q = await searchParams;
   const period = PERIODS.some((p) => p.key === q.period) ? (q.period as string) : "this_month";
   const { start, end } = periodBounds(period, q.start, q.end);
-  const [moneyIn, invoiced, { outstanding, overdue }, expected, jobRows, stripeCash] = await Promise.all([
+  const [moneyIn, invoiced, { outstanding, overdue }, expected, jobRows, stripeCash, squareCash] = await Promise.all([
     collectedCents(org.id, start, end),
     invoicedRevenueCents(org.id, start, end),
     outstandingTotals(org.id),
     expectedCash(org.id),
     db().select().from(jobs).where(and(eq(jobs.organizationId, org.id), eq(jobs.status, "completed"))),
-    loadStripeCash(org.id, start),
+    loadStripeCash(org.id, start, end),
+    loadSquareCash(org.id, start, end),
   ]);
 
   const completed = [];
@@ -72,7 +74,7 @@ export default async function ReportsPage({
       sub={
         <p className="page-sub">
           {prettyDate(start)} to {prettyDate(end)}. Collected in Sere is what you logged.
-          Stripe is what actually hit the shop's Stripe account.
+          Stripe and Square are what actually hit those accounts.
         </p>
       }
     >
@@ -91,7 +93,9 @@ export default async function ReportsPage({
         ) : null}
       </div>
 
-      {!shell.isDemo && !stripeCash.connected ? <ConnectStripeCallout /> : null}
+      {!shell.isDemo ? (
+        <ConnectCashCallout stripe={stripeCash.connected} square={squareCash.connected} />
+      ) : null}
 
       <div className="grid grid-4">
         <Stat label="Money in" value={formatMoney(moneyIn)} note="Payments logged in Sere" tone="good" />
@@ -118,6 +122,22 @@ export default async function ReportsPage({
             label="Stripe charges"
             value={formatMoney(stripeCash.monthInCents)}
             note="Succeeded charges in this period, minus refunds"
+          />
+        </div>
+      ) : null}
+
+      {squareCash.connected ? (
+        <div className="grid grid-2 mt-2">
+          <Stat
+            label="Taken in Square"
+            value={formatMoney(squareCash.monthInCents)}
+            note={squareCash.error || "Completed payments this period, minus refunds"}
+            tone="good"
+          />
+          <Stat
+            label="Square in transit"
+            value={formatMoney(squareCash.inTransitCents)}
+            note="Payouts on the way to the bank"
           />
         </div>
       ) : null}

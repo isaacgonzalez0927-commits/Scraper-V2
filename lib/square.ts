@@ -19,16 +19,32 @@ function baseUrl(sandbox?: boolean): string {
   return sandbox ? SANDBOX : LIVE;
 }
 
+function queryString(query?: Record<string, string | number | undefined>): string {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === "") continue;
+    params.set(key, String(value));
+  }
+  const encoded = params.toString();
+  return encoded ? `?${encoded}` : "";
+}
+
 async function request<T>(
   accessToken: string,
   path: string,
-  opts: { method?: "GET" | "POST"; body?: unknown; sandbox?: boolean } = {},
+  opts: {
+    method?: "GET" | "POST";
+    body?: unknown;
+    sandbox?: boolean;
+    query?: Record<string, string | number | undefined>;
+  } = {},
 ): Promise<T> {
   if (!accessToken) throw new SquareError("No Square access token is configured.");
   const method = opts.method || "GET";
   let response: Response;
   try {
-    response = await fetch(`${baseUrl(opts.sandbox)}${path}`, {
+    response = await fetch(`${baseUrl(opts.sandbox)}${path}${queryString(opts.query)}`, {
       method,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -107,6 +123,81 @@ export type SquarePayment = {
   order_id?: string;
   amount_money?: { amount?: number };
 };
+
+export type SquareMoney = { amount?: number; currency?: string };
+
+export type SquareListedPayment = {
+  id?: string;
+  status?: string;
+  amount_money?: SquareMoney;
+  refunded_money?: SquareMoney;
+  created_at?: string;
+};
+
+export function squarePaymentNetCents(payment: SquareListedPayment): number {
+  if (payment.status && payment.status !== "COMPLETED") return 0;
+  const amount = Number(payment.amount_money?.amount || 0);
+  const refunded = Number(payment.refunded_money?.amount || 0);
+  return Math.max(0, amount - refunded);
+}
+
+export async function listSquarePayments(
+  accessToken: string,
+  opts: {
+    beginTime?: string;
+    endTime?: string;
+    locationId?: string;
+    sandbox?: boolean;
+    limit?: number;
+  } = {},
+): Promise<SquareListedPayment[]> {
+  const rows: SquareListedPayment[] = [];
+  let cursor: string | undefined;
+  const max = opts.limit && opts.limit > 0 ? opts.limit : 1000;
+  while (rows.length < max) {
+    const payload = await request<{ payments?: SquareListedPayment[]; cursor?: string }>(
+      accessToken,
+      "/v2/payments",
+      {
+        sandbox: opts.sandbox,
+        query: {
+          begin_time: opts.beginTime,
+          end_time: opts.endTime,
+          location_id: opts.locationId,
+          limit: Math.min(100, max - rows.length),
+          cursor,
+        },
+      },
+    );
+    const page = payload.payments || [];
+    rows.push(...page);
+    if (!payload.cursor || !page.length) break;
+    cursor = payload.cursor;
+  }
+  return rows;
+}
+
+export type SquareListedPayout = {
+  id?: string;
+  status?: string;
+  amount_money?: SquareMoney;
+  arrival_date?: string;
+  created_at?: string;
+};
+
+export async function listSquarePayouts(
+  accessToken: string,
+  opts: { locationId?: string; sandbox?: boolean; limit?: number } = {},
+): Promise<SquareListedPayout[]> {
+  const payload = await request<{ payouts?: SquareListedPayout[] }>(accessToken, "/v2/payouts", {
+    sandbox: opts.sandbox,
+    query: {
+      location_id: opts.locationId,
+      limit: opts.limit || 5,
+    },
+  });
+  return payload.payouts || [];
+}
 
 export async function retrieveSquarePayment(
   accessToken: string,

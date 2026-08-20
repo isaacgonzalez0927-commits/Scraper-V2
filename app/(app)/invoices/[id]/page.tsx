@@ -142,15 +142,17 @@ export default async function InvoiceDetailPage({
                 <span className="kv-value">
                   {integrations.stripe.connected
                     ? "On · Overview shows the live balance"
-                    : <a href="/settings?tab=integrations">Connect to see the Stripe balance</a>}
+                    : <a href="/settings?tab=integrations#stripe">Connect Stripe</a>}
                 </span>
               </div>
-              {integrations.square.connected ? (
-                <div className="kv-row">
-                  <span className="kv-key">Square</span>
-                  <span className="kv-value">Also on · {integrations.square.label}</span>
-                </div>
-              ) : null}
+              <div className="kv-row">
+                <span className="kv-key">Square cash</span>
+                <span className="kv-value">
+                  {integrations.square.connected
+                    ? `On · ${integrations.square.label}`
+                    : <a href="/settings?tab=integrations#square">Connect Square</a>}
+                </span>
+              </div>
               {integrations.paypal.connected ? (
                 <div className="kv-row">
                   <span className="kv-key">PayPal</span>

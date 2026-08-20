@@ -28,13 +28,24 @@ function unixToDay(unix?: number): string {
   return new Date(unix * 1000).toISOString().slice(0, 10);
 }
 
+function unixDayStart(day: string): number {
+  return Math.floor(new Date(`${day}T00:00:00Z`).getTime() / 1000);
+}
+
+function unixNextDay(day: string): number {
+  const stamp = new Date(`${day}T00:00:00Z`);
+  stamp.setUTCDate(stamp.getUTCDate() + 1);
+  return Math.floor(stamp.getTime() / 1000);
+}
+
 /**
  * Live cash from the shop's Stripe: what's sitting there, what charged this
- * month, and recent payouts to the bank. Read-only. Failures never crash Overview.
+ * period, and recent payouts to the bank. Read-only. Failures never crash Overview.
  */
 export async function loadStripeCash(
   organizationId: number,
   periodStart: string,
+  periodEnd?: string,
 ): Promise<StripeCash> {
   const empty: StripeCash = {
     connected: false,
@@ -47,12 +58,13 @@ export async function loadStripeCash(
   const config = await stripeConfig(organizationId);
   if (!config?.secretKey) return empty;
 
-  const createdGte = Math.floor(new Date(`${periodStart}T00:00:00Z`).getTime() / 1000);
+  const createdGte = unixDayStart(periodStart);
+  const createdLt = periodEnd ? unixNextDay(periodEnd) : undefined;
   const opts = { stripeAccount: config.stripeAccount };
   try {
     const [balance, charges, payouts] = await Promise.all([
       retrieveBalance(config.secretKey, opts),
-      listCharges(config.secretKey, { createdGte, ...opts }),
+      listCharges(config.secretKey, { createdGte, createdLt, ...opts }),
       listPayouts(config.secretKey, { limit: 5, ...opts }),
     ]);
     return {
