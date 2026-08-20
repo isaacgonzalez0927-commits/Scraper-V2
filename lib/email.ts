@@ -89,6 +89,58 @@ export function invoiceEmail(opts: {
   return { subject, text, html };
 }
 
+export function invoiceReminderEmail(opts: {
+  shopName: string;
+  invoiceNumber: string;
+  amountDue: string;
+  daysOverdue: number;
+  payUrl: string;
+}): { subject: string; text: string; html: string } {
+  const subject = `${opts.shopName}: ${opts.invoiceNumber} is still open`;
+  const age = `${opts.daysOverdue} ${opts.daysOverdue === 1 ? "day" : "days"} past due`;
+  const text = [
+    `A quick reminder from ${opts.shopName}`,
+    "",
+    `Invoice ${opts.invoiceNumber} has a balance of ${opts.amountDue}.`,
+    `It is ${age}.`,
+    "",
+    `View and pay: ${opts.payUrl}`,
+    "",
+    "If you already sent payment, please disregard this note. Thank you.",
+  ].join("\n");
+  const html = `
+    <div style="
+      font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      color:#0f1b33;
+      line-height:1.55
+    ">
+      <h2 style="margin:0 0 4px;font-size:18px">A quick reminder</h2>
+      <p style="margin:0 0 18px;color:#6b7688">from ${escapeHtml(opts.shopName)}</p>
+      <p style="margin:0 0 4px">
+        Invoice <strong>${escapeHtml(opts.invoiceNumber)}</strong> has a balance of
+        <strong>${escapeHtml(opts.amountDue)}</strong>.
+      </p>
+      <p style="margin:0 0 18px;color:#6b7688">It is ${escapeHtml(age)}.</p>
+      <p style="margin:0 0 22px">
+        <a href="${escapeHtml(opts.payUrl)}"
+           style="
+             background:#5b38d6;
+             color:#fff;
+             padding:10px 16px;
+             border-radius:8px;
+             text-decoration:none;
+             display:inline-block
+           ">
+          View and pay invoice
+        </a>
+      </p>
+      <p style="margin:0;color:#6b7688;font-size:13px">
+        If you already sent payment, please disregard this note. Thank you.
+      </p>
+    </div>`;
+  return { subject, text, html };
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,

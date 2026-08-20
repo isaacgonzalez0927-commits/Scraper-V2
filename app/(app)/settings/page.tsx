@@ -447,7 +447,7 @@ export default async function SettingsPage({
 
           <Card
             id="openai"
-            title="Sere assistant"
+            title="Nova assistant"
             note="GPT answers in English about this shop. Completing or moving a job still goes through Sere. gpt-4o-mini plus a $5 monthly budget in OpenAI is enough."
             action={
               <span

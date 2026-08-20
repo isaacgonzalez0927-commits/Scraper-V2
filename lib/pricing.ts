@@ -74,7 +74,7 @@ export const PLANS: readonly Plan[] = [
     features: [
       { text: "5 logins" },
       { text: "Everything on Shop" },
-      { text: "Assistant that knows today's board" },
+      { text: "Nova owner assistant that knows today's board" },
       { text: "Week and month reports" },
       { text: "Texts: reminders, on-my-way, invoice link", soon: true },
       { text: "Today's jobs on the tech's phone", soon: true },

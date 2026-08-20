@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { boot } from "@/lib/boot";
 import { clearSession, createSession, hashPassword, requireContext, verifyPassword } from "@/lib/auth";
 import { db, nowISO, token } from "@/lib/db";
-import { invoiceEmail, sendEmail } from "@/lib/email";
+import { invoiceEmail, invoiceReminderEmail, sendEmail } from "@/lib/email";
 import {
   addEvent,
   applyPayment,
@@ -38,6 +38,7 @@ import { DEMO_EMAIL } from "@/lib/seed";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
   customers,
+  invoiceEvents,
   invoiceLines,
   invoices,
   jobCosts,
@@ -613,6 +614,100 @@ export async function sendInvoiceAction(form: FormData) {
     }
   }
   redirect(`/invoices/${id}?notice=${encodeURIComponent(notice)}`);
+}
+
+export async function sendInvoiceReminderAction(form: FormData) {
+  const { org } = await requireContext();
+  const id = Number(str(form, "invoice_id"));
+  const [invoice] = await db()
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.id, id), eq(invoices.organizationId, org.id)));
+  if (!invoice) redirect("/overview?error=Invoice+not+found.");
+
+  const today = new Date().toISOString().slice(0, 10);
+  const events = await db()
+    .select()
+    .from(invoiceEvents)
+    .where(
+      and(
+        eq(invoiceEvents.organizationId, org.id),
+        eq(invoiceEvents.invoiceId, invoice.id),
+      ),
+    );
+  if (
+    events.some(
+      (event) =>
+        event.kind === "reminder" && event.createdAt.slice(0, 10) === today,
+    )
+  ) {
+    redirect("/overview?ok=Nova+already+reminded+this+customer+today.");
+  }
+
+  const [customer] = await db()
+    .select()
+    .from(customers)
+    .where(
+      and(
+        eq(customers.id, invoice.customerId),
+        eq(customers.organizationId, org.id),
+      ),
+    );
+  if (!customer?.email) {
+    redirect("/overview?error=That+customer+has+no+email+address.");
+  }
+  const config = await emailConfig(org.id);
+  if (!config) {
+    redirect("/overview?error=Connect+email+in+Settings+before+sending+a+reminder.");
+  }
+
+  const paid = await amountPaidCents(invoice.id);
+  const due = balanceCents(invoice.totalCents, paid, invoice.status);
+  if (due <= 0) redirect("/overview?ok=That+invoice+is+already+paid.");
+  const daysOverdue = Math.max(
+    1,
+    Math.round(
+      (new Date(`${today}T00:00:00Z`).getTime() -
+        new Date(`${invoice.dueDate}T00:00:00Z`).getTime()) /
+        86400000,
+    ),
+  );
+  const base = await absoluteBaseUrl();
+  const body = invoiceReminderEmail({
+    shopName: org.name,
+    invoiceNumber: invoice.number,
+    amountDue: formatMoney(due),
+    daysOverdue,
+    payUrl: `${base}/p/inv/${invoice.publicToken}`,
+  });
+  try {
+    await sendEmail(config, { to: customer.email, ...body });
+  } catch (error) {
+    redirect(
+      `/overview?error=${encodeURIComponent(
+        `Reminder did not go out. ${(error as Error).message}`,
+      )}`,
+    );
+  }
+  await addEvent(
+    org.id,
+    invoice.id,
+    "reminder",
+    `Payment reminder emailed to ${customer.email}`,
+    due,
+  );
+  await logActivity(
+    org.id,
+    "invoice_reminder",
+    `Reminder sent: ${invoice.number}`,
+    due,
+    `/invoices/${invoice.id}`,
+  );
+  redirect(
+    `/overview?ok=${encodeURIComponent(
+      `Nova reminded ${customer.name} about ${invoice.number}.`,
+    )}`,
+  );
 }
 
 export async function voidInvoiceAction(form: FormData) {
