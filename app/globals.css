@@ -2140,10 +2140,10 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 }
 .choice {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-height: 44px;
-  padding: 8px 10px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface-2);
@@ -2156,7 +2156,27 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
-.choice input { accent-color: var(--accent); }
+.choice input { accent-color: var(--accent); margin-top: 2px; }
+.choice-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.choice-copy strong {
+  font-weight: 550;
+  font-size: 13px;
+}
+.choice-copy span {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.35;
+}
+.choice:has(input:checked) .choice-copy span {
+  color: inherit;
+  opacity: 0.82;
+}
 .choice-span { grid-column: 1 / -1; }
 .signup-optional { margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
 .signup-benefit {

@@ -5,25 +5,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchIcon } from "@/components/ui";
 import type { AssistantBrief } from "@/lib/assistant";
 
-const NAV = [
-  ["/overview", "Overview", "grid"],
-  ["/jobs", "Jobs", "briefcase"],
-  ["/customers", "Customers", "users"],
-  ["/invoices", "Invoices", "file"],
-  ["/payments", "Payments", "card"],
-  ["/calendar", "Calendar", "calendar"],
-  ["/reports", "Reports", "chart"],
-  ["/settings", "Settings", "settings"],
-] as const;
-
-const BOTTOM_NAV = [
-  ["/overview", "Home", "grid"],
-  ["/jobs", "Jobs", "briefcase"],
-  ["/calendar", "Calendar", "calendar"],
-  ["/invoices", "Invoices", "file"],
-  ["/settings", "Settings", "settings"],
-] as const;
-
 const PATHS: Record<string, React.ReactNode> = {
   grid: <><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" /></>,
   briefcase: <><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M8.5 7V5.5A2 2 0 0 1 10.5 3.5h3a2 2 0 0 1 2 2V7M3 12h18" /></>,
@@ -80,6 +61,9 @@ export function Shell({
   isDemo,
   tradeName,
   worker,
+  jobsLabel = "Jobs",
+  customersLabel = "Customers",
+  searchHint = "Search customers, jobs, invoices",
   brief,
   path,
   title,
@@ -93,6 +77,9 @@ export function Shell({
   isDemo?: boolean;
   tradeName?: string;
   worker?: string;
+  jobsLabel?: string;
+  customersLabel?: string;
+  searchHint?: string;
   brief?: AssistantBrief;
   path: string;
   title: string;
@@ -101,6 +88,23 @@ export function Shell({
   children: React.ReactNode;
 }) {
   const active = (href: string) => path === href || path.startsWith(`${href}/`);
+  const nav: [string, string, string][] = [
+    ["/overview", "Overview", "grid"],
+    ["/jobs", jobsLabel, "briefcase"],
+    ["/customers", customersLabel, "users"],
+    ["/invoices", "Invoices", "file"],
+    ["/payments", "Payments", "card"],
+    ["/calendar", "Calendar", "calendar"],
+    ["/reports", "Reports", "chart"],
+    ["/settings", "Settings", "settings"],
+  ];
+  const bottom: [string, string, string][] = [
+    ["/overview", "Home", "grid"],
+    ["/jobs", jobsLabel, "briefcase"],
+    ["/calendar", "Calendar", "calendar"],
+    ["/invoices", "Invoices", "file"],
+    ["/settings", "Settings", "settings"],
+  ];
   return (
     <div className="app">
       <aside className="sidebar" id="sidebar">
@@ -108,7 +112,7 @@ export function Shell({
           <BrandLogo className="brand-lockup" />
         </a>
         <nav className="nav">
-          {NAV.map(([href, name, icon]) => (
+          {nav.map(([href, name, icon]) => (
             <a key={href} href={href} className={active(href) ? "active" : ""}>
               <Icon name={icon} />
               {name}
@@ -151,7 +155,7 @@ export function Shell({
           </a>
           <button className="search-btn" type="button" data-open-search aria-label="Search">
             <SearchIcon />
-            <span>Search customers, jobs, invoices</span>
+            <span>{searchHint}</span>
             <kbd>⌘K</kbd>
           </button>
           <div className="topbar-right">
@@ -179,7 +183,7 @@ export function Shell({
       <div className="scrim" data-close-nav />
 
       <nav className="bottom-nav" aria-label="Primary">
-        {BOTTOM_NAV.map(([href, name, icon]) => {
+        {bottom.map(([href, name, icon]) => {
           const on = active(href);
           return (
             <a key={href} href={href} className={on ? "active" : ""} aria-current={on ? "page" : undefined}>
@@ -196,7 +200,7 @@ export function Shell({
             <input
               id="palette-input"
               type="search"
-              placeholder="Search customers, jobs, invoices"
+              placeholder={searchHint}
               autoComplete="off"
               enterKeyHint="search"
             />

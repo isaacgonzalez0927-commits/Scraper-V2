@@ -7,13 +7,14 @@ import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
 import { amountPaidCents, balanceCents } from "@/lib/finance";
 import { COST_CATEGORIES, JOB_STATUSES, label, prettyWhen } from "@/lib/labels";
+import { filledDetails, parseDetails, tradeFieldsFor } from "@/lib/business";
 import { formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
 import { jobCostTotal, jobRevenueCents } from "@/lib/queries";
 import { customers, invoices, jobCosts, jobs, notes } from "@/lib/schema";
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { org, shell } = await loadApp();
+  const { org, shell, voice } = await loadApp();
   const { id } = await params;
   const [job] = await db()
     .select()
@@ -39,6 +40,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     }),
   );
   const address = formatAddress(job.serviceLine1, job.serviceCity, job.serviceState, job.servicePostal);
+  const visitRows = filledDetails(
+    parseDetails(job.details),
+    tradeFieldsFor(org.businessType, "job"),
+  );
+  const costCategories = voice.costCategories.length ? voice.costCategories : COST_CATEGORIES;
 
   return (
     <Shell
@@ -81,18 +87,23 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           label="Scheduled"
           value={prettyWhen(job.scheduledStart) || "Not scheduled"}
           small
-          note={job.technicianName ? `Tech: ${job.technicianName}` : "No technician assigned"}
+          note={
+            job.technicianName
+              ? `${voice.worker}: ${job.technicianName}`
+              : `No ${voice.worker.toLowerCase()} assigned`
+          }
         />
       </div>
 
       <div className="grid grid-2 mt-2">
-        <Card title="Job details">
+        <Card title={`${voice.job} details`}>
           <p>{job.description || <span className="muted">No description yet.</span>}</p>
           <KeyValue
             rows={[
-              ["Service address", address || <Blank text="Not set" />],
-              ["Technician", job.technicianName || <Blank text="Unassigned" />],
+              [voice.siteLabel, address || <Blank text="Not set" />],
+              [voice.worker, job.technicianName || <Blank text="Unassigned" />],
               ["Status", label(job.status)],
+              ...visitRows,
             ]}
           />
           <form action={updateJobStatusAction} className="schedule-row mt-2">
@@ -105,7 +116,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           {job.notes ? <p className="muted mt-2">{job.notes}</p> : null}
         </Card>
 
-        <Card title="Costs" note="Log parts and labor so the profit number means something.">
+        <Card title="Costs" note={voice.costNote}>
           {costs.length ? (
             <ul className="list">
               {costs.map((cost) => (
@@ -126,7 +137,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <div className="field">
               <label>Category</label>
               <select name="category">
-                {COST_CATEGORIES.map((c) => <option key={c} value={c}>{label(c)}</option>)}
+                {costCategories.map((c) => <option key={c} value={c}>{label(c)}</option>)}
               </select>
             </div>
             <div className="field">
@@ -135,7 +146,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </div>
             <div className="field full">
               <label>Description</label>
-              <input name="description" placeholder="Two technicians, 8 hours" />
+              <input name="description" placeholder={voice.costPlaceholder} />
             </div>
             <div className="form-actions">
               <button className="btn btn-secondary btn-sm" type="submit">Add cost</button>
@@ -160,7 +171,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               ))}
             </Rows>
           ) : (
-            <p className="muted">No invoice yet. Finish the job, then create one.</p>
+            <p className="muted">No invoice yet. Finish the {voice.job.toLowerCase()}, then create one.</p>
           )}
         </Card>
 
@@ -169,7 +180,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <input type="hidden" name="job_id" value={job.id} />
             <input type="hidden" name="customer_id" value={job.customerId} />
             <div className="field">
-              <textarea name="body" placeholder="What did you find on site?" />
+              <textarea name="body" placeholder={voice.jobNotesPlaceholder} />
             </div>
             <button className="btn btn-secondary btn-sm mt-1" type="submit">Save note</button>
           </form>

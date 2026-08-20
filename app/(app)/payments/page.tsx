@@ -15,7 +15,7 @@ export default async function PaymentsPage({
 }: {
   searchParams: Promise<{ q?: string; error?: string; ok?: string }>;
 }) {
-  const { org, shell } = await loadApp();
+  const { org, shell, voice } = await loadApp();
   const { q, error, ok } = await searchParams;
   const term = (q || "").trim();
   const integrations = await integrationStatus(org.id);
@@ -41,7 +41,7 @@ export default async function PaymentsPage({
       {...shell}
       path="/payments"
       title="Payments"
-      sub={<p className="page-sub">Cash that actually arrived. Voided payments drop out of every report.</p>}
+      sub={<p className="page-sub">{voice.paymentsSub}</p>}
       actions={
         <>
           <a className="btn btn-secondary" href="/api/export/payments">Export CSV</a>
@@ -72,7 +72,7 @@ export default async function PaymentsPage({
         <RecordTable
           columns={[
             { label: "Date" },
-            { label: "Customer" },
+            { label: voice.customer },
             { label: "Invoice" },
             { label: "Method" },
             { label: "Reference" },

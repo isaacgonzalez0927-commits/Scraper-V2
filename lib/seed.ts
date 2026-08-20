@@ -141,6 +141,16 @@ export async function seedHarborAir() {
     serviceState: "FL",
     servicePostal: "33904",
     notes: "Prefers morning appointments. Gate code 4412.",
+    details: JSON.stringify({
+      outdoor_brand: "Carrier 24ACC6",
+      outdoor_serial: "2414X12345",
+      indoor_brand: "Carrier FV4CNF003",
+      filter_size: "16x25x1",
+      thermostat: "Nest Learning",
+      warranty_until: "2034-04",
+      membership: "Comfort Club",
+      refrigerant: "R-410A",
+    }),
     customerSince: "2023-04-12",
   });
   const coastal = await customer({
@@ -157,6 +167,13 @@ export async function seedHarborAir() {
     serviceState: "FL",
     servicePostal: "33907",
     notes: "After-hours only. Building manager: Luis.",
+    details: JSON.stringify({
+      outdoor_brand: "Trane Precedent 5-ton RTU",
+      outdoor_serial: "RTU-110-A",
+      filter_size: "20x25x2",
+      thermostat: "Honeywell T6 Pro",
+      refrigerant: "R-410A",
+    }),
     customerSince: "2022-11-03",
   });
   const maria = await customer({
@@ -173,6 +190,14 @@ export async function seedHarborAir() {
     serviceState: "FL",
     servicePostal: "33928",
     notes: "",
+    details: JSON.stringify({
+      outdoor_brand: "Goodman GSX16",
+      indoor_brand: "Goodman CAPF",
+      filter_size: "20x25x1",
+      thermostat: "Honeywell",
+      membership: "None",
+      refrigerant: "R-410A",
+    }),
     customerSince: "2024-01-20",
   });
   const riverside = await customer({
@@ -221,6 +246,12 @@ export async function seedHarborAir() {
     serviceState: "FL",
     servicePostal: "33931",
     notes: "12 PTAC units.",
+    details: JSON.stringify({
+      outdoor_brand: "Amana PTAC (12 units)",
+      filter_size: "14x20x1",
+      thermostat: "Unit-mounted",
+      membership: "Quarterly PM",
+    }),
     customerSince: "2022-03-18",
   });
 
@@ -241,6 +272,11 @@ export async function seedHarborAir() {
       estimatedRevenueCents: 840000,
       actualRevenueCents: 840000,
       estimatedCostCents: 510000,
+      details: JSON.stringify({
+        refrigerant: "R-410A",
+        filter_changed: "Yes, 16x25x1 left in the closet",
+        charge_lbs: "Factory charge + 0.4 lb",
+      }),
       completedAt: dtOffset(-12, 16),
       createdAt: created,
     })
@@ -260,6 +296,11 @@ export async function seedHarborAir() {
       status: "in_progress",
       technicianName: "Marcus Hale",
       estimatedRevenueCents: 42000,
+      details: JSON.stringify({
+        refrigerant: "R-410A",
+        filter_changed: "Clogged 20x25x2, replaced",
+        charge_lbs: "None — capacitor first",
+      }),
       createdAt: created,
     })
     .returning();

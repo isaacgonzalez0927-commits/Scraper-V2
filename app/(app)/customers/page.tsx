@@ -14,7 +14,7 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<{ q?: string; show?: string }>;
 }) {
-  const { org, shell } = await loadApp();
+  const { org, shell, voice } = await loadApp();
   const q = await searchParams;
   const archived = q.show === "archived";
   const term = (q.q || "").trim();
@@ -46,9 +46,9 @@ export default async function CustomersPage({
     <Shell
       {...shell}
       path="/customers"
-      title="Customers"
-      sub={<p className="page-sub">Who you work for, what they have paid, and what they still owe.</p>}
-      actions={<a className="btn" href="/customers/new">New customer</a>}
+      title={voice.customers}
+      sub={<p className="page-sub">{voice.customersSub}</p>}
+      actions={<a className="btn" href="/customers/new">{voice.newCustomer}</a>}
     >
       <div className="toolbar">
         <Tabs
@@ -68,9 +68,9 @@ export default async function CustomersPage({
       {cards.length ? (
         <RecordTable
           columns={[
-            { label: "Customer" },
+            { label: voice.customer },
             { label: "Contact" },
-            { label: "Customer since" },
+            { label: voice.sinceLabel },
             { label: "Paid to date", align: "right" },
             { label: "Outstanding", align: "right" },
           ]}
@@ -102,14 +102,14 @@ export default async function CustomersPage({
         />
       ) : (
         <Empty
-          title={term ? "No customers matched that search" : "No customers yet"}
+          title={term ? `No ${voice.customers.toLowerCase()} matched that search` : `No ${voice.customers.toLowerCase()} yet`}
           body={
             term
               ? "Try a phone number, a last name, or part of an email address."
-              : "Add the first one. A job and an invoice can follow in the next two screens."
+              : voice.emptyCustomers
           }
           href="/customers/new"
-          action="New customer"
+          action={voice.newCustomer}
         />
       )}
     </Shell>

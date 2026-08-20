@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { JobForm } from "@/components/JobForm";
 import { Shell } from "@/components/Shell";
+import { tradeFieldsFor } from "@/lib/business";
 import { db } from "@/lib/db";
 import { loadApp } from "@/lib/page";
 import { customers } from "@/lib/schema";
@@ -20,15 +21,15 @@ export default async function NewJobPage({
     <Shell
       {...shell}
       path="/jobs"
-      title="New job"
-      sub={<p className="page-sub">Pick the customer, then say what the work is.</p>}
+      title={voice.newJob}
+      sub={<p className="page-sub">{voice.newJobSub}</p>}
       actions={<a className="btn btn-secondary" href="/jobs">Cancel</a>}
     >
       <JobForm
         customerRows={customerRows}
         error={q.error}
-        jobPlaceholder={voice.jobPlaceholder}
-        workerLabel={voice.worker}
+        voice={voice}
+        fields={tradeFieldsFor(org.businessType, "job")}
         job={{
           customerId: q.customerId ? Number(q.customerId) : undefined,
           scheduledStart: q.start || null,

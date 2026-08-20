@@ -27,7 +27,7 @@ export default async function OverviewPage({
 }: {
   searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
-  const { org, shell, brief } = await loadApp();
+  const { org, shell, brief, voice } = await loadApp();
   const q = await searchParams;
   const month = monthBounds();
   const week = weekBounds();
@@ -91,7 +91,7 @@ export default async function OverviewPage({
       path="/overview"
       title={brief.greeting}
       sub={<p className="page-sub">{brief.summary}</p>}
-      actions={<a className="btn" href="/jobs/new">New job</a>}
+      actions={<a className="btn" href="/jobs/new">{voice.newJob}</a>}
     >
       <Banner error={q.error} ok={q.ok} />
       {!shell.isDemo ? (
@@ -229,7 +229,7 @@ export default async function OverviewPage({
 
       <div className="grid grid-2 mt-2">
         <Card
-          title="Jobs on the board"
+          title={`${voice.jobs} on the board`}
           action={<a className="btn btn-secondary btn-sm" href="/jobs">View all</a>}
         >
           <ul className="list">
@@ -282,8 +282,8 @@ export default async function OverviewPage({
           ) : (
             <div className="empty">
               <h3>Your day will show up here</h3>
-              <p>Add a customer, schedule a job, or send an invoice.</p>
-              <a className="btn" href="/customers/new">Add a customer</a>
+              <p>{voice.emptyOverview}</p>
+              <a className="btn" href="/customers/new">{voice.newCustomer}</a>
             </div>
           )}
         </Card>

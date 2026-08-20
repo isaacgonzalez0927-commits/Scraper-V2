@@ -23,6 +23,9 @@ export async function loadApp() {
       isDemo: ctx.user.email === DEMO_EMAIL,
       tradeName: voice.name,
       worker: voice.worker,
+      jobsLabel: voice.jobs,
+      customersLabel: voice.customers,
+      searchHint: voice.searchHint,
       brief,
     },
   };

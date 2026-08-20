@@ -1,5 +1,5 @@
 import { and, desc, eq, ne } from "drizzle-orm";
-import { tradeCopy } from "./business";
+import { countLabel, tradeCopy } from "./business";
 import { db } from "./db";
 import { displayName } from "./display";
 import { logActivity } from "./finance";
@@ -335,14 +335,14 @@ export async function buildBrief(
   if (jobsToday.length) {
     alerts.push({
       tone: "info",
-      title: `${jobsToday.length} ${jobsToday.length === 1 ? "job" : "jobs"} today`,
+      title: `${countLabel(jobsToday.length, voice.job, voice.jobs)} today`,
       body: jobsToday.slice(0, 3).map((j) => j.title).join(", "),
       href: "/calendar",
     });
   } else if (jobsTomorrow.length) {
     alerts.push({
       tone: "info",
-      title: `${jobsTomorrow.length} ${jobsTomorrow.length === 1 ? "job" : "jobs"} tomorrow`,
+      title: `${countLabel(jobsTomorrow.length, voice.job, voice.jobs)} tomorrow`,
       body: jobsTomorrow.slice(0, 3).map((j) => j.title).join(", "),
       href: "/calendar",
     });
@@ -351,7 +351,7 @@ export async function buildBrief(
     alerts.push({
       tone: "warn",
       title: `${unscheduled.length} unscheduled`,
-      body: `Ask me to move one onto a day, or open Jobs.`,
+      body: `Ask me to move one onto a day, or open ${voice.jobs}.`,
       href: "/jobs?status=unscheduled",
     });
   }
@@ -385,9 +385,13 @@ export async function buildBrief(
     summary: `${voice.name}. ${bits.join(". ")}.`,
     alerts,
     suggestions: [
-      jobsToday.length ? "What's on today" : jobsTomorrow.length ? "What's on tomorrow" : "Unscheduled jobs",
-      overdue > 0 ? "Show overdue invoices" : dueSoon.length ? "What's due soon" : "Who still owes me",
-      unscheduled[0] ? `Move ${unscheduled[0].title} to tomorrow` : "Jobs this week",
+      jobsToday.length
+        ? "What's on today"
+        : jobsTomorrow.length
+          ? "What's on tomorrow"
+          : voice.suggestions[0],
+      overdue > 0 ? "Show overdue invoices" : dueSoon.length ? "What's due soon" : voice.suggestions[1],
+      unscheduled[0] ? `Move ${unscheduled[0].title} to tomorrow` : voice.suggestions[2],
     ].slice(0, 3),
     gpt: integrations.openai.connected,
   };
@@ -553,6 +557,7 @@ export async function runAssistant(
 
   const [org] = await db().select().from(organizations).where(eq(organizations.id, organizationId));
   const shop = org?.name || "your shop";
+  const voice = tradeCopy(businessType || org?.businessType);
 
   if (intent.kind === "answer") {
     return { text: intent.text, links: [] };
@@ -560,13 +565,23 @@ export async function runAssistant(
 
   if (intent.kind === "help" || intent.kind === "unknown") {
     const gpt = Boolean(await openaiConfig(organizationId));
+    const work = voice.jobs.toLowerCase();
+    const unit = voice.job.toLowerCase();
     return {
       text:
         intent.kind === "unknown"
           ? gpt
-            ? `I did not catch that. Try today's jobs, overdue invoices, or move a job to Friday.`
-            : `I did not catch that. I can show today's jobs, catch you up, list overdue invoices, or move a job. Connect an OpenAI key in Settings if you want me to answer in plain English. Try: move the next job to Friday.`
-          : `I watch ${shop} for you. Ask for today's jobs, overdue invoices, or cash this week. Or say move the Johnson job to Friday, or mark the leak repair complete.`,
+            ? `I did not catch that. Try today's ${work}, overdue invoices, or move a ${unit} to Friday.`
+            : [
+                `I did not catch that. I can show today's ${work}, catch you up,`,
+                `list overdue invoices, or move a ${unit}. Connect an OpenAI key`,
+                `in Settings if you want me to answer in plain English.`,
+                `Try: move the next ${unit} to Friday.`,
+              ].join(" ")
+          : [
+              `I watch ${shop} for you. Ask for today's ${work}, overdue invoices,`,
+              `or cash this week. Or say move the next ${unit} to Friday.`,
+            ].join(" "),
       links:
         intent.kind === "unknown" && !gpt
           ? [{ href: "/settings?tab=integrations#openai", label: "Connect OpenAI" }]
@@ -672,14 +687,17 @@ export async function runAssistant(
       return day >= week.start && day <= week.end;
     });
     if (!filtered.length) {
-      return { text: `Nothing ${intent.when === "unscheduled" ? "waiting to be scheduled" : `on ${intent.when}`}.`, links: [{ href: "/jobs", label: "Jobs" }] };
+      return {
+        text: `Nothing ${intent.when === "unscheduled" ? "waiting to be scheduled" : `on ${intent.when}`}.`,
+        links: [{ href: "/jobs", label: voice.jobs }],
+      };
     }
     const lines = filtered.slice(0, 8).map(({ job, customer }) => {
       const when = prettyWhen(job.scheduledStart) || "unscheduled";
       return `${job.title} · ${displayName(customer)} · ${when}`;
     });
     return {
-      text: `${filtered.length} ${filtered.length === 1 ? "job" : "jobs"}.\n${lines.join("\n")}`,
+      text: `${countLabel(filtered.length, voice.job, voice.jobs)}.\n${lines.join("\n")}`,
       links: filtered.slice(0, 6).map(({ job, customer }) => ({
         href: `/jobs/${job.id}`,
         label: `${job.title} · ${displayName(customer)}`,
@@ -690,10 +708,13 @@ export async function runAssistant(
   if (intent.kind === "complete") {
     const hits = await findJobs(organizationId, intent.query);
     if (!hits.length) {
-      return { text: `I could not find a job matching "${intent.query}".`, links: [{ href: "/jobs", label: "Jobs" }] };
+      return {
+        text: `I could not find a ${voice.job.toLowerCase()} matching "${intent.query}".`,
+        links: [{ href: "/jobs", label: voice.jobs }],
+      };
     }
     if (hits.length > 1) {
-      return { text: "A few jobs match. Pick one:", links: jobLinks(hits) };
+      return { text: `A few ${voice.jobs.toLowerCase()} match. Pick one:`, links: jobLinks(hits) };
     }
     const job = hits[0];
     await db()
@@ -710,10 +731,16 @@ export async function runAssistant(
 
   const hits = await findJobs(organizationId, intent.query);
   if (!hits.length) {
-    return { text: `I could not find a job matching "${intent.query}".`, links: [{ href: "/jobs", label: "Jobs" }] };
+    return {
+      text: `I could not find a ${voice.job.toLowerCase()} matching "${intent.query}".`,
+      links: [{ href: "/jobs", label: voice.jobs }],
+    };
   }
   if (hits.length > 1) {
-    return { text: "A few jobs match. Pick one, then ask me again with the full title.", links: jobLinks(hits) };
+    return {
+      text: `A few ${voice.jobs.toLowerCase()} match. Pick one, then ask me again with the full title.`,
+      links: jobLinks(hits),
+    };
   }
   const job = hits[0];
   await db()

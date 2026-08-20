@@ -1,5 +1,7 @@
 import { saveCustomerAction } from "@/app/actions";
+import { TradeFields } from "@/components/TradeFields";
 import { Banner } from "@/components/ui";
+import { parseDetails, type TradeField, type TradeProfile } from "@/lib/business";
 import type { customers } from "@/lib/schema";
 
 type Customer = typeof customers.$inferSelect;
@@ -7,10 +9,15 @@ type Customer = typeof customers.$inferSelect;
 export function CustomerForm({
   customer,
   error,
+  voice,
+  fields,
 }: {
   customer?: Partial<Customer>;
   error?: string;
+  voice: TradeProfile;
+  fields: readonly TradeField[];
 }) {
+  const details = parseDetails(customer?.details);
   return (
     <form action={saveCustomerAction} className="grid narrow">
       {customer?.id ? <input type="hidden" name="id" value={customer.id} /> : null}
@@ -22,7 +29,7 @@ export function CustomerForm({
           <input name="name" defaultValue={customer?.name || ""} required />
         </div>
         <div className="field">
-          <label>Company</label>
+          <label>{voice.companyLabel}</label>
           <input name="company_name" defaultValue={customer?.companyName || ""} />
         </div>
         <div className="field">
@@ -34,14 +41,25 @@ export function CustomerForm({
           <input name="phone" defaultValue={customer?.phone || ""} />
         </div>
         <div className="field">
-          <label>Customer since</label>
+          <label>{voice.sinceLabel}</label>
           <input name="customer_since" type="date" defaultValue={customer?.customerSince || ""} />
         </div>
         <div className="field full">
           <label>Notes</label>
-          <textarea name="notes" defaultValue={customer?.notes || ""} placeholder="Gate code, equipment, preferences" />
+          <textarea
+            name="notes"
+            defaultValue={customer?.notes || ""}
+            placeholder={voice.notesPlaceholder}
+          />
         </div>
       </section>
+
+      <TradeFields
+        fields={fields}
+        values={details}
+        title={voice.customerFieldsTitle}
+        note={voice.customerFieldsNote}
+      />
 
       <section className="card form-grid">
         <div className="field full">
@@ -65,15 +83,15 @@ export function CustomerForm({
         <div className="field full">
           <label className="checkbox">
             <input type="checkbox" name="same_as_billing" value="1" defaultChecked />
-            The service address is the same as billing
+            The {voice.siteLabel.toLowerCase()} is the same as billing
           </label>
         </div>
       </section>
 
       <section className="card form-grid">
         <div className="field full">
-          <h2 className="card-title">Service address</h2>
-          <p className="card-note">Only needed when the work happens somewhere else.</p>
+          <h2 className="card-title">{voice.siteLabel}</h2>
+          <p className="card-note">{voice.siteNote}</p>
         </div>
         <div className="field full">
           <label>Street</label>
@@ -91,10 +109,10 @@ export function CustomerForm({
           </div>
         </div>
         <div className="form-actions">
-          <button className="btn" type="submit">Save customer</button>
+          <button className="btn" type="submit">Save {voice.customer.toLowerCase()}</button>
           {!customer?.id ? (
             <button className="btn btn-secondary" type="submit" name="next" value="job">
-              Save and create a job
+              Save and create a {voice.job.toLowerCase()}
             </button>
           ) : null}
         </div>
