@@ -26,6 +26,7 @@ import {
   tradeCopy,
   tradeFieldsFor,
 } from "@/lib/business";
+import { closeoutDueDate, parseCloseout } from "@/lib/closeout";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
 import { looksLikeOpenAIKey, validateOpenAIKey, DEFAULT_OPENAI_MODEL } from "@/lib/openai";
@@ -351,19 +352,46 @@ export async function rescheduleJobAction(form: FormData) {
   redirect(str(form, "next") || `/jobs/${id}`);
 }
 
-export async function invoiceFromJobAction(form: FormData) {
-  const { org } = await requireContext();
-  const jobId = Number(str(form, "job_id"));
-  const [job] = await db().select().from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
-  if (!job) redirect("/jobs");
+async function invoiceForJob(
+  org: typeof organizations.$inferSelect,
+  job: typeof jobs.$inferSelect,
+  syncDraft = false,
+) {
   const existing = await db()
     .select()
     .from(invoices)
-    .where(and(eq(invoices.jobId, jobId), eq(invoices.organizationId, org.id)));
+    .where(and(eq(invoices.jobId, job.id), eq(invoices.organizationId, org.id)));
   const open = existing.find((i) => i.status !== "void");
-  if (open) redirect(`/invoices/${open.id}`);
+  if (open) {
+    if (syncDraft && open.status === "draft") {
+      const lines = await db()
+        .select()
+        .from(invoiceLines)
+        .where(eq(invoiceLines.invoiceId, open.id));
+      if (lines.length === 1) {
+        const price = job.actualRevenueCents || job.estimatedRevenueCents;
+        await db()
+          .update(invoiceLines)
+          .set({
+            description: job.title,
+            quantity: "1",
+            unitPriceCents: price,
+            amountCents: price,
+          })
+          .where(eq(invoiceLines.id, lines[0].id));
+        await refreshInvoice(open.id, org.id);
+        const [synced] = await db()
+          .select()
+          .from(invoices)
+          .where(eq(invoices.id, open.id));
+        return { invoice: synced, created: false };
+      }
+    }
+    return { invoice: open, created: false };
+  }
+
   const issue = new Date().toISOString().slice(0, 10);
-  const due = new Date(Date.now() + org.paymentTermsDays * 86400000).toISOString().slice(0, 10);
+  const due = closeoutDueDate(issue, org.paymentTermsDays);
   const price = job.actualRevenueCents || job.estimatedRevenueCents;
   const calc = totalsFromLines([{ quantity: "1", unitPriceCents: price }], 0, org.defaultTaxBps);
   const number = await nextInvoiceNumber(org.id);
@@ -395,7 +423,86 @@ export async function invoiceFromJobAction(form: FormData) {
   });
   await addEvent(org.id, invoice.id, "created", `${number} created from job`);
   await logActivity(org.id, "invoice_created", `${number} created`, invoice.totalCents, `/invoices/${invoice.id}`);
-  redirect(`/invoices/${invoice.id}`);
+  return { invoice, created: true };
+}
+
+export async function invoiceFromJobAction(form: FormData) {
+  const { org } = await requireContext();
+  const jobId = Number(str(form, "job_id"));
+  const [job] = await db()
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
+  if (!job) redirect("/jobs");
+  const result = await invoiceForJob(org, job);
+  redirect(`/invoices/${result.invoice.id}`);
+}
+
+export async function finishJobAction(form: FormData) {
+  const { org } = await requireContext();
+  const jobId = Number(str(form, "job_id"));
+  const [job] = await db()
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
+  if (!job) redirect("/jobs");
+
+  const draft = parseCloseout({
+    workCompleted: str(form, "work_completed"),
+    finalAmount: str(form, "final_amount"),
+    fallbackAmountCents: job.actualRevenueCents || job.estimatedRevenueCents,
+    extraCost: str(form, "extra_cost"),
+    costDescription: str(form, "cost_description"),
+    costCategory: str(form, "cost_category"),
+  });
+  if (!draft.ok) {
+    redirect(`/jobs/${job.id}/finish?error=${encodeURIComponent(draft.error)}`);
+  }
+
+  const completedAt = job.completedAt || nowISO();
+  await db()
+    .update(jobs)
+    .set({
+      description: draft.workCompleted,
+      actualRevenueCents: draft.finalAmountCents,
+      status: "completed",
+      completedAt,
+    })
+    .where(and(eq(jobs.id, job.id), eq(jobs.organizationId, org.id)));
+
+  if (draft.extraCostCents > 0 && job.status !== "completed") {
+    await db().insert(jobCosts).values({
+      organizationId: org.id,
+      jobId: job.id,
+      category: draft.costCategory,
+      description: draft.costDescription,
+      amountCents: draft.extraCostCents,
+      createdAt: nowISO(),
+    });
+  }
+  if (job.status !== "completed") {
+    await logActivity(
+      org.id,
+      "job_completed",
+      `Job completed: ${job.title}`,
+      draft.finalAmountCents,
+      `/jobs/${job.id}`,
+    );
+  }
+
+  if (str(form, "next") !== "invoice") {
+    redirect(`/jobs/${job.id}?notice=${encodeURIComponent("Job finished and final amount saved.")}`);
+  }
+
+  const [fresh] = await db()
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.id, job.id), eq(jobs.organizationId, org.id)));
+  const result = await invoiceForJob(org, fresh, true);
+  const notice = result.created
+    ? "Job finished. Review the invoice, then send it."
+    : "Job finished. This invoice was already linked to it.";
+  redirect(`/invoices/${result.invoice.id}?notice=${encodeURIComponent(notice)}`);
 }
 
 export async function saveInvoiceAction(form: FormData) {

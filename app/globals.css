@@ -869,6 +869,61 @@ table.data a.rowlink:hover { color: var(--accent); }
   padding-top: 2px;
 }
 
+.closeout-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  color: var(--ink);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
+}
+.closeout-callout:hover { color: var(--ink); border-color: var(--accent); }
+.closeout-callout span { display: grid; gap: 3px; min-width: 0; }
+.closeout-callout strong { font-size: 14px; }
+.closeout-callout small { color: var(--ink-2); font-size: 12.5px; line-height: 1.4; }
+.closeout-callout b {
+  flex: 0 0 auto;
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.closeout-contact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.closeout-contact > div:first-child { display: grid; gap: 2px; }
+.closeout-contact strong { font-size: 15px; }
+.closeout-contact span:not(.section-label) { color: var(--ink-3); font-size: 12.5px; }
+
+.closeout-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+}
+.closeout-actions p {
+  margin: 0 0 0 auto;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+}
+
 .search-field {
   display: flex;
   align-items: center;
@@ -1892,6 +1947,25 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .form-actions { flex-direction: column; align-items: stretch; }
   .form-actions .btn { width: 100%; }
   .form-actions .help { text-align: center; }
+  .closeout-callout { align-items: flex-start; padding: 14px 16px; }
+  .closeout-callout b { display: none; }
+  .closeout-contact { align-items: flex-start; flex-direction: column; }
+  .closeout-contact .row { width: 100%; }
+  .closeout-contact .btn { flex: 1; }
+  .closeout-actions {
+    position: sticky;
+    z-index: 20;
+    bottom: calc(58px + env(safe-area-inset-bottom));
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0 -4px;
+    padding: 10px;
+    background: var(--glass);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+  .closeout-actions .btn { width: 100%; }
+  .closeout-actions p { margin: 0; text-align: center; }
   .connect-cta { align-items: stretch; }
   .connect-cta form,
   .connect-cta .btn,

@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { addJobCostAction, addNoteAction, invoiceFromJobAction, updateJobStatusAction } from "@/app/actions";
-import { Badge, Blank, Card, KeyValue, RowLink, Rows, Stat } from "@/components/ui";
+import { Badge, Banner, Blank, Card, KeyValue, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
@@ -13,9 +13,16 @@ import { loadApp } from "@/lib/page";
 import { jobCostTotal, jobRevenueCents } from "@/lib/queries";
 import { customers, invoices, jobCosts, jobs, notes } from "@/lib/schema";
 
-export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function JobDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ notice?: string }>;
+}) {
   const { org, shell, voice } = await loadApp();
   const { id } = await params;
+  const q = await searchParams;
   const [job] = await db()
     .select()
     .from(jobs)
@@ -39,6 +46,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       return { inv, balance: balanceCents(inv.totalCents, paid, inv.status) };
     }),
   );
+  const openInvoice = invoiceRows.find((invoice) => invoice.status !== "void");
   const address = formatAddress(job.serviceLine1, job.serviceCity, job.serviceState, job.servicePostal);
   const visitRows = filledDetails(
     parseDetails(job.details),
@@ -62,19 +70,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <Badge status={job.status} />
           <a className="btn btn-secondary" href={`/jobs/${job.id}/edit`}>Edit</a>
           {job.status !== "completed" ? (
-            <form action={updateJobStatusAction}>
-              <input type="hidden" name="id" value={job.id} />
-              <input type="hidden" name="status" value="completed" />
-              <button className="btn btn-secondary" type="submit">Mark complete</button>
+            <a className="btn" href={`/jobs/${job.id}/finish`}>Finish & invoice</a>
+          ) : !openInvoice ? (
+            <form action={invoiceFromJobAction}>
+              <input type="hidden" name="job_id" value={job.id} />
+              <button className="btn" type="submit">Create invoice</button>
             </form>
           ) : null}
-          <form action={invoiceFromJobAction}>
-            <input type="hidden" name="job_id" value={job.id} />
-            <button className="btn" type="submit">Create invoice</button>
-          </form>
         </>
       }
     >
+      <Banner info={q.notice} />
       <div className="grid grid-4">
         <Stat label="Revenue" value={formatMoney(revenue)} note="Actual if set, otherwise estimated" />
         <Stat label="Costs" value={formatMoney(costTotal)} note="Materials, labor, and equipment" />
@@ -94,6 +100,16 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           }
         />
       </div>
+
+      {job.status !== "completed" ? (
+        <a className="closeout-callout mt-2" href={`/jobs/${job.id}/finish`}>
+          <span>
+            <strong>Finish this {voice.job.toLowerCase()} at the truck</strong>
+            <small>Save what was done, the final amount, and make the invoice in one pass.</small>
+          </span>
+          <b>Finish & invoice</b>
+        </a>
+      ) : null}
 
       <div className="grid grid-2 mt-2">
         <Card title={`${voice.job} details`}>
