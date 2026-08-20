@@ -53,19 +53,26 @@ export default async function SignupPage({
               What kind of business <span className="optional-tag">Optional</span>
             </legend>
             <p className="signup-benefit">
-              Jobs, invoices, and the assistant then use your words. HVAC gets
-              technicians. A salon gets stylists. Skip and Sere stays generic.
-              You can change this any time in Settings.
+              Each trade gets its own words, starter services, and the fields
+              that shop actually fills in — equipment, VIN, color formula,
+              squares. Skip and Sere stays generic. Change this any time in
+              Settings.
             </p>
             <div className="choice-grid">
               <label className="choice choice-span">
                 <input type="radio" name="business_type" value="" defaultChecked />
-                <span>Skip for now</span>
+                <span className="choice-copy">
+                  <strong>Skip for now</strong>
+                  <span>Generic jobs and customers. You can pick a trade later.</span>
+                </span>
               </label>
               {TRADE_LIST.map((trade) => (
                 <label key={trade.key} className="choice">
                   <input type="radio" name="business_type" value={trade.key} />
-                  <span>{trade.name}</span>
+                  <span className="choice-copy">
+                    <strong>{trade.name}</strong>
+                    <span>{trade.signupHint}</span>
+                  </span>
                 </label>
               ))}
             </div>

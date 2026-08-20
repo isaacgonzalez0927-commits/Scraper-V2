@@ -15,7 +15,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const { org, shell } = await loadApp();
+  const { org, shell, voice } = await loadApp();
   const { status } = await searchParams;
   const filters = [eq(invoices.organizationId, org.id)];
   if (status) filters.push(eq(invoices.status, status));
@@ -36,7 +36,7 @@ export default async function InvoicesPage({
       {...shell}
       path="/invoices"
       title="Invoices"
-      sub={<p className="page-sub">An invoice is paid only when the balance reaches zero.</p>}
+      sub={<p className="page-sub">{voice.invoicesSub}</p>}
       actions={
         <>
           <a className="btn btn-secondary" href="/api/export/invoices">Export CSV</a>
@@ -49,7 +49,7 @@ export default async function InvoicesPage({
         <RecordTable
           columns={[
             { label: "Number" },
-            { label: "Customer" },
+            { label: voice.customer },
             { label: "Issued" },
             { label: "Due" },
             { label: "Status" },
@@ -83,7 +83,7 @@ export default async function InvoicesPage({
       ) : (
         <Empty
           title="No invoices here"
-          body="Bill a finished job, or start a fresh invoice for a customer."
+          body={`Bill a finished ${voice.job.toLowerCase()}, or start a fresh invoice.`}
           href="/invoices/new"
           action="New invoice"
         />

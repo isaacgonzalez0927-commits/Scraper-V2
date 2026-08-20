@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { JobForm } from "@/components/JobForm";
 import { Shell } from "@/components/Shell";
+import { tradeFieldsFor } from "@/lib/business";
 import { db } from "@/lib/db";
 import { loadApp } from "@/lib/page";
 import { customers, jobs } from "@/lib/schema";
@@ -28,8 +29,8 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
       <JobForm
         job={job}
         customerRows={customerRows}
-        jobPlaceholder={voice.jobPlaceholder}
-        workerLabel={voice.worker}
+        voice={voice}
+        fields={tradeFieldsFor(org.businessType, "job")}
       />
     </Shell>
   );

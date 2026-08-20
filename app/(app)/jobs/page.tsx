@@ -32,12 +32,12 @@ export default async function JobsPage({
     <Shell
       {...shell}
       path="/jobs"
-      title="Jobs"
+      title={voice.jobs}
       sub={<p className="page-sub">{voice.jobsSub}</p>}
       actions={
         <>
           <a className="btn btn-secondary" href="/api/export/jobs">Export CSV</a>
-          <a className="btn" href="/jobs/new">New job</a>
+          <a className="btn" href="/jobs/new">{voice.newJob}</a>
         </>
       }
     >
@@ -45,8 +45,8 @@ export default async function JobsPage({
       {rows.length ? (
         <RecordTable
           columns={[
-            { label: "Job" },
-            { label: "Customer" },
+            { label: voice.job },
+            { label: voice.customer },
             { label: "Scheduled" },
             { label: voice.worker },
             { label: "Status" },
@@ -74,10 +74,10 @@ export default async function JobsPage({
         />
       ) : (
         <Empty
-          title="No jobs on this list"
+          title={`No ${voice.jobs.toLowerCase()} on this list`}
           body={voice.emptyJobs}
           href="/jobs/new"
-          action="New job"
+          action={voice.newJob}
         />
       )}
     </Shell>

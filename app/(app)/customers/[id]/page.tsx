@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
 import { formatMoney } from "@/lib/money";
 import { label, prettyDate, prettyWhen } from "@/lib/labels";
+import { filledDetails, parseDetails, tradeFieldsFor } from "@/lib/business";
 import { loadApp } from "@/lib/page";
 import { customerBalanceCents, customerLifetimeCents } from "@/lib/queries";
 import { customers, invoices, jobs, notes, payments } from "@/lib/schema";
@@ -16,7 +17,7 @@ export default async function CustomerDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { org, shell } = await loadApp();
+  const { org, shell, voice } = await loadApp();
   const { id } = await params;
   const [customer] = await db()
     .select()
@@ -38,6 +39,10 @@ export default async function CustomerDetailPage({
 
   const billing = formatAddress(customer.billingLine1, customer.billingCity, customer.billingState, customer.billingPostal);
   const service = formatAddress(customer.serviceLine1, customer.serviceCity, customer.serviceState, customer.servicePostal);
+  const siteRows = filledDetails(
+    parseDetails(customer.details),
+    tradeFieldsFor(org.businessType, "customer"),
+  );
 
   return (
     <Shell
@@ -46,7 +51,7 @@ export default async function CustomerDetailPage({
       title={displayName(customer)}
       sub={
         <p className="page-sub">
-          Customer since {prettyDate(customer.customerSince)}
+          {voice.sinceLabel} {prettyDate(customer.customerSince)}
           {customer.archivedAt ? " · Archived" : ""}
         </p>
       }
@@ -54,7 +59,7 @@ export default async function CustomerDetailPage({
         <>
           <a className="btn btn-secondary" href={`/customers/${customer.id}/edit`}>Edit</a>
           <a className="btn btn-secondary" href={`/invoices/new?customerId=${customer.id}`}>New invoice</a>
-          <a className="btn" href={`/jobs/new?customerId=${customer.id}`}>New job</a>
+          <a className="btn" href={`/jobs/new?customerId=${customer.id}`}>{voice.newJob}</a>
         </>
       }
     >
@@ -78,14 +83,24 @@ export default async function CustomerDetailPage({
                 customer.email ? <a href={`mailto:${customer.email}`}>{customer.email}</a> : <Blank />,
               ],
               ["Billing", billing || <Blank />],
-              ["Service", service || <Blank text="Same as billing" />],
+              [voice.siteLabel, service || <Blank text="Same as billing" />],
             ]}
           />
         </Card>
       </div>
 
+      {siteRows.length ? (
+        <Card title={voice.customerFieldsTitle} note={voice.customerFieldsNote} className="mt-2">
+          <KeyValue rows={siteRows} />
+        </Card>
+      ) : null}
+
       <div className="grid grid-2 mt-2">
-        <Card title="Jobs" action={<a className="btn btn-secondary btn-sm" href={`/jobs/new?customerId=${customer.id}`}>Add</a>} flush={jobRows.length > 0}>
+        <Card
+          title={voice.jobs}
+          action={<a className="btn btn-secondary btn-sm" href={`/jobs/new?customerId=${customer.id}`}>Add</a>}
+          flush={jobRows.length > 0}
+        >
           {jobRows.length ? (
             <Rows>
               {jobRows.map((job) => (
@@ -99,7 +114,7 @@ export default async function CustomerDetailPage({
               ))}
             </Rows>
           ) : (
-            <p className="muted">No jobs yet.</p>
+            <p className="muted">No {voice.jobs.toLowerCase()} yet.</p>
           )}
         </Card>
 
@@ -147,7 +162,7 @@ export default async function CustomerDetailPage({
           <form action={addNoteAction}>
             <input type="hidden" name="customer_id" value={customer.id} />
             <div className="field">
-              <textarea name="body" placeholder="Gate code, equipment model, who to call" />
+              <textarea name="body" placeholder={voice.notesPlaceholder} />
             </div>
             <button className="btn btn-secondary btn-sm mt-1" type="submit">Save note</button>
           </form>
@@ -164,7 +179,7 @@ export default async function CustomerDetailPage({
       <form action={archiveCustomerAction} className="mt-2">
         <input type="hidden" name="id" value={customer.id} />
         <button className="btn btn-ghost btn-sm" type="submit">
-          {customer.archivedAt ? "Restore this customer" : "Archive this customer"}
+          {customer.archivedAt ? `Restore this ${voice.customer.toLowerCase()}` : `Archive this ${voice.customer.toLowerCase()}`}
         </button>
       </form>
     </Shell>
