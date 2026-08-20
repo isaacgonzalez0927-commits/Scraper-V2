@@ -122,3 +122,15 @@ displayed again.
 
 Without an online processor, payments are recorded by hand as card, bank transfer, cash,
 check, Zelle, or Venmo.
+
+## Cold outreach
+
+Full walkthrough: [docs/OUTREACH.md](docs/OUTREACH.md).
+
+`npm run outreach` is an operator tool, run from the terminal. It has no routes and no
+UI, and it keeps prospects in their own database file rather than next to shop data.
+
+One rule matters more than the rest: **outreach must send from a different domain and a
+different provider account than invoice email.** Cold mail draws spam complaints, and a
+shared sender reputation would push shops' invoices into junk. `npm run outreach send`
+refuses to run if the two overlap.
