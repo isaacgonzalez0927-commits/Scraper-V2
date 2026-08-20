@@ -120,6 +120,7 @@ export async function ensureSchema(): Promise<void> {
       service_state TEXT NOT NULL DEFAULT '',
       service_postal TEXT NOT NULL DEFAULT '',
       notes TEXT NOT NULL DEFAULT '',
+      details TEXT NOT NULL DEFAULT '{}',
       customer_since TEXT NOT NULL,
       archived_at TEXT,
       created_at TEXT NOT NULL
@@ -141,6 +142,7 @@ export async function ensureSchema(): Promise<void> {
       actual_revenue_cents INTEGER NOT NULL DEFAULT 0,
       estimated_cost_cents INTEGER NOT NULL DEFAULT 0,
       notes TEXT NOT NULL DEFAULT '',
+      details TEXT NOT NULL DEFAULT '{}',
       completed_at TEXT,
       created_at TEXT NOT NULL
     );
@@ -243,6 +245,8 @@ export async function ensureSchema(): Promise<void> {
     );
   `);
   await addColumnIfMissing("organizations", "business_type", "TEXT NOT NULL DEFAULT 'general'");
+  await addColumnIfMissing("customers", "details", "TEXT NOT NULL DEFAULT '{}'");
+  await addColumnIfMissing("jobs", "details", "TEXT NOT NULL DEFAULT '{}'");
 }
 
 async function addColumnIfMissing(table: string, column: string, definition: string): Promise<void> {

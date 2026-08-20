@@ -42,7 +42,7 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<{ tab?: string; error?: string; ok?: string }>;
 }) {
-  const { org, user, shell } = await loadApp();
+  const { org, user, shell, voice } = await loadApp();
   const q = await searchParams;
   const tab = TABS.some((t) => t.key === q.tab) ? (q.tab as string) : "company";
   const [services, integrations, base] = await Promise.all([
@@ -96,8 +96,10 @@ export default async function SettingsPage({
               ))}
             </select>
             <p className="help">
-              Jobs, invoices, and the assistant then use your words. HVAC gets
-              technicians. A salon gets stylists. Change this any time.
+              {voice.signupHint} {voice.jobs} use {voice.worker.toLowerCase()}{" "}
+              language, and {voice.customers.toLowerCase()} get {voice.short}{" "}
+              fields. Starter services were added at signup — this only changes
+              words and fields.
             </p>
           </div>
           <div className="field full"><label>Street address</label><input name="address_line1" defaultValue={org.addressLine1} /></div>

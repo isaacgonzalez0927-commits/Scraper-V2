@@ -17,7 +17,15 @@ import {
   totalsFromLines,
 } from "@/lib/finance";
 import { disconnectIntegration, emailConfig, saveIntegration } from "@/lib/integrations";
-import { parseBusinessType, tradeCopy } from "@/lib/business";
+import {
+  collectDetails,
+  mergeDetails,
+  parseBusinessType,
+  parseDetails,
+  serializeDetails,
+  tradeCopy,
+  tradeFieldsFor,
+} from "@/lib/business";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
 import { looksLikeOpenAIKey, validateOpenAIKey, DEFAULT_OPENAI_MODEL } from "@/lib/openai";
@@ -190,6 +198,18 @@ export async function saveCustomerAction(form: FormData) {
   const { org } = await requireContext();
   const id = Number(str(form, "id") || 0);
   const same = str(form, "same_as_billing") === "1";
+  const fields = tradeFieldsFor(org.businessType, "customer");
+  const incoming = collectDetails(form, fields);
+  let details = serializeDetails(incoming);
+  if (id) {
+    const [existing] = await db()
+      .select({ details: customers.details })
+      .from(customers)
+      .where(and(eq(customers.id, id), eq(customers.organizationId, org.id)));
+    if (existing) {
+      details = serializeDetails(mergeDetails(parseDetails(existing.details), fields, incoming));
+    }
+  }
   const row = {
     name: str(form, "name"),
     companyName: str(form, "company_name"),
@@ -204,6 +224,7 @@ export async function saveCustomerAction(form: FormData) {
     serviceState: same ? str(form, "billing_state") : str(form, "service_state"),
     servicePostal: same ? str(form, "billing_postal") : str(form, "service_postal"),
     notes: str(form, "notes"),
+    details,
     customerSince: str(form, "customer_since") || new Date().toISOString().slice(0, 10),
   };
   if (!row.name) redirect("/customers/new?error=A+customer+name+is+required.");
@@ -248,6 +269,18 @@ export async function saveJobAction(form: FormData) {
   const id = Number(str(form, "id") || 0);
   const status = str(form, "status") || "unscheduled";
   const scheduledStart = str(form, "scheduled_start") || null;
+  const fields = tradeFieldsFor(org.businessType, "job");
+  const incoming = collectDetails(form, fields);
+  let details = serializeDetails(incoming);
+  if (id) {
+    const [existing] = await db()
+      .select({ details: jobs.details })
+      .from(jobs)
+      .where(and(eq(jobs.id, id), eq(jobs.organizationId, org.id)));
+    if (existing) {
+      details = serializeDetails(mergeDetails(parseDetails(existing.details), fields, incoming));
+    }
+  }
   const row = {
     customerId: Number(str(form, "customer_id")),
     title: str(form, "title"),
@@ -263,6 +296,7 @@ export async function saveJobAction(form: FormData) {
     actualRevenueCents: dollarsToCents(str(form, "actual_revenue")),
     estimatedCostCents: dollarsToCents(str(form, "estimated_cost")),
     notes: str(form, "notes"),
+    details,
     completedAt: status === "completed" ? nowISO() : null,
   };
   if (!row.customerId || !row.title) redirect("/jobs/new?error=Customer+and+title+are+required.");

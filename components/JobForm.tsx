@@ -1,5 +1,7 @@
 import { saveJobAction } from "@/app/actions";
+import { TradeFields } from "@/components/TradeFields";
 import { Banner } from "@/components/ui";
+import { parseDetails, type TradeField, type TradeProfile } from "@/lib/business";
 import { toLocalInput } from "@/lib/display";
 import { JOB_STATUSES, label } from "@/lib/labels";
 import { centsToInput } from "@/lib/money";
@@ -12,15 +14,16 @@ export function JobForm({
   job,
   customerRows,
   error,
-  jobPlaceholder = "Service visit",
-  workerLabel = "Technician",
+  voice,
+  fields,
 }: {
   job?: Partial<Job>;
   customerRows: Customer[];
   error?: string;
-  jobPlaceholder?: string;
-  workerLabel?: string;
+  voice: TradeProfile;
+  fields: readonly TradeField[];
 }) {
+  const details = parseDetails(job?.details);
   return (
     <form action={saveJobAction} className="grid narrow">
       {job?.id ? <input type="hidden" name="id" value={job.id} /> : null}
@@ -28,23 +31,23 @@ export function JobForm({
 
       <section className="card form-grid">
         <div className="field">
-          <label>Customer</label>
+          <label>{voice.customer}</label>
           <select name="customer_id" required defaultValue={job?.customerId || ""}>
-            <option value="">Choose a customer</option>
+            <option value="">Choose a {voice.customer.toLowerCase()}</option>
             {customerRows.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.companyName && c.companyName !== c.name ? `${c.name} · ${c.companyName}` : c.companyName || c.name}
               </option>
             ))}
           </select>
-          <p className="help"><a href="/customers/new">Add a new customer</a></p>
+          <p className="help"><a href="/customers/new">Add a new {voice.customer.toLowerCase()}</a></p>
         </div>
         <div className="field">
-          <label>Job title</label>
-          <input name="title" defaultValue={job?.title || ""} required placeholder={jobPlaceholder} />
+          <label>{voice.jobTitleLabel}</label>
+          <input name="title" defaultValue={job?.title || ""} required placeholder={voice.jobPlaceholder} />
         </div>
         <div className="field full">
-          <label>Work to perform</label>
+          <label>{voice.workLabel}</label>
           <textarea name="description" defaultValue={job?.description || ""} />
         </div>
         <div className="field">
@@ -58,21 +61,33 @@ export function JobForm({
         <div className="field">
           <label>Start</label>
           <input name="scheduled_start" type="datetime-local" defaultValue={toLocalInput(job?.scheduledStart)} />
-          <p className="help">Setting a start time schedules the job automatically.</p>
+          <p className="help">Setting a start time schedules the {voice.job.toLowerCase()} automatically.</p>
         </div>
         <div className="field">
-          <label>{workerLabel}</label>
+          <label>{voice.worker}</label>
           <input name="technician_name" defaultValue={job?.technicianName || ""} />
         </div>
         <div className="field">
           <label>Notes</label>
-          <input name="notes" defaultValue={job?.notes || ""} />
+          <input
+            name="notes"
+            defaultValue={job?.notes || ""}
+            placeholder={voice.jobNotesPlaceholder}
+          />
         </div>
       </section>
 
+      <TradeFields
+        fields={fields}
+        values={details}
+        title={voice.jobFieldsTitle}
+        note={voice.jobFieldsNote}
+      />
+
       <section className="card form-grid">
         <div className="field full">
-          <h2 className="card-title">Service address</h2>
+          <h2 className="card-title">{voice.siteLabel}</h2>
+          <p className="card-note">{voice.siteNote}</p>
         </div>
         <div className="field full">
           <label>Street</label>
@@ -107,10 +122,10 @@ export function JobForm({
         <div className="field">
           <label>Estimated cost</label>
           <input name="estimated_cost" inputMode="decimal" defaultValue={centsToInput(job?.estimatedCostCents || 0)} />
-          <p className="help">Logged costs on the job page replace this estimate.</p>
+          <p className="help">Logged costs on the {voice.job.toLowerCase()} page replace this estimate.</p>
         </div>
         <div className="form-actions">
-          <button className="btn" type="submit">Save job</button>
+          <button className="btn" type="submit">Save {voice.job.toLowerCase()}</button>
         </div>
       </section>
     </form>
