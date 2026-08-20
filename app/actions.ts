@@ -23,7 +23,7 @@ import { prettyDate } from "@/lib/labels";
 import { paypalAccountLabel } from "@/lib/paypal";
 import { quickBooksCompanyName } from "@/lib/quickbooks";
 import { listSquareLocations, squareAccountLabel } from "@/lib/square";
-import { accountLabel, retrieveAccount, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
+import { accountLabel, looksLikeStripeSecret, retrieveAccount, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
 import { DEMO_EMAIL } from "@/lib/seed";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
@@ -51,6 +51,42 @@ function slugify(name: string) {
   return `${base}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+async function maybeSaveStripe(organizationId: number, secretKey: string): Promise<void> {
+  if (!looksLikeStripeSecret(secretKey)) return;
+  try {
+    const label = accountLabel(await retrieveAccount(secretKey));
+    await saveIntegration(
+      organizationId,
+      "stripe",
+      { secretKey, publishableKey: "", webhookSecret: "", connectedVia: "keys" },
+      label,
+    );
+  } catch {
+    // Shop is created either way. They can paste a working key in Settings.
+  }
+}
+
+async function maybeSaveSquare(organizationId: number, accessToken: string): Promise<void> {
+  if (!accessToken) return;
+  for (const sandbox of [false, true]) {
+    try {
+      const locations = await listSquareLocations(accessToken, sandbox);
+      const locationId = locations[0]?.id || "";
+      if (!locationId) continue;
+      const label = await squareAccountLabel(accessToken, sandbox);
+      await saveIntegration(
+        organizationId,
+        "square",
+        { accessToken, locationId, webhookSignatureKey: "", sandbox },
+        label,
+      );
+      return;
+    } catch {
+      // Try the other environment, then give up.
+    }
+  }
+}
+
 export async function loginAction(form: FormData) {
   await boot();
   const email = str(form, "email").toLowerCase();
@@ -72,7 +108,9 @@ export async function signupAction(form: FormData) {
   const password = str(form, "password");
   const company = str(form, "company");
   const businessType = parseBusinessType(str(form, "business_type"));
-  if (!name || !email || !password || !company) redirect("/signup?error=All+fields+are+required.");
+  if (!name || !email || !password || !company) {
+    redirect("/signup?error=Shop+name,+your+name,+email,+and+password+are+required.");
+  }
   if (password.length < 8) redirect("/signup?error=Use+at+least+8+characters.");
   const existing = await db().select().from(users).where(eq(users.email, email));
   if (existing.length) redirect("/signup?error=An+account+with+that+email+already+exists.");
@@ -97,6 +135,8 @@ export async function signupAction(form: FormData) {
   for (const [n, d, p] of voice.services) {
     await db().insert(serviceItems).values({ organizationId: org.id, name: n, description: d, unitPriceCents: p });
   }
+  await maybeSaveStripe(org.id, str(form, "stripe_secret_key"));
+  await maybeSaveSquare(org.id, str(form, "square_access_token"));
   await createSession(user.id, org.id);
   redirect("/overview");
 }
@@ -544,7 +584,7 @@ export async function connectStripeAction(form: FormData) {
   if (!secretKey) {
     redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Paste your Stripe secret key first.")}`);
   }
-  if (!/^(sk|rk)_(test|live)_/.test(secretKey)) {
+  if (!looksLikeStripeSecret(secretKey)) {
     redirect(
       `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
         "That does not look like a Stripe secret key. It starts with sk_live_, sk_test_, or rk_live_.",

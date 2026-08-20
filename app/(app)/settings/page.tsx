@@ -14,7 +14,7 @@ import {
   saveSettingsAction,
   sendTestEmailAction,
 } from "@/app/actions";
-import { ConnectStripeButton, OpenSquareKeys, OpenStripeKeys } from "@/components/ConnectStripe";
+import { ConnectStripeButton, SquareKeyLink, StripeKeyLink } from "@/components/ConnectStripe";
 import { Banner, Card } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -91,7 +91,10 @@ export default async function SettingsPage({
                 <option key={trade.key} value={trade.key}>{trade.name}</option>
               ))}
             </select>
-            <p className="help">Changes labels, starter language, and how the assistant talks about jobs.</p>
+            <p className="help">
+              Jobs, invoices, and the assistant then use your words. HVAC gets
+              technicians. A salon gets stylists. Change this any time.
+            </p>
           </div>
           <div className="field full"><label>Street address</label><input name="address_line1" defaultValue={org.addressLine1} /></div>
           <div className="field"><label>City</label><input name="city" defaultValue={org.city} /></div>
@@ -229,27 +232,20 @@ export default async function SettingsPage({
             ) : !demoShop && oneClick ? (
               <div className="connect-cta connect-cta-flush">
                 <div>
-                  <strong>Connect the shop's Stripe.</strong>
+                  <strong>Connect the shop&apos;s Stripe.</strong>
                   <p>
                     One click. Stripe asks the shop to approve Sere, then Overview
-                    shows the live Stripe balance and payouts. Or open the keys page
-                    and paste instead.
+                    shows the live Stripe balance and payouts.
                   </p>
                 </div>
-                <div className="connect-cta-actions">
-                  <ConnectStripeButton large />
-                  <OpenStripeKeys large />
-                </div>
+                <ConnectStripeButton large />
               </div>
             ) : !demoShop ? (
               <>
-                <div className="open-keys">
-                  <OpenStripeKeys large />
-                </div>
                 <p className="help">
-                  Sign in as the shop. Copy <strong>Secret key</strong>. Paste it below.
+                  Copy the Secret key from Stripe, paste it below, tap Connect Stripe.
                   Test keys start with <code>sk_test_</code>. Live keys start with{" "}
-                  <code>sk_live_</code>.
+                  <code>sk_live_</code>. <StripeKeyLink />.
                 </p>
                 <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
                   <div className="field full">
@@ -394,12 +390,10 @@ export default async function SettingsPage({
                 <p className="muted">Create your shop to connect Square.</p>
               ) : (
                 <>
-                  <div className="open-keys">
-                    <OpenSquareKeys large />
-                  </div>
                   <p className="help">
-                    Open your app (create one if you do not have one). Credentials,
-                    then Production. Copy <strong>Access token</strong>. Paste it below.
+                    Copy the Production access token from Square, paste it below, tap
+                    Connect Square. Create an app if you do not have one.{" "}
+                    <SquareKeyLink />.
                   </p>
                   <form action={connectSquareAction} className="form-grid mt-2">
                     <div className="field full">

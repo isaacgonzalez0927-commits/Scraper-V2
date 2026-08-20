@@ -34,20 +34,33 @@ export function ConnectStripeButton({
   );
 }
 
-export function OpenStripeKeys({ large }: { large?: boolean }) {
-  const className = ["btn", "btn-stripe", large ? "btn-connect-lg" : ""].filter(Boolean).join(" ");
+export function ConnectSquareButton({
+  label = "Connect Square",
+  large,
+}: {
+  label?: string;
+  large?: boolean;
+}) {
+  const className = ["btn", "btn-square", large ? "btn-connect-lg" : ""].filter(Boolean).join(" ");
   return (
-    <a className={className} href={STRIPE_KEYS_URL} target="_blank" rel="noreferrer">
-      Open Stripe keys
+    <a className={className} href="/settings?tab=integrations#square">
+      {label}
     </a>
   );
 }
 
-export function OpenSquareKeys({ large }: { large?: boolean }) {
-  const className = ["btn", "btn-square", large ? "btn-connect-lg" : ""].filter(Boolean).join(" ");
+export function StripeKeyLink() {
   return (
-    <a className={className} href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
-      Open Square keys
+    <a href={STRIPE_KEYS_URL} target="_blank" rel="noreferrer">
+      Get the key from Stripe
+    </a>
+  );
+}
+
+export function SquareKeyLink() {
+  return (
+    <a href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
+      Get the key from Square
     </a>
   );
 }
@@ -63,28 +76,24 @@ export function ConnectCashCallout({
   const needSquare = !square;
   if (!needStripe && !needSquare) return null;
   const both = needStripe && needSquare;
-  const pasteHash = both ? "" : needSquare ? "#square" : "#stripe";
   return (
     <div className="connect-cta">
       <div>
         <strong>
           {both
-            ? "See the cash in Stripe or Square."
+            ? "Connect Stripe or Square to see live cash."
             : needStripe
-              ? "See the cash that is actually in Stripe."
-              : "See the cash that is actually in Square."}
+              ? "Connect Stripe to see live cash."
+              : "Connect Square to see live cash."}
         </strong>
         <p>
-          Tap the keys page, copy, then paste in Settings. About a minute.
-          Overview then shows what actually landed, not just invoices you typed.
+          Overview then shows what actually landed in that account, not just
+          invoices you typed. About a minute in Settings.
         </p>
       </div>
       <div className="connect-cta-actions">
-        {needStripe ? <OpenStripeKeys large /> : null}
-        {needSquare ? <OpenSquareKeys large /> : null}
-        <a className="btn btn-secondary" href={`/settings?tab=integrations${pasteHash}`}>
-          Paste in Settings
-        </a>
+        {needStripe ? <ConnectStripeButton large /> : null}
+        {needSquare ? <ConnectSquareButton large /> : null}
       </div>
     </div>
   );
