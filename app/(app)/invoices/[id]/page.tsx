@@ -141,7 +141,7 @@ export default async function InvoiceDetailPage({
               <div className="connect-cta connect-cta-flush mt-2">
                 <div>
                   <strong>Stripe is the main pay button.</strong>
-                  <p>Customers tap Pay with Stripe on the invoice. Square and PayPal can sit underneath if those are connected too.</p>
+                  <p>About a minute: copy the shop&apos;s Stripe secret key and paste it in Settings.</p>
                 </div>
                 <ConnectStripeButton large />
               </div>
