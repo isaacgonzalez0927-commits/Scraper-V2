@@ -924,6 +924,16 @@ a.copy-value:hover { color: var(--accent); border-color: var(--accent-line); }
 }
 .disclosure > summary:hover { color: var(--ink); }
 
+.setup-steps {
+  margin: 0 0 16px;
+  padding: 0 0 0 1.25rem;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.setup-steps li + li { margin-top: 8px; }
+.setup-steps a { font-weight: 600; }
+
 /* Empty state */
 
 .empty {

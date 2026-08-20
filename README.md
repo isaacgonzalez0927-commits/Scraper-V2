@@ -93,17 +93,18 @@ record for the apex and a CNAME for `www` at the values Vercel shows you; then s
 Full walkthrough: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
 
 Each shop connects its own accounts from **Settings**, then **Integrations**. **Connect
-Stripe** is the main button on Overview, Invoices, and Payments. Money lands in their
-account. Credentials are stored encrypted and never displayed again.
+Stripe** is for the shop's books: Overview and Reports then show the live Stripe
+balance, pending funds, and payouts. Credentials are stored encrypted and never
+displayed again.
 
-- **Stripe.** The primary card processor. One click when `STRIPE_CONNECT_CLIENT_ID` is
-  set, or paste a secret key. Invoice links then show **Pay with Stripe**. Add the
-  webhook `https://yourdomain.com/api/webhooks/stripe` with `checkout.session.completed`
-  so a payment is recorded even if the customer closes the tab. Payments are keyed on
-  the Stripe session id, so no double entries.
+- **Stripe.** Paste a secret key (or one-click Connect when `STRIPE_CONNECT_CLIENT_ID`
+  is set). Sere reads `/balance`, `/charges`, and `/payouts` so the owner can see
+  real cash next to invoices typed in Sere. Invoice **Pay with Stripe** is optional
+  leftover checkout, not the product. Webhook
+  `https://yourdomain.com/api/webhooks/stripe` is only needed for that checkout path.
 - **Square.** Optional. Payment links for shops already on Square. Webhook:
   `https://yourdomain.com/api/webhooks/square`.
-- **PayPal.** Optional. Checkout under the Stripe button when both are on. Webhook:
+- **PayPal.** Optional. Invoice checkout if that shop already uses PayPal. Webhook:
   `https://yourdomain.com/api/webhooks/paypal`.
 - **QuickBooks.** Optional books link. Not used for customer checkout.
 - **Email.** Paste a Resend API key and a verified from address to email invoices

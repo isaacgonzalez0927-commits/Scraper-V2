@@ -5,8 +5,8 @@ import { integrations, organizations } from "./schema";
 import { deauthorizeStripeConnect, stripePlatformSecret } from "./stripe";
 
 /**
- * Each shop connects its own accounts. Sere never holds a shared merchant
- * account, so money moves straight from the customer to the shop.
+ * Each shop connects its own accounts. Stripe is read so the shop can see
+ * live cash on Overview. Sere never holds a shared merchant account.
  *
  * Credentials live in one encrypted JSON blob per provider so adding a
  * provider never needs a database migration.

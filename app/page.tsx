@@ -24,8 +24,8 @@ const POINTS = [
     body: "Overdue cash and today's jobs sit up top. Say “move the Johnson job to Friday” and it does.",
   },
   {
-    title: "They pay from the invoice",
-    body: "Connect the shop's Stripe. Square and PayPal are there too if that is already how you take cards.",
+    title: "See the cash in Stripe",
+    body: "Connect the shop's Stripe. Overview then shows what's available, what's pending, and what paid out to the bank.",
   },
 ];
 

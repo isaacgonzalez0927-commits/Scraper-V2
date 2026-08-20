@@ -6,8 +6,9 @@ import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
 import { formatMoney } from "@/lib/money";
 import { integrationStatus } from "@/lib/integrations";
-import { label, prettyWhen } from "@/lib/labels";
+import { label, prettyDate, prettyWhen } from "@/lib/labels";
 import { loadApp } from "@/lib/page";
+import { loadStripeCash } from "@/lib/stripe-cash";
 import {
   collectedCents,
   invoicedRevenueCents,
@@ -25,7 +26,8 @@ export default async function OverviewPage() {
   const month = monthBounds();
   const week = weekBounds();
   const today = isoDate(new Date());
-  const [revenue, collected, { outstanding, overdue }, jobRows, activity, invoiceRows, integrations] = await Promise.all([
+  const [revenue, collected, { outstanding, overdue }, jobRows, activity, invoiceRows, integrations, stripeCash] =
+    await Promise.all([
     invoicedRevenueCents(org.id, month.start, month.end),
     collectedCents(org.id, month.start, month.end),
     outstandingTotals(org.id),
@@ -42,6 +44,7 @@ export default async function OverviewPage() {
       .limit(8),
     db().select().from(invoices).where(eq(invoices.organizationId, org.id)),
     integrationStatus(org.id),
+    loadStripeCash(org.id, month.start),
   ]);
 
   const jobsToday = jobRows.filter((r) => r.job.scheduledStart?.slice(0, 10) === today);
@@ -104,6 +107,53 @@ export default async function OverviewPage() {
           tone="accent"
         />
       </section>
+
+      {stripeCash.connected ? (
+        <Card
+          className="mt-2"
+          title="In Stripe"
+          note={stripeCash.error || "Live from the shop's Stripe. This is cash, not invoices."}
+        >
+          {stripeCash.error ? (
+            <p className="muted">{stripeCash.error}</p>
+          ) : (
+            <>
+              <div className="grid grid-3">
+                <div className="stat-good">
+                  <p className="stat-label">Available now</p>
+                  <p className="stat-value">{formatMoney(stripeCash.availableCents)}</p>
+                  <p className="stat-note">Ready to pay out</p>
+                </div>
+                <div>
+                  <p className="stat-label">Pending</p>
+                  <p className="stat-value">{formatMoney(stripeCash.pendingCents)}</p>
+                  <p className="stat-note">Not yet available</p>
+                </div>
+                <div>
+                  <p className="stat-label">Charged this month</p>
+                  <p className="stat-value">{formatMoney(stripeCash.monthInCents)}</p>
+                  <p className="stat-note">Succeeded charges, minus refunds</p>
+                </div>
+              </div>
+              {stripeCash.payouts.length ? (
+                <ul className="list mt-2">
+                  {stripeCash.payouts.map((row) => (
+                    <li key={row.id || row.arrival}>
+                      <span>
+                        {row.status === "paid" ? "Paid out" : label(row.status) || row.status}
+                        {row.arrival ? ` · ${prettyDate(row.arrival)}` : ""}
+                      </span>
+                      <span className="money">{formatMoney(row.amountCents)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted mt-2">No payouts yet.</p>
+              )}
+            </>
+          )}
+        </Card>
+      ) : null}
 
       <div className="grid grid-2 mt-2">
         <Card

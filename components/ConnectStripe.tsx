@@ -35,11 +35,11 @@ export function ConnectStripeCallout() {
   return (
     <div className="connect-cta">
       <div>
-        <strong>Let customers pay invoices online.</strong>
+        <strong>See the cash that is actually in Stripe.</strong>
         <p>
-          Connect the shop's own Stripe account. That is the main way customers pay
-          an invoice by card. Square and PayPal are available too if that is what
-          the shop already uses.
+          Overview and Reports then show available balance, pending funds, and
+          payouts to the bank. About a minute: copy the shop&apos;s secret key in
+          Stripe and paste it in Settings.
         </p>
       </div>
       <ConnectStripeButton large />

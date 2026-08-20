@@ -156,7 +156,7 @@ export default async function SettingsPage({
         <div className="grid narrow">
           <Card
             title="Stripe"
-            note="The main way customers pay an invoice by card. Money lands in the shop's own Stripe account."
+            note="Read the shop's Stripe so Overview shows cash that actually landed, not just invoices you typed in."
             action={
               <span
                 className={`badge badge-${
@@ -206,54 +206,99 @@ export default async function SettingsPage({
                 {integrations.stripe.viaOAuth && process.env.STRIPE_WEBHOOK_SECRET ? (
                   <Banner>
                     <div>
-                      <strong>Online payments post on their own.</strong>
+                      <strong>Overview is reading this Stripe account.</strong>
                       <p className="mt-1">
-                        Sere records the payment when Stripe confirms it. You do not need to add a
-                        webhook in the shop's Stripe account.
+                        Available balance, pending funds, and payouts show on Overview and Reports.
+                        No webhook is needed for that.
                       </p>
                     </div>
                   </Banner>
                 ) : (
                   <Banner>
                     <div>
-                      <strong>Send Stripe your webhook.</strong>
+                      <strong>Cash view does not need a webhook.</strong>
                       <p className="mt-1">
-                        In Stripe, open Developers, then Webhooks, then add this endpoint and select the
-                        event <code>checkout.session.completed</code>.
-                      </p>
-                      <div className="copy-row mt-1">
-                        <span className="copy-value">{webhookUrl}</span>
-                        <button className="btn btn-secondary btn-sm" type="button" data-copy={webhookUrl}>Copy</button>
-                      </div>
-                      <p className="mt-1">
-                        Paste the signing secret it gives you (<code>whsec_...</code>) into the form below.
-                        Payments still get recorded without it, but the webhook is what catches a customer
-                        who closes the tab mid payment.
+                        Overview already reads the live Stripe balance with this key. A webhook is
+                        only if you also want invoice card checkout recorded when a tab is closed.
                       </p>
                     </div>
                   </Banner>
                 )}
               </>
-            ) : !demoShop ? (
+            ) : !demoShop && oneClick ? (
               <div className="connect-cta connect-cta-flush">
                 <div>
                   <strong>Connect the shop's Stripe.</strong>
                   <p>
-                    {oneClick
-                      ? "One click. Stripe asks the shop to approve Sere, then invoice links show Pay with Stripe as the big button. Money goes to their account."
-                      : "Paste the shop's Stripe secret key. Customers then see Pay with Stripe as the main button, and the money goes to that Stripe account."}
+                    One click. Stripe asks the shop to approve Sere, then Overview
+                    shows the live Stripe balance and payouts.
                   </p>
                 </div>
-                {oneClick ? <ConnectStripeButton large /> : (
-                  <button className="btn btn-stripe btn-connect-lg" type="submit" form="stripe-keys-form">
-                    Connect Stripe
-                  </button>
-                )}
+                <ConnectStripeButton large />
               </div>
+            ) : !demoShop ? (
+              <>
+                <ol className="setup-steps">
+                  <li>
+                    Open{" "}
+                    <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noreferrer">
+                      dashboard.stripe.com/apikeys
+                    </a>
+                    . Sign in as the shop.
+                  </li>
+                  <li>
+                    Reveal <strong>Secret key</strong>. Test keys start with{" "}
+                    <code>sk_test_</code>. Live keys start with <code>sk_live_</code>.
+                  </li>
+                  <li>Paste it below and tap Connect Stripe. Overview then shows the live balance.</li>
+                </ol>
+                <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
+                  <div className="field full">
+                    <label>Secret key</label>
+                    <input
+                      name="stripe_secret_key"
+                      type="password"
+                      placeholder="sk_test_... or sk_live_..."
+                      autoComplete="off"
+                      required
+                    />
+                    <p className="help">
+                      Stored encrypted. Sere never shows it again. Used to read balance and payouts.
+                    </p>
+                  </div>
+                  <details className="disclosure">
+                    <summary>Optional: webhook, so a closed tab still records the payment</summary>
+                    <p className="help mt-1">
+                      In Stripe, Developers → Webhooks → Add endpoint. Event{" "}
+                      <code>checkout.session.completed</code>. Paste the <code>whsec_...</code> it gives you.
+                    </p>
+                    <div className="copy-row mt-1">
+                      <span className="copy-value">{webhookUrl}</span>
+                      <button className="btn btn-secondary btn-sm" type="button" data-copy={webhookUrl}>
+                        Copy
+                      </button>
+                    </div>
+                    <div className="field full mt-2">
+                      <label>Webhook signing secret</label>
+                      <input
+                        name="stripe_webhook_secret"
+                        type="password"
+                        placeholder="whsec_..."
+                        autoComplete="off"
+                      />
+                    </div>
+                  </details>
+                  <div className="form-actions">
+                    <button className="btn btn-stripe btn-connect-lg" type="submit">
+                      Connect Stripe
+                    </button>
+                  </div>
+                </form>
+              </>
             ) : null}
 
-            {!demoShop ? (
-              <details className="disclosure" open={!oneClick && !integrations.stripe.connected}>
+            {!demoShop && (oneClick || integrations.stripe.connected) ? (
+              <details className="disclosure" open={false}>
                 <summary>{integrations.stripe.connected ? "Update with API keys" : "Or paste API keys"}</summary>
                 <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
                   <div className="field full">
@@ -288,8 +333,9 @@ export default async function SettingsPage({
 
           <p className="section-label mt-1">Also works with</p>
           <p className="muted">
-            Already on Square, PayPal, or QuickBooks? Connect those too. Customers still
-            see <strong>Pay with Stripe</strong> as the main button whenever Stripe is on.
+            Already on Square, PayPal, or QuickBooks? Connect those too. Stripe is for
+            the shop&apos;s cash view. Square and PayPal stay available if that is how
+            this shop already takes cards.
           </p>
 
           <Card

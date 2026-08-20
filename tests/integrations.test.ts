@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { decryptSecret, encryptSecret, maskSecret } from "../lib/crypto";
-import { encodeParams, readConnectState, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled, verifyWebhookSignature } from "../lib/stripe";
+import { encodeParams, readConnectState, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled, verifyWebhookSignature, usdCents, chargeNetCents } from "../lib/stripe";
 import { paypalAmount } from "../lib/paypal";
 import { verifySquareSignature } from "../lib/square";
 
@@ -103,6 +103,19 @@ test("webhook signatures are accepted only when they match and are recent", () =
   );
   assert.equal(verifyWebhookSignature({ payload, header: null, secret }), false);
   assert.equal(verifyWebhookSignature({ payload, header, secret: "" }), false);
+});
+
+test("Stripe cash sums the USD balance and net charges", () => {
+  assert.equal(usdCents([{ amount: 18420, currency: "usd" }]), 18420);
+  assert.equal(
+    usdCents([
+      { amount: 500, currency: "eur" },
+      { amount: 2200, currency: "usd" },
+    ]),
+    2200,
+  );
+  assert.equal(chargeNetCents({ amount: 10000, amount_refunded: 1500, status: "succeeded" }), 8500);
+  assert.equal(chargeNetCents({ amount: 10000, status: "failed" }), 0);
 });
 
 test("Square webhook signatures match HMAC of notification URL plus body", () => {

@@ -105,6 +105,88 @@ export function retrieveAccount(secretKey: string): Promise<StripeAccount> {
   return request<StripeAccount>(secretKey, "/account");
 }
 
+type StripeFund = { amount?: number; currency?: string };
+
+export function usdCents(funds?: StripeFund[] | null): number {
+  if (!funds?.length) return 0;
+  const usd = funds.find((row) => (row.currency || "usd").toLowerCase() === "usd") || funds[0];
+  return Number(usd.amount || 0);
+}
+
+export type StripeBalance = {
+  available?: StripeFund[];
+  pending?: StripeFund[];
+};
+
+export function retrieveBalance(
+  secretKey: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<StripeBalance> {
+  return request<StripeBalance>(secretKey, "/balance", { stripeAccount: opts.stripeAccount });
+}
+
+export type StripeCharge = {
+  id?: string;
+  amount?: number;
+  amount_refunded?: number;
+  status?: string;
+  created?: number;
+  description?: string | null;
+};
+
+export async function listCharges(
+  secretKey: string,
+  opts: { createdGte?: number; limit?: number; stripeAccount?: string } = {},
+): Promise<StripeCharge[]> {
+  const rows: StripeCharge[] = [];
+  let startingAfter: string | undefined;
+  const pageSize = 100;
+  const max = opts.limit && opts.limit > 0 ? opts.limit : 1000;
+  while (rows.length < max) {
+    const payload = await request<{ data?: StripeCharge[]; has_more?: boolean }>(
+      secretKey,
+      "/charges",
+      {
+        stripeAccount: opts.stripeAccount,
+        params: {
+          limit: Math.min(pageSize, max - rows.length),
+          starting_after: startingAfter,
+          created: opts.createdGte ? { gte: opts.createdGte } : undefined,
+        },
+      },
+    );
+    const page = payload.data || [];
+    rows.push(...page);
+    if (!payload.has_more || !page.length) break;
+    startingAfter = page[page.length - 1]?.id;
+    if (!startingAfter) break;
+  }
+  return rows;
+}
+
+export function chargeNetCents(charge: StripeCharge): number {
+  if (charge.status && charge.status !== "succeeded") return 0;
+  return Math.max(0, Number(charge.amount || 0) - Number(charge.amount_refunded || 0));
+}
+
+export type StripePayout = {
+  id?: string;
+  amount?: number;
+  status?: string;
+  arrival_date?: number;
+};
+
+export async function listPayouts(
+  secretKey: string,
+  opts: { limit?: number; stripeAccount?: string } = {},
+): Promise<StripePayout[]> {
+  const payload = await request<{ data?: StripePayout[] }>(secretKey, "/payouts", {
+    stripeAccount: opts.stripeAccount,
+    params: { limit: opts.limit || 5 },
+  });
+  return payload.data || [];
+}
+
 export type CheckoutSession = {
   id: string;
   url?: string | null;
