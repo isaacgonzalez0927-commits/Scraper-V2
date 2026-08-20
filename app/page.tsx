@@ -1,23 +1,31 @@
+import { Newsreader } from "next/font/google";
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
 import { TRADE_LIST } from "@/lib/business";
 
+const display = Newsreader({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-landing",
+  weight: ["400", "500", "600"],
+});
+
 const POINTS = [
   {
-    title: "Cash, not guesses",
-    body: "Every payment is a line in the ledger. An invoice turns paid only when the balance hits zero.",
+    title: "Cash that actually landed",
+    body: "Every card, check, and cash payment is a line in the ledger. An invoice is paid only when the balance hits zero.",
   },
   {
-    title: "Job to invoice in one click",
-    body: "Schedule the work, log the parts and labor, then bill it without retyping anything.",
+    title: "Job to invoice in one tap",
+    body: "Schedule the call, log the parts and labor, then bill it. Nobody retypes the work.",
   },
   {
-    title: "An assistant for the small stuff",
-    body: "Sere watches overdue invoices and today's jobs, and can move a date when you ask.",
+    title: "Ask it to move Friday",
+    body: "Overdue cash and today's jobs sit up top. Say “move the Johnson job to Friday” and it does.",
   },
   {
-    title: "Customers pay online",
-    body: "Connect the shop's Stripe. Square and PayPal sit underneath if that is what they already use.",
+    title: "They pay from the invoice",
+    body: "Connect the shop's Stripe. Square and PayPal are there too if that is already how you take cards.",
   },
 ];
 
@@ -25,7 +33,7 @@ const TRADES = TRADE_LIST.filter((trade) => trade.key !== "other").map((trade) =
 
 export default function LandingPage() {
   return (
-    <div className="landing">
+    <div className={`landing ${display.variable}`}>
       <header className="landing-nav">
         <Link href="/" className="brand" aria-label="Sere">
           <BrandLogo className="brand-lockup" />
@@ -39,16 +47,16 @@ export default function LandingPage() {
       <main className="landing-main">
         <section className="hero">
           <div className="hero-copy">
-            <h1>Know what you billed, what you collected, and what is still owed.</h1>
+            <h1>What you billed. What came in. What is still owed.</h1>
             <p className="hero-lede">
-              Jobs, invoices, and payments in one place. Built for HVAC, plumbing,
-              electrical, and the rest of the trades.
+              Sere is the book for a local shop. Jobs, invoices, and payments stay
+              together, so the number on the screen is the number in the bank.
             </p>
             <div className="hero-actions">
               <Link className="btn" href="/signup">Create your shop</Link>
-              <a className="btn btn-secondary" href="/demo">Open the demo</a>
+              <a className="btn btn-secondary" href="/demo">Try Harbor Air</a>
             </div>
-            <p className="hero-note">Harbor Air in Fort Myers. No sign in.</p>
+            <p className="hero-note">HVAC shop in Fort Myers. Open it with no account.</p>
           </div>
 
           <div className="hero-preview">
@@ -114,7 +122,7 @@ export default function LandingPage() {
 
       <div className="landing-dock">
         <Link className="btn" href="/signup">Create your shop</Link>
-        <a className="btn btn-secondary" href="/demo">Open the demo</a>
+        <a className="btn btn-secondary" href="/demo">Try Harbor Air</a>
       </div>
     </div>
   );
