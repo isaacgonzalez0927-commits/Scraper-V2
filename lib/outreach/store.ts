@@ -250,6 +250,46 @@ export async function recordOutcome(email: string, kind: OutcomeKind): Promise<b
   return true;
 }
 
+/**
+ * Sent messages whose delivery outcome is still unknown. Polling these is how
+ * bounces and complaints get recorded without a person in the loop.
+ */
+export async function awaitingDelivery(limit = 200): Promise<
+  Array<{ id: number; providerId: string; email: string }>
+> {
+  const result = await outreachClient().execute({
+    sql: `SELECT e.id, e.provider_id, p.email
+          FROM emails e
+          JOIN prospects p ON p.id = e.prospect_id
+          WHERE e.sent_at IS NOT NULL
+            AND e.provider_id <> ''
+            AND e.bounced_at IS NULL
+            AND e.complained_at IS NULL
+          ORDER BY e.sent_at DESC
+          LIMIT ?`,
+    args: [limit],
+  });
+  return result.rows.map((raw) => {
+    const row = raw as Row;
+    return {
+      id: Number(row.id),
+      providerId: text(row, "provider_id"),
+      email: text(row, "email"),
+    };
+  });
+}
+
+/** Writes a delivery outcome straight onto one email, by id. */
+export async function setDeliveryOutcome(
+  emailId: number,
+  kind: "bounced" | "complained",
+): Promise<void> {
+  await outreachClient().execute({
+    sql: `UPDATE emails SET ${OUTCOME_COLUMNS[kind]} = ? WHERE id = ? AND ${OUTCOME_COLUMNS[kind]} IS NULL`,
+    args: [nowISO(), emailId],
+  });
+}
+
 /** Everything sent, with its prospect, for scoring and retrieval. */
 export async function sentHistory(): Promise<SentEmail[]> {
   const result = await outreachClient().execute(

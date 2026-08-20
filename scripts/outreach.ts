@@ -16,8 +16,10 @@
 
 import { readFileSync } from "node:fs";
 import { finalBody, prospectReady, SERE, type Product } from "../lib/outreach/copy";
+import { circuitBreaker, pauseSeconds, planRun, sendingWindow } from "../lib/outreach/guard";
 import { nextVariant, pickWinners, variantStats } from "../lib/outreach/learn";
 import { draftEmail, novaCredentials } from "../lib/outreach/nova";
+import { fetchDeliveryEvent } from "../lib/outreach/poll";
 import {
   senderFromEnv,
   senderProblems,
@@ -27,6 +29,7 @@ import {
 import {
   addProspect,
   approveDraft,
+  awaitingDelivery,
   discardDraft,
   initOutreach,
   listProspects,
@@ -35,6 +38,7 @@ import {
   recordOutcome,
   saveDraft,
   sentHistory,
+  setDeliveryOutcome,
   unsubscribe,
   untouchedProspects,
   type OutcomeKind,
@@ -264,6 +268,155 @@ async function cmdOutcome(kind: string, email: string): Promise<void> {
   if (kind === "complained") console.log("Also opted them out.");
 }
 
+function has(name: string): boolean {
+  return process.argv.includes(`--${name}`);
+}
+
+/**
+ * Pulls delivery results back in so the breakers see reality. Runs on its own
+ * and as the first step of an autonomous run.
+ */
+async function cmdSync(): Promise<number> {
+  const sender = senderFromEnv();
+  if (!sender) {
+    console.log("Outreach sending is not configured, so there is nothing to sync.");
+    return 0;
+  }
+  const pending = await awaitingDelivery();
+  let changed = 0;
+  for (const row of pending) {
+    try {
+      const event = await fetchDeliveryEvent(sender.apiKey, row.providerId);
+      if (event === "bounced" || event === "complained") {
+        await setDeliveryOutcome(row.id, event);
+        await unsubscribe(row.email);
+        changed += 1;
+        console.log(`  ${event}: ${row.email}`);
+      }
+    } catch (error) {
+      console.error(`  could not check ${row.email}: ${(error as Error).message}`);
+      break;
+    }
+  }
+  console.log(`Synced ${pending.length} message(s), ${changed} new bounce/complaint.`);
+  return changed;
+}
+
+/**
+ * The autonomous loop: sync outcomes, decide whether it is safe to send, draft
+ * inside the day's headroom, and send paced out. No approval step — the
+ * validator and the breakers are the gate instead of a person.
+ *
+ * Cron it. It is safe to run more often than the cap allows, because the cap is
+ * enforced from what has actually been sent today, not from how often this runs.
+ */
+async function cmdRun(): Promise<void> {
+  const dry = has("dry-run");
+  const credentials = novaCredentials();
+  if (!credentials) throw new Error("Set OUTREACH_OPENAI_API_KEY (or OPENAI_API_KEY) first.");
+
+  const sender = senderFromEnv();
+  const senderIssues = senderProblems(sender, transactionalFromEnv());
+  if (!dry && (senderIssues.length || !sender)) {
+    console.error("Refusing to run:\n");
+    for (const problem of senderIssues) console.error(`  - ${problem}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log("1. syncing delivery outcomes");
+  if (!dry) await cmdSync();
+
+  let history = await sentHistory();
+  const plan = planRun(history, { batch: flag("limit", 0) || undefined });
+  for (const note of plan.notes) console.log(`   ${note}`);
+  if (plan.breaker.tripped) {
+    console.error("\nSTOPPED. Sending is unsafe right now:\n");
+    for (const reason of plan.breaker.reasons) console.error(`  - ${reason}`);
+    console.error(
+      "\nNothing will send until the recent numbers improve. Fix the list or " +
+        "the copy; do not raise the threshold.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  if (!plan.send) {
+    console.log("\nNothing to do. Cap reached for today.");
+    return;
+  }
+
+  console.log(`\n2. drafting up to ${plan.send}`);
+  const queue = await untouchedProspects(plan.send * 3);
+  const ready = queue.filter((prospect) => !prospectReady(prospect).length).slice(0, plan.send);
+  if (!ready.length) {
+    console.log("   no prospect has a researched fact — nothing to draft");
+    console.log("   add facts to the CSV and re-import; Nova will not invent them");
+    return;
+  }
+  const copy = product();
+  const variant = nextVariant(history, VARIANTS);
+  const queued: Array<{ id: number; to: string; subject: string; body: string }> = [];
+  for (const prospect of ready) {
+    try {
+      const result = await draftEmail(credentials, copy, prospect, pickWinners(history, prospect));
+      if (result.problems.length) {
+        console.log(`   ✗ ${prospect.email} — draft never came out clean, skipped`);
+        continue;
+      }
+      const id = dry ? 0 : await saveDraft(prospect.id, copy.key, variant, result.draft);
+      if (!dry) await approveDraft(id);
+      queued.push({
+        id,
+        to: prospect.email,
+        subject: result.draft.subject,
+        body: finalBody(result.draft, copy),
+      });
+      console.log(`   ✓ ${prospect.email} — "${result.draft.subject}"`);
+    } catch (error) {
+      console.log(`   ✗ ${prospect.email} — ${(error as Error).message}`);
+    }
+  }
+
+  if (!queued.length) {
+    console.log("\nNothing survived drafting. Nothing sent.");
+    return;
+  }
+  if (dry) {
+    console.log(`\n3. dry run — would send ${queued.length}, sending nothing`);
+    console.log(`   pacing would be ${pauseSeconds(queued.length)}s between sends`);
+    return;
+  }
+
+  const gap = pauseSeconds(queued.length);
+  console.log(`\n3. sending ${queued.length}, ${gap}s apart`);
+  let sent = 0;
+  for (const message of queued) {
+    try {
+      const result = await sendOutreachEmail(sender!, copy, message);
+      await markSent(message.id, result.providerId);
+      sent += 1;
+      console.log(`   → ${message.to}`);
+    } catch (error) {
+      console.error(`   stopped at ${message.to}: ${(error as Error).message}`);
+      process.exitCode = 1;
+      break;
+    }
+    // Re-check the breaker mid-batch so a complaint that lands during a run
+    // stops the rest of it.
+    if (sent % 10 === 0) {
+      history = await sentHistory();
+      const live = circuitBreaker(history);
+      if (live.tripped) {
+        console.error(`   stopping mid-batch: ${live.reasons.join(" ")}`);
+        break;
+      }
+    }
+    if (gap) await new Promise((resolve) => setTimeout(resolve, gap * 1000));
+  }
+  const window = sendingWindow(await sentHistory());
+  console.log(`\nSent ${sent}. Today: ${window.sentToday}/${window.dailyCap} (day ${window.day}).`);
+}
+
 async function cmdStats(): Promise<void> {
   const history = await sentHistory();
   if (!history.length) {
@@ -295,6 +448,17 @@ async function cmdStats(): Promise<void> {
   } else {
     console.log("\nNo winners yet, so Nova is drafting from rules alone.");
   }
+
+  const window = sendingWindow(history);
+  console.log(
+    `\nsending day ${window.day}, cap ${window.dailyCap}/day, ` +
+      `${window.sentToday} sent today`,
+  );
+  const breaker = circuitBreaker(history);
+  if (breaker.tripped) {
+    console.log("\nCIRCUIT BREAKER OPEN — autonomous runs will not send:");
+    for (const reason of breaker.reasons) console.log(`  - ${reason}`);
+  }
 }
 
 async function main(): Promise<void> {
@@ -319,6 +483,12 @@ async function main(): Promise<void> {
     }
     case "send":
       return cmdSend();
+    case "run":
+      return cmdRun();
+    case "sync": {
+      await cmdSync();
+      return;
+    }
     case "outcome":
       return cmdOutcome(rest[0] || "", rest[1] || "");
     case "unsubscribe": {
@@ -335,14 +505,21 @@ async function main(): Promise<void> {
           "",
           "  init                      create the outreach database",
           "  import <file.csv>         company,email,contact,trade,city,website,fact",
-          "  draft [--limit 10]        draft for prospects that have a fact",
+          "",
+          "  run [--limit N] [--dry-run]",
+          "                            autonomous: sync, check safety, draft, send",
+          "                            paced inside today's cap. Cron this.",
+          "  sync                      pull bounces and complaints from the provider",
+          "",
+          "  draft [--limit 10]        draft only, for review by hand",
           "  review                    read every pending draft",
           "  approve <id|all>          approve for sending",
           "  discard <id>              throw a draft away",
           "  send [--limit 10]         send approved drafts, slowly",
+          "",
           "  outcome <kind> <email>    replied | demo | signup | bounced | complained",
           "  unsubscribe <email>       never email them again",
-          "  stats                     reply rate, variants, what Nova learns from",
+          "  stats                     reply rate, variants, cap, breaker state",
         ].join("\n"),
       );
   }

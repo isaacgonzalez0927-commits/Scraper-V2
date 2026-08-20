@@ -66,22 +66,94 @@ offers one-click unsubscribe instead of the spam button.
 
 ---
 
-## The loop
+## Autonomous mode
+
+One command does the whole cycle with nobody in the loop. Cron it.
 
 ```bash
 npm run outreach init
 npm run outreach import prospects.csv
+
+npm run outreach run -- --dry-run    # see the plan, send nothing
+npm run outreach run                 # sync, check safety, draft, send
+```
+
+`run` does four things in order:
+
+1. **Sync.** Pulls delivery results from the provider so bounces and complaints
+   land in the database before anything decides to send.
+2. **Check safety.** If a circuit breaker is open, it sends nothing and exits
+   non-zero so cron surfaces it.
+3. **Draft.** Only for prospects that have a fact, only up to today's headroom.
+   Anything the validator won't pass is dropped rather than sent.
+4. **Send.** Paced, and it re-checks the breaker every ten messages so a
+   complaint landing mid-batch stops the rest of it.
+
+It is safe to run more often than the cap allows. The cap is measured from what
+was actually sent today, not from how often the command runs.
+
+```cron
+0 14 * * 1-5  cd /path/to/sere && npm run outreach run >> /var/log/outreach.log 2>&1
+```
+
+Weekdays only, once a day, mid-morning in your prospects' timezone.
+
+### What autonomous does not mean
+
+It does not mean "send as fast as possible." Volume ramps on a warmup schedule,
+because mailbox providers judge a new domain on trend:
+
+| Days sending | Cold emails per day |
+| -----------: | ------------------: |
+| 1–3 | 20 |
+| 4–7 | 40 |
+| 8–14 | 75 |
+| 15–21 | 120 |
+| 22–30 | 200 |
+| 31+ | 300 |
+
+And it stops itself. Sending halts when any of these is true:
+
+- **2 spam complaints** in the last 500 sends. Two is a pattern, not luck.
+- **Complaint rate over 0.3%** once there are 100+ sends. Gmail treats 0.1% as
+  the danger line.
+- **Bounce rate over 5%** once there are 20+ sends. That means a scraped or
+  stale list.
+
+When a breaker opens, fix the list or the copy. Do not raise the threshold — the
+threshold is the only thing standing between a bad list and a dead domain.
+
+`npm run outreach stats` shows the current cap, today's count, and whether a
+breaker is open.
+
+### What still needs a human
+
+Replies and signups. A reply arrives in a mailbox, not in the sending API, so
+catching it automatically needs an inbox connection (IMAP or an inbound-email
+provider) that does not exist yet. Bounces and complaints — the two signals the
+breakers read — are pulled automatically.
+
+That split is deliberate: the autonomous path never depends on the good
+outcomes, only on the dangerous ones.
+
+```bash
+npm run outreach outcome replied elena@harborair.example
+npm run outreach outcome signup  elena@harborair.example
+npm run outreach outcome demo    ray@gulfplumb.example
+```
+
+Recording replies is what teaches Nova. Skip it and it keeps drafting from rules
+alone forever.
+
+## Driving it by hand
+
+If you'd rather read every email before it goes:
+
+```bash
 npm run outreach draft -- --limit 10
 npm run outreach review
 npm run outreach approve all
 npm run outreach send -- --limit 10
-
-# then, as things come back — this is the part that teaches Nova
-npm run outreach outcome demo    ray@gulfplumb.example
-npm run outreach outcome replied elena@harborair.example
-npm run outreach outcome signup  elena@harborair.example
-npm run outreach outcome complained someone@angry.example
-
 npm run outreach stats
 ```
 
