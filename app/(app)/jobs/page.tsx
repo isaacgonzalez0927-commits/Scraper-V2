@@ -34,7 +34,12 @@ export default async function JobsPage({
       path="/jobs"
       title="Jobs"
       sub={<p className="page-sub">{voice.jobsSub}</p>}
-      actions={<a className="btn" href="/jobs/new">New job</a>}
+      actions={
+        <>
+          <a className="btn btn-secondary" href="/api/export/jobs">Export CSV</a>
+          <a className="btn" href="/jobs/new">New job</a>
+        </>
+      }
     >
       <Tabs tabs={tabs} active={status || ""} />
       {rows.length ? (

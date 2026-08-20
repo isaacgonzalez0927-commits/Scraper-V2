@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signupAction } from "../actions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Banner } from "@/components/ui";
 import { TRADE_LIST } from "@/lib/business";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 const STRIPE_KEYS = "https://dashboard.stripe.com/apikeys";
 const SQUARE_KEYS = "https://developer.squareup.com/apps";
+const OPENAI_KEYS = "https://platform.openai.com/api-keys";
 
 export default async function SignupPage({
   searchParams,
@@ -20,11 +22,12 @@ export default async function SignupPage({
       <div className="auth-card auth-wide">
         <div className="brand">
           <BrandLogo className="brand-lockup" />
+          <ThemeToggle />
         </div>
         <h1 className="auth-title">Create your shop</h1>
         <p className="auth-sub">
-          Shop name and an account are enough. Trade and Stripe or Square are
-          optional — skip them and set them later.
+          Shop name and an account are enough. Trade, Stripe, Square, and OpenAI
+          are optional — skip them and set them later.
         </p>
         <Banner error={q.error} />
         <form action={signupAction} className="stack">
@@ -73,10 +76,10 @@ export default async function SignupPage({
               Stripe or Square <span className="optional-tag">Optional</span>
             </legend>
             <p className="signup-benefit">
-              If the shop already takes cards in Stripe or Square, paste a key
-              so Overview shows cash that actually landed — available, pending,
-              and payouts to the bank — next to invoices you type in Sere. This
-              is for you, not your customers. Skip and connect later in Settings.
+              If the shop already takes cards in Stripe or Square, paste the key
+              here. Overview then shows cash that actually landed. This is for
+              you, not your customers. Skip and connect later — the paste box
+              is on Overview too.
             </p>
             <div className="signup-keys">
               <div className="signup-key">
@@ -91,7 +94,7 @@ export default async function SignupPage({
                   />
                 </label>
                 <p className="help">
-                  Paste the secret key so Overview can show live Stripe cash.{" "}
+                  Reveal Secret key in Stripe, copy it, paste it here.{" "}
                   <a href={STRIPE_KEYS} target="_blank" rel="noreferrer">Get the key from Stripe</a>.
                 </p>
               </div>
@@ -107,8 +110,39 @@ export default async function SignupPage({
                   />
                 </label>
                 <p className="help">
-                  Paste the access token so Overview can show live Square cash.{" "}
+                  Credentials, then Production, copy Access token, paste it here.{" "}
                   <a href={SQUARE_KEYS} target="_blank" rel="noreferrer">Get the key from Square</a>.
+                </p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="choice-set signup-optional">
+            <legend>
+              Sere assistant <span className="optional-tag">Optional</span>
+            </legend>
+            <p className="signup-benefit">
+              Skip this if Sere already has an OpenAI key on the server. Paste
+              your own only if you want GPT billed to you. Completing or moving
+              a job still goes through Sere. Cap spend in OpenAI — $5 a month is
+              enough for gpt-4o-mini.
+            </p>
+            <div className="signup-keys">
+              <div className="signup-key">
+                <label>
+                  Connect OpenAI
+                  <input
+                    name="openai_api_key"
+                    type="password"
+                    autoComplete="off"
+                    placeholder="sk-... or sk-proj-..."
+                    spellCheck={false}
+                  />
+                </label>
+                <p className="help">
+                  Optional. <a href={OPENAI_KEYS} target="_blank" rel="noreferrer">Get an API key from OpenAI</a>
+                  {" "}·{" "}
+                  <a href="https://platform.openai.com/settings/organization/limits" target="_blank" rel="noreferrer">Set a monthly budget</a>.
                 </p>
               </div>
             </div>

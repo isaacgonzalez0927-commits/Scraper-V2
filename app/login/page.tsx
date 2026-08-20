@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { loginAction } from "../actions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Banner } from "@/components/ui";
 import { boot } from "@/lib/boot";
 
@@ -27,6 +28,7 @@ export default async function LoginPage({
       <div className="auth-card">
         <div className="brand">
           <BrandLogo className="brand-lockup" />
+          <ThemeToggle />
         </div>
         <h1 className="auth-title">Sign in</h1>
         <p className="auth-sub">Or skip it and look around the Harbor Air demo first.</p>

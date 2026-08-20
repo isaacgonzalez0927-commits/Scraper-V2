@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { decryptSecret, encryptSecret, maskSecret } from "../lib/crypto";
+import { csvCell, csvFileName, csvTable } from "../lib/csv";
+import { DEFAULT_OPENAI_MODEL, looksLikeOpenAIKey, openaiFromEnv } from "../lib/openai";
 import { encodeParams, looksLikeStripeSecret, readConnectState, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled, verifyWebhookSignature, usdCents, chargeNetCents } from "../lib/stripe";
 import { paypalAmount } from "../lib/paypal";
 import { squarePaymentNetCents, verifySquareSignature } from "../lib/square";
@@ -162,4 +164,39 @@ test("PayPal amounts are two-decimal dollars from integer cents", () => {
   assert.equal(paypalAmount(12900), "129.00");
   assert.equal(paypalAmount(1), "0.01");
   assert.equal(paypalAmount(0), "0.00");
+});
+
+test("OpenAI keys are recognised and Stripe secrets are rejected", () => {
+  assert.equal(looksLikeOpenAIKey("sk-proj-abcdefghijklmnopqrstuv"), true);
+  assert.equal(looksLikeOpenAIKey("sk-abcdefghijklmnopqrstuvwxyz"), true);
+  assert.equal(looksLikeOpenAIKey("sk_live_abc"), false);
+  assert.equal(looksLikeOpenAIKey("sk-short"), false);
+  assert.equal(looksLikeOpenAIKey(""), false);
+});
+
+test("a deployment OPENAI_API_KEY turns the assistant on without a shop paste", () => {
+  const previous = process.env.OPENAI_API_KEY;
+  const previousModel = process.env.OPENAI_MODEL;
+  process.env.OPENAI_API_KEY = "sk-proj-abcdefghijklmnopqrstuv";
+  delete process.env.OPENAI_MODEL;
+  assert.deepEqual(openaiFromEnv(), {
+    apiKey: "sk-proj-abcdefghijklmnopqrstuv",
+    model: DEFAULT_OPENAI_MODEL,
+  });
+  process.env.OPENAI_API_KEY = "sk_live_not_openai";
+  assert.equal(openaiFromEnv(), null);
+  if (previous === undefined) delete process.env.OPENAI_API_KEY;
+  else process.env.OPENAI_API_KEY = previous;
+  if (previousModel === undefined) delete process.env.OPENAI_MODEL;
+  else process.env.OPENAI_MODEL = previousModel;
+});
+
+test("CSV cells quote commas and quotes", () => {
+  assert.equal(csvCell("Harbor Air"), "Harbor Air");
+  assert.equal(csvCell("AC, leak"), '"AC, leak"');
+  assert.equal(csvCell('He said "ok"'), '"He said ""ok"""');
+  assert.equal(csvFileName("payments", "2026-08-20"), "sere-payments-2026-08-20.csv");
+  const table = csvTable(["Name", "Amount"], [["Riverside, LLC", "120.00"]]);
+  assert.equal(table.startsWith("\uFEFF"), true);
+  assert.equal(table.includes('"Riverside, LLC"'), true);
 });

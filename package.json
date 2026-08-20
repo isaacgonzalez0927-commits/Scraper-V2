@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test tests/money.test.ts tests/invoices.test.ts tests/db.test.ts tests/integrations.test.ts tests/assistant.test.ts",
+    "test": "tsx --test tests/money.test.ts tests/invoices.test.ts tests/db.test.ts tests/integrations.test.ts tests/assistant.test.ts tests/theme.test.ts",
     "process-logos": "node scripts/process-sere-logo.mjs"
   },
   "dependencies": {

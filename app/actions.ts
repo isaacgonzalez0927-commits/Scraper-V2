@@ -20,6 +20,7 @@ import { disconnectIntegration, emailConfig, saveIntegration } from "@/lib/integ
 import { parseBusinessType, tradeCopy } from "@/lib/business";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
+import { looksLikeOpenAIKey, validateOpenAIKey, DEFAULT_OPENAI_MODEL } from "@/lib/openai";
 import { paypalAccountLabel } from "@/lib/paypal";
 import { quickBooksCompanyName } from "@/lib/quickbooks";
 import { listSquareLocations, squareAccountLabel } from "@/lib/square";
@@ -87,6 +88,21 @@ async function maybeSaveSquare(organizationId: number, accessToken: string): Pro
   }
 }
 
+async function maybeSaveOpenAI(organizationId: number, apiKey: string): Promise<void> {
+  if (!looksLikeOpenAIKey(apiKey)) return;
+  try {
+    const label = await validateOpenAIKey(apiKey);
+    await saveIntegration(
+      organizationId,
+      "openai",
+      { apiKey, model: DEFAULT_OPENAI_MODEL },
+      label,
+    );
+  } catch {
+    // Shop is created either way. They can paste a working key in Settings.
+  }
+}
+
 export async function loginAction(form: FormData) {
   await boot();
   const email = str(form, "email").toLowerCase();
@@ -137,6 +153,7 @@ export async function signupAction(form: FormData) {
   }
   await maybeSaveStripe(org.id, str(form, "stripe_secret_key"));
   await maybeSaveSquare(org.id, str(form, "square_access_token"));
+  await maybeSaveOpenAI(org.id, str(form, "openai_api_key"));
   await createSession(user.id, org.id);
   redirect("/overview");
 }
@@ -551,6 +568,19 @@ export async function saveSettingsAction(form: FormData) {
 
 const INTEGRATIONS_TAB = "/settings?tab=integrations";
 
+const CONNECT_RETURNS = new Set(["/overview", "/reports", "/payments", INTEGRATIONS_TAB]);
+
+function connectReturn(form: FormData): string {
+  const next = str(form, "next");
+  return CONNECT_RETURNS.has(next) ? next : INTEGRATIONS_TAB;
+}
+
+function connectRedirect(form: FormData, kind: "ok" | "error", message: string): never {
+  const base = connectReturn(form);
+  const join = base.includes("?") ? "&" : "?";
+  redirect(`${base}${join}${kind}=${encodeURIComponent(message)}`);
+}
+
 function demoBlocked(): string {
   return `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
     "Create your own shop to connect accounts. The demo is shared, so keys cannot be saved here.",
@@ -582,13 +612,13 @@ export async function connectStripeAction(form: FormData) {
   const publishableKey = str(form, "stripe_publishable_key");
   const webhookSecret = str(form, "stripe_webhook_secret");
   if (!secretKey) {
-    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Paste your Stripe secret key first.")}`);
+    connectRedirect(form, "error", "Paste your Stripe secret key first.");
   }
   if (!looksLikeStripeSecret(secretKey)) {
-    redirect(
-      `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
-        "That does not look like a Stripe secret key. It starts with sk_live_, sk_test_, or rk_live_.",
-      )}`,
+    connectRedirect(
+      form,
+      "error",
+      "That does not look like a Stripe secret key. It starts with sk_live_, sk_test_, or rk_live_.",
     );
   }
 
@@ -599,7 +629,7 @@ export async function connectStripeAction(form: FormData) {
   } catch (error) {
     failure = (error as Error).message;
   }
-  if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
+  if (failure) connectRedirect(form, "error", failure);
 
   await saveIntegration(org.id, "stripe", {
     secretKey,
@@ -607,7 +637,7 @@ export async function connectStripeAction(form: FormData) {
     webhookSecret,
     connectedVia: "keys",
   }, label);
-  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Stripe connected to ${label}.`)}`);
+  connectRedirect(form, "ok", `Stripe connected to ${label}.`);
 }
 
 export async function disconnectStripeAction() {
@@ -627,34 +657,75 @@ export async function connectSquareAction(form: FormData) {
   const accessToken = str(form, "square_access_token");
   let locationId = str(form, "square_location_id");
   const webhookSignatureKey = str(form, "square_webhook_key");
-  const sandbox = on(form, "square_sandbox");
+  const sandboxChosen = str(form, "square_sandbox") !== "";
+  const sandboxOnly = on(form, "square_sandbox");
   if (!accessToken) {
-    redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent("Paste your Square access token first.")}`);
+    connectRedirect(form, "error", "Paste your Square access token first.");
   }
   let failure = "";
   let label = "";
-  try {
-    const locations = await listSquareLocations(accessToken, sandbox);
-    if (!locationId) locationId = locations[0]?.id || "";
-    if (!locationId) throw new Error("This Square account has no active location.");
-    label = await squareAccountLabel(accessToken, sandbox);
-  } catch (error) {
-    failure = (error as Error).message;
+  let sandbox = sandboxOnly;
+  const tries = sandboxChosen ? [sandboxOnly] : [false, true];
+  for (const env of tries) {
+    try {
+      const locations = await listSquareLocations(accessToken, env);
+      if (!locationId) locationId = locations[0]?.id || "";
+      if (!locationId) throw new Error("This Square account has no active location.");
+      label = await squareAccountLabel(accessToken, env);
+      sandbox = env;
+      failure = "";
+      break;
+    } catch (error) {
+      failure = (error as Error).message;
+    }
   }
-  if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
+  if (failure) connectRedirect(form, "error", failure);
   await saveIntegration(
     org.id,
     "square",
     { accessToken, locationId, webhookSignatureKey, sandbox },
     label,
   );
-  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Square connected to ${label}.`)}`);
+  connectRedirect(form, "ok", `Square connected to ${label}.`);
 }
 
 export async function disconnectSquareAction() {
   const { org } = await requireContext();
   await disconnectIntegration(org.id, "square");
   redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("Square disconnected.")}`);
+}
+
+export async function connectOpenAIAction(form: FormData) {
+  const { org, user } = await requireContext();
+  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
+  const apiKey = str(form, "openai_api_key");
+  const model = str(form, "openai_model") || DEFAULT_OPENAI_MODEL;
+  if (!apiKey) {
+    connectRedirect(form, "error", "Paste your OpenAI API key first.");
+  }
+  if (!looksLikeOpenAIKey(apiKey)) {
+    connectRedirect(
+      form,
+      "error",
+      "That does not look like an OpenAI key. It starts with sk- or sk-proj-.",
+    );
+  }
+  let failure = "";
+  let label = "";
+  try {
+    label = await validateOpenAIKey(apiKey);
+  } catch (error) {
+    failure = (error as Error).message;
+  }
+  if (failure) connectRedirect(form, "error", failure);
+  await saveIntegration(org.id, "openai", { apiKey, model }, label);
+  connectRedirect(form, "ok", `OpenAI connected. The Sere assistant can use GPT now.`);
+}
+
+export async function disconnectOpenAIAction() {
+  const { org } = await requireContext();
+  await disconnectIntegration(org.id, "openai");
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("OpenAI disconnected. The assistant is rules-only again.")}`);
 }
 
 export async function connectPaypalAction(form: FormData) {

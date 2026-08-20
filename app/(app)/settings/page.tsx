@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import {
   connectEmailAction,
+  connectOpenAIAction,
   connectPaypalAction,
   connectQuickbooksAction,
   connectSquareAction,
   connectStripeAction,
   disconnectEmailAction,
+  disconnectOpenAIAction,
   disconnectPaypalAction,
   disconnectQuickbooksAction,
   disconnectSquareAction,
@@ -14,7 +16,8 @@ import {
   saveSettingsAction,
   sendTestEmailAction,
 } from "@/app/actions";
-import { ConnectStripeButton, SquareKeyLink, StripeKeyLink } from "@/components/ConnectStripe";
+import { ConnectStripeButton, OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, StripeKeyLink } from "@/components/ConnectStripe";
+import { ThemeChooser } from "@/components/ThemeToggle";
 import { Banner, Card } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -73,7 +76,8 @@ export default async function SettingsPage({
         integrations.email.unreadable ||
         integrations.square.unreadable ||
         integrations.paypal.unreadable ||
-        integrations.quickbooks.unreadable) ? (
+        integrations.quickbooks.unreadable ||
+        integrations.openai.unreadable) ? (
         <Banner warn="Saved credentials could not be read. This happens when SERE_SECRET_KEY changes. Paste the keys again to reconnect." />
       ) : null}
 
@@ -243,9 +247,9 @@ export default async function SettingsPage({
             ) : !demoShop ? (
               <>
                 <p className="help">
-                  Copy the Secret key from Stripe, paste it below, tap Connect Stripe.
-                  Test keys start with <code>sk_test_</code>. Live keys start with{" "}
-                  <code>sk_live_</code>. <StripeKeyLink />.
+                  Reveal <strong>Secret key</strong>, copy it, paste it below, tap
+                  Connect Stripe. Test keys start with <code>sk_test_</code>. Live
+                  keys start with <code>sk_live_</code>. Need it? <StripeKeyLink />.
                 </p>
                 <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
                   <div className="field full">
@@ -328,9 +332,9 @@ export default async function SettingsPage({
 
           <p className="section-label mt-1">Also works with</p>
           <p className="muted">
-            Square is the same idea: open the keys page, paste the access token,
-            then Overview shows cash that actually landed in Square. PayPal and
-            QuickBooks stay optional extras.
+            Square is the same idea: paste the access token and tap Connect Square.
+            Overview then shows cash that actually landed in Square. OpenAI is for
+            the Sere assistant. PayPal and QuickBooks stay optional extras.
           </p>
 
           <Card
@@ -436,6 +440,141 @@ export default async function SettingsPage({
                   </form>
                 </>
               )}
+          </Card>
+
+          <Card
+            id="openai"
+            title="Sere assistant"
+            note="GPT answers in English about this shop. Completing or moving a job still goes through Sere. gpt-4o-mini plus a $5 monthly budget in OpenAI is enough."
+            action={
+              <span
+                className={`badge badge-${
+                  integrations.openai.connected ? "paid" : integrations.openai.unreadable ? "partial" : "draft"
+                }`}
+              >
+                {integrations.openai.connected
+                  ? "Connected"
+                  : integrations.openai.unreadable
+                    ? "Needs reconnecting"
+                    : "Not connected"}
+              </span>
+            }
+          >
+            {integrations.openai.connected ? (
+              <>
+                <div className="kv">
+                  <div className="kv-row">
+                    <span className="kv-key">Account</span>
+                    <span className="kv-value">{integrations.openai.label}</span>
+                  </div>
+                  {integrations.openai.updatedAt ? (
+                    <div className="kv-row">
+                      <span className="kv-key">Connected on</span>
+                      <span className="kv-value">{prettyDate(integrations.openai.updatedAt)}</span>
+                    </div>
+                  ) : null}
+                  <div className="kv-row">
+                    <span className="kv-key">Connected with</span>
+                    <span className="kv-value">
+                      {integrations.openai.fromEnv
+                        ? "Deployment environment variable"
+                        : "API key"}
+                    </span>
+                  </div>
+                </div>
+                <Banner>
+                  <div>
+                    <strong>
+                      {integrations.openai.fromEnv
+                        ? "The assistant is using the deployment OpenAI key."
+                        : "The assistant can use GPT on this shop."}
+                    </strong>
+                    <p className="mt-1">
+                      {integrations.openai.fromEnv
+                        ? "All shops share this key, including the demo. Set a monthly budget in OpenAI so a busy week cannot run past it. $5 is enough for gpt-4o-mini."
+                        : "Questions about the board go to this shop's OpenAI account. The model cannot write jobs or invoices on its own."}{" "}
+                      <OpenAILimitsLink />.
+                    </p>
+                  </div>
+                </Banner>
+                {integrations.openai.connected && !integrations.openai.fromEnv && !demoShop ? (
+                  <form action={disconnectOpenAIAction} className="mt-2">
+                    <button className="btn btn-ghost btn-sm" type="submit">Disconnect OpenAI</button>
+                  </form>
+                ) : null}
+              </>
+            ) : demoShop ? (
+              <p className="muted">
+                Create your shop to paste a shop key. A deployment{" "}
+                <code>OPENAI_API_KEY</code> also turns GPT on for every shop,
+                including this demo.
+              </p>
+            ) : (
+              <>
+                <p className="help">
+                  Put <code>OPENAI_API_KEY</code> on the server, or paste a key
+                  below. Use gpt-4o-mini and <OpenAILimitsLink /> — $5 a month
+                  is plenty. Starts with <code>sk-</code> or <code>sk-proj-</code>.{" "}
+                  <OpenAIKeyLink />.
+                </p>
+                <form action={connectOpenAIAction} className="form-grid mt-2">
+                  <div className="field full">
+                    <label>API key</label>
+                    <input
+                      name="openai_api_key"
+                      type="password"
+                      autoComplete="off"
+                      required
+                      placeholder="sk-... or sk-proj-..."
+                      spellCheck={false}
+                    />
+                    <p className="help">
+                      Stored encrypted. Sere never shows it again. Used only for
+                      the assistant on this shop.
+                    </p>
+                  </div>
+                  <details className="disclosure">
+                    <summary>Optional: model</summary>
+                    <div className="field full mt-2">
+                      <label>Model</label>
+                      <input
+                        name="openai_model"
+                        defaultValue="gpt-4o-mini"
+                        placeholder="gpt-4o-mini"
+                        autoComplete="off"
+                      />
+                      <p className="help">Leave gpt-4o-mini if you are capping spend at a few dollars a month.</p>
+                    </div>
+                  </details>
+                  <div className="form-actions">
+                    <button className="btn btn-openai btn-connect-lg" type="submit">
+                      Connect OpenAI
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+            {!demoShop && integrations.openai.fromEnv ? (
+              <details className="disclosure">
+                <summary>Or paste a shop key to bill this shop separately</summary>
+                <form action={connectOpenAIAction} className="form-grid mt-2">
+                  <div className="field full">
+                    <label>API key</label>
+                    <input
+                      name="openai_api_key"
+                      type="password"
+                      autoComplete="off"
+                      required
+                      placeholder="sk-... or sk-proj-..."
+                      spellCheck={false}
+                    />
+                  </div>
+                  <div className="form-actions">
+                    <button className="btn" type="submit">Use this shop&apos;s key</button>
+                  </div>
+                </form>
+              </details>
+            ) : null}
           </Card>
 
           <Card
@@ -682,6 +821,14 @@ export default async function SettingsPage({
               <p className="help">Leave the password fields empty to keep your current password.</p>
             </div>
           </form>
+          <Card title="Appearance">
+            <p className="help">
+              Light, dark, or match the phone. This stays on this browser.
+            </p>
+            <div className="mt-2">
+              <ThemeChooser />
+            </div>
+          </Card>
           <Card title="Session">
             <form action={logoutAction}>
               <button className="btn btn-secondary" type="submit">Sign out</button>

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { ConnectCashCallout } from "@/components/ConnectStripe";
-import { Blank, Empty, RecordTable, SearchField, Stat } from "@/components/ui";
+import { Blank, Banner, Empty, RecordTable, SearchField, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -13,10 +13,10 @@ import { customers, invoices, payments } from "@/lib/schema";
 export default async function PaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; error?: string; ok?: string }>;
 }) {
   const { org, shell } = await loadApp();
-  const { q } = await searchParams;
+  const { q, error, ok } = await searchParams;
   const term = (q || "").trim();
   const integrations = await integrationStatus(org.id);
   const rows = await db()
@@ -42,10 +42,17 @@ export default async function PaymentsPage({
       path="/payments"
       title="Payments"
       sub={<p className="page-sub">Cash that actually arrived. Voided payments drop out of every report.</p>}
-      actions={<a className="btn" href="/payments/new">Record payment</a>}
+      actions={
+        <>
+          <a className="btn btn-secondary" href="/api/export/payments">Export CSV</a>
+          <a className="btn" href="/payments/new">Record payment</a>
+        </>
+      }
     >
+      <Banner error={error} ok={ok} />
       {!shell.isDemo ? (
         <ConnectCashCallout
+          next="/payments"
           stripe={integrations.stripe.connected}
           square={integrations.square.connected}
         />

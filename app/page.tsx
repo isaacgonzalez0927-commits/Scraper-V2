@@ -1,6 +1,7 @@
 import { Newsreader } from "next/font/google";
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { TRADE_LIST } from "@/lib/business";
 
 const display = Newsreader({
@@ -25,7 +26,7 @@ const POINTS = [
   },
   {
     title: "See the cash in Stripe or Square",
-    body: "Connect Stripe or Square. Overview then shows what actually landed.",
+    body: "Paste the key on Overview, tap Connect Stripe. Then you see what actually landed.",
   },
 ];
 
@@ -39,6 +40,7 @@ export default function LandingPage() {
           <BrandLogo className="brand-lockup" />
         </Link>
         <nav>
+          <ThemeToggle />
           <Link href="/login">Sign in</Link>
           <Link className="btn" href="/signup">Start free</Link>
         </nav>

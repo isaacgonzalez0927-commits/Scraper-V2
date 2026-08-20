@@ -4,9 +4,10 @@ Every shop connects its own accounts. Stripe and Square are for the shop's books
 Sere reads live payments and payouts so Overview is accurate. Email goes out from
 the shop's own domain.
 
-Shop owners do this from **Settings**, then **Integrations**, or tap **Connect Stripe**
-/ **Connect Square** on Overview, Reports, and Payments. Copy the key from Stripe or
-Square, paste it, tap Connect.
+Shop owners paste the secret on **Overview** (or Reports, Payments, Settings) and tap
+**Connect Stripe**. That is the connect action. A small **Get the key from Stripe**
+link opens Stripe in a new tab so they can copy it — that link is not the button
+that connects.
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
 key derived from `SERE_SECRET_KEY`. Nothing shows a saved secret back on screen. If you
@@ -192,9 +193,13 @@ fallback, so money cannot land in the wrong account.
 | `RESEND_API_KEY` | Resend API key |
 | `SERE_EMAIL_FROM` | From address for outgoing email |
 | `SERE_EMAIL_FROM_NAME` | From name for outgoing email |
+| `OPENAI_API_KEY` | Turns on GPT for the Sere assistant on every shop |
+| `OPENAI_MODEL` | Optional. Defaults to `gpt-4o-mini` |
 
 The Integrations screen labels these as coming from the deployment environment and does
-not let you disconnect them from inside the app.
+not let you disconnect them from inside the app. For OpenAI, set a monthly budget in
+[Usage limits](https://platform.openai.com/settings/organization/limits). $5 is enough
+for gpt-4o-mini on a shop this size.
 
 ---
 

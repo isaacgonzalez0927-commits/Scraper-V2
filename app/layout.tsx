@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { THEME_BOOT, THEME_DARK_COLOR, THEME_LIGHT_COLOR } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +14,6 @@ export const metadata: Metadata = {
   appleWebApp: {
     title: "Sere",
     capable: true,
-    // The app chrome is light, so a light status bar with dark text blends in.
     statusBarStyle: "default",
   },
   formatDetection: { telephone: false },
@@ -21,7 +21,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_LIGHT_COLOR },
+    { media: "(prefers-color-scheme: dark)", color: THEME_DARK_COLOR },
+  ],
   width: "device-width",
   initialScale: 1,
   /* Let the page reach under the notch and home indicator; padding handles the rest. */
@@ -30,8 +33,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
+        <Script id="sere-theme" strategy="beforeInteractive">
+          {THEME_BOOT}
+        </Script>
         {children}
         <Script src="/sere.js" strategy="afterInteractive" />
       </body>

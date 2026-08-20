@@ -5,6 +5,21 @@ import type { AssistantBrief, AssistantLink, AssistantReply } from "@/lib/assist
 
 type ChatItem = { role: "user" | "sere"; text: string; links: AssistantLink[]; did?: string };
 
+const CHAT_KEY = "sere-assistant-v1";
+const CHAT_CAP = 40;
+
+function loadChat(): ChatItem[] {
+  try {
+    const raw = localStorage.getItem(CHAT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as ChatItem[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(-CHAT_CAP);
+  } catch {
+    return [];
+  }
+}
+
 export function AssistantDock({
   brief,
   tradeName,
@@ -19,6 +34,18 @@ export function AssistantDock({
   const end = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const badge = brief.alerts.length;
+
+  useEffect(() => {
+    setItems(loadChat());
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAT_KEY, JSON.stringify(items.slice(-CHAT_CAP)));
+    } catch {
+      // Private mode or quota. Chat still works for this session.
+    }
+  }, [items]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("locked", open);
@@ -38,6 +65,26 @@ export function AssistantDock({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  useEffect(() => {
+    function onSlash(event: KeyboardEvent) {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setOpen(true);
+    }
+    window.addEventListener("keydown", onSlash);
+    return () => window.removeEventListener("keydown", onSlash);
+  }, []);
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
@@ -94,7 +141,7 @@ export function AssistantDock({
           <section className="assistant-panel" role="dialog" aria-label="Sere assistant">
             <header className="assistant-head">
               <div>
-                <p className="assistant-kicker">Sere</p>
+                <p className="assistant-kicker">{brief.gpt ? "Sere · GPT" : "Sere"}</p>
                 <h2>{brief.greeting}</h2>
                 <p className="tiny">{brief.summary}</p>
               </div>
@@ -116,6 +163,12 @@ export function AssistantDock({
               ) : (
                 <p className="muted">Nothing needs you right now. Ask me to move a job or pull cash numbers.</p>
               )}
+              {!brief.gpt ? (
+                <p className="tiny">
+                  Sere is on rules. <a href="/settings?tab=integrations#openai">Connect OpenAI</a> to
+                  answer in English about this shop.
+                </p>
+              ) : null}
 
               {items.map((item, i) => (
                 <div key={`${item.role}-${i}`} className={`assistant-msg ${item.role}`}>

@@ -1,5 +1,6 @@
 import { resetAction } from "../../actions";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Banner } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function ResetPage({
       <div className="auth-card">
         <div className="brand">
           <BrandLogo className="brand-lockup" />
+          <ThemeToggle />
         </div>
         <h1 className="auth-title">Choose a new password</h1>
         <p className="auth-sub">At least 8 characters.</p>
