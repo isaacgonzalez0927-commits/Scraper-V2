@@ -4,6 +4,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Banner } from "@/components/ui";
 import { TRADE_LIST } from "@/lib/business";
+import { planByKey } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,10 @@ const OPENAI_KEYS = "https://platform.openai.com/api-keys";
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; plan?: string }>;
 }) {
   const q = await searchParams;
+  const picked = planByKey(q.plan);
   return (
     <div className="auth">
       <div className="auth-card auth-wide">
@@ -29,8 +31,21 @@ export default async function SignupPage({
           Shop name and an account are enough. Trade, Stripe, Square, and OpenAI
           are optional — skip them and set them later.
         </p>
+        {picked ? (
+          <p className="signup-plan">
+            You picked <strong>{picked.name}</strong>
+            {picked.price > 0 ? ` at $${picked.price}/month` : ""}. Create the shop
+            now. We will not charge a card until billing is live.
+          </p>
+        ) : (
+          <p className="signup-plan">
+            Free to open. Shop is $39/month for two people and live Stripe cash.
+            Crew is $79. We are not billing Sere yet.
+          </p>
+        )}
         <Banner error={q.error} />
         <form action={signupAction} className="stack">
+          {picked ? <input type="hidden" name="plan" value={picked.key} /> : null}
           <label>
             Shop name
             <input name="company" required autoComplete="organization" enterKeyHint="next" />
@@ -156,7 +171,10 @@ export default async function SignupPage({
           </fieldset>
 
           <button className="btn" type="submit">Create shop</button>
-          <p className="help">You can leave the optional parts blank.</p>
+          <p className="help">
+            You can leave the optional parts blank.{" "}
+            <Link href="/#pricing">What Shop and Crew include</Link>.
+          </p>
         </form>
         <div className="auth-foot">
           <span>Already have an account?</span>

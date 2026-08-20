@@ -28,6 +28,7 @@ import { loadApp } from "@/lib/page";
 import { stripeConnectEnabled } from "@/lib/stripe";
 import { absoluteBaseUrl } from "@/lib/url";
 import { TRADE_LIST } from "@/lib/business";
+import { formatPlanPrice, PLANS } from "@/lib/pricing";
 import { serviceItems } from "@/lib/schema";
 
 const TABS = [
@@ -823,6 +824,26 @@ export default async function SettingsPage({
               <p className="help">Leave the password fields empty to keep your current password.</p>
             </div>
           </form>
+          <Card title="Plan" note="You are on Free. We are not charging for Sere yet.">
+            <ul className="plan-settings">
+              {PLANS.map((plan) => (
+                <li key={plan.key}>
+                  <div>
+                    <strong>{plan.name}</strong>
+                    <span className="tiny">{plan.priceNote}</span>
+                  </div>
+                  <span className="money">
+                    {plan.price > 0 ? `${formatPlanPrice(plan)}/mo` : "Free"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="help mt-2">
+              Shop is the office book with live Stripe or Square cash. Crew is
+              seats plus the assistant; texts and the tech phone are next and
+              stay on Crew when they ship. Card fees stay with your processor.
+            </p>
+          </Card>
           <Card title="Appearance">
             <p className="help">
               Light, dark, or match the phone. This stays on this browser.
