@@ -1,10 +1,8 @@
-import { connectOpenAIAction, connectSquareAction, connectStripeAction, startStripeConnectAction } from "@/app/actions";
+import { connectSquareAction, connectStripeAction, startStripeConnectAction } from "@/app/actions";
 import { stripeConnectEnabled } from "@/lib/stripe";
 
 export const STRIPE_KEYS_URL = "https://dashboard.stripe.com/apikeys";
 export const SQUARE_KEYS_URL = "https://developer.squareup.com/apps";
-export const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
-export const OPENAI_LIMITS_URL = "https://platform.openai.com/settings/organization/limits";
 
 export function ConnectStripeButton({
   label = "Connect Stripe",
@@ -63,22 +61,6 @@ export function SquareKeyLink() {
   return (
     <a href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
       Get the key from Square
-    </a>
-  );
-}
-
-export function OpenAIKeyLink() {
-  return (
-    <a href={OPENAI_KEYS_URL} target="_blank" rel="noreferrer">
-      Get an API key from OpenAI
-    </a>
-  );
-}
-
-export function OpenAILimitsLink() {
-  return (
-    <a href={OPENAI_LIMITS_URL} target="_blank" rel="noreferrer">
-      Set a monthly budget in OpenAI
     </a>
   );
 }
@@ -161,51 +143,6 @@ export function ConnectCashCallout({
           <ConnectSquarePaste next={next} />
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function ConnectOpenAIPaste({ next }: { next: string }) {
-  return (
-    <form action={connectOpenAIAction} className="connect-paste">
-      <input type="hidden" name="next" value={next} />
-      <input
-        className="input"
-        name="openai_api_key"
-        type="password"
-        autoComplete="off"
-        required
-        spellCheck={false}
-        placeholder="Paste sk-... or sk-proj-..."
-        aria-label="OpenAI API key"
-      />
-      <button className="btn btn-openai btn-connect-lg" type="submit">
-        Connect OpenAI
-      </button>
-    </form>
-  );
-}
-
-export function ConnectAssistantCallout({
-  connected,
-  next = "/overview",
-}: {
-  connected: boolean;
-  next?: string;
-}) {
-  if (connected) return null;
-  return (
-    <div className="connect-cta connect-cta-stack" id="openai">
-      <div className="connect-cta-block">
-        <strong>Connect OpenAI</strong>
-        <p>
-          Paste an API key if you want this shop billed on its own OpenAI
-          account. Completing or moving a job still goes through Sere, not the
-          model. Need a key? <OpenAIKeyLink />. Cap spend with{" "}
-          <OpenAILimitsLink /> — $5 a month is enough for gpt-4o-mini.
-        </p>
-        <ConnectOpenAIPaste next={next} />
-      </div>
     </div>
   );
 }

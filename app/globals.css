@@ -1022,17 +1022,6 @@ a.copy-value:hover { color: var(--accent); border-color: var(--accent-line); }
   color: #fff;
 }
 a.btn-square, a.btn-square:hover { color: #fff; }
-.btn-openai {
-  background: #111;
-  border-color: #111;
-  color: #fff;
-}
-.btn-openai:hover {
-  background: #222;
-  border-color: #222;
-  color: #fff;
-}
-a.btn-openai, a.btn-openai:hover { color: #fff; }
 
 .connect-cta-stack {
   flex-direction: column;
@@ -1949,8 +1938,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .form-actions .help { text-align: center; }
   .form-actions .btn-connect-lg,
   .form-actions .btn-stripe,
-  .form-actions .btn-square,
-  .form-actions .btn-openai {
+  .form-actions .btn-square {
     width: auto;
     align-self: flex-start;
   }

@@ -1,8 +1,9 @@
 /**
  * OpenAI over plain HTTPS. No SDK.
  *
- * A deployment can set OPENAI_API_KEY (recommended: gpt-4o-mini plus a $5
- * monthly budget in OpenAI). A shop can still paste its own key to override.
+ * Sere pays OpenAI. Set OPENAI_API_KEY on the deployment (gpt-4o-mini plus a
+ * monthly budget in OpenAI). Shops do not paste their own keys. The public
+ * demo never uses this key.
  */
 
 const API = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
@@ -40,6 +41,12 @@ export function openaiFromEnv(): OpenAICredentials | null {
   if (!looksLikeOpenAIKey(apiKey)) return null;
   const model = (process.env.OPENAI_MODEL || "").trim() || DEFAULT_OPENAI_MODEL;
   return { apiKey, model };
+}
+
+/** Real shops share Sere's key. Harbor Air demo stays on rules. */
+export function openaiForShop(isDemo: boolean): OpenAICredentials | null {
+  if (isDemo) return null;
+  return openaiFromEnv();
 }
 
 export type OpenAIChatJson = {

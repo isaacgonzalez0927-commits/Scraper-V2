@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { ConnectAssistantCallout, ConnectCashCallout } from "@/components/ConnectStripe";
+import { ConnectCashCallout } from "@/components/ConnectStripe";
 import { Badge, Banner, Card, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -101,7 +101,6 @@ export default async function OverviewPage({
             stripe={integrations.stripe.connected}
             square={integrations.square.connected}
           />
-          <ConnectAssistantCallout next="/overview" connected={integrations.openai.connected} />
         </>
       ) : null}
       {brief.alerts.length ? (
