@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TRADE_LIST } from "@/lib/business";
+import { formatPlanPrice, PLANS, PRICING_NOTE, signupHref } from "@/lib/pricing";
 
 const display = Newsreader({
   subsets: ["latin"],
@@ -41,6 +42,7 @@ export default function LandingPage() {
         </Link>
         <nav>
           <ThemeToggle />
+          <a href="#pricing">Pricing</a>
           <Link href="/login">Sign in</Link>
           <Link className="btn" href="/signup">Start free</Link>
         </nav>
@@ -117,6 +119,53 @@ export default function LandingPage() {
               <p>{point.body}</p>
             </article>
           ))}
+        </section>
+
+        <section className="landing-pricing" id="pricing">
+          <div className="landing-pricing-head">
+            <h2>What it costs</h2>
+            <p>
+              Housecall Pro starts around $65 a person. Jobber Core is $49 for
+              one login. Sere is the book for the office — priced like that, not
+              like a full dispatch OS we have not built.
+            </p>
+          </div>
+          <div className="plan-grid">
+            {PLANS.map((plan) => (
+              <article
+                key={plan.key}
+                className={
+                  plan.featured ? "plan plan-featured" : "plan"
+                }
+              >
+                {plan.featured ? (
+                  <p className="plan-kicker">Most 1–2 truck shops</p>
+                ) : null}
+                <h3 className="plan-name">{plan.name}</h3>
+                <p className="plan-price">
+                  {formatPlanPrice(plan)}
+                  {plan.price > 0 ? <span> / month</span> : null}
+                </p>
+                <p className="plan-seat">{plan.priceNote}</p>
+                <p className="plan-blurb">{plan.blurb}</p>
+                <ul className="plan-features">
+                  {plan.features.map((item) => (
+                    <li key={item.text} className={item.soon ? "soon" : undefined}>
+                      {item.text}
+                      {item.soon ? <span className="plan-soon"> Next</span> : null}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  className={plan.featured ? "btn" : "btn btn-secondary"}
+                  href={signupHref(plan)}
+                >
+                  {plan.cta}
+                </Link>
+              </article>
+            ))}
+          </div>
+          <p className="landing-pricing-note">{PRICING_NOTE}</p>
         </section>
 
         <p className="landing-trades">{TRADES.join(" · ")}</p>
