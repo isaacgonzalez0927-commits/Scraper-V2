@@ -36,6 +36,21 @@ export function ConnectStripeButton({
   );
 }
 
+export function ConnectSquareButton({
+  label = "Connect Square",
+  large,
+}: {
+  label?: string;
+  large?: boolean;
+}) {
+  const className = ["btn", "btn-square", large ? "btn-connect-lg" : ""].filter(Boolean).join(" ");
+  return (
+    <a className={className} href="/settings?tab=integrations#square">
+      {label}
+    </a>
+  );
+}
+
 export function StripeKeyLink() {
   return (
     <a href={STRIPE_KEYS_URL} target="_blank" rel="noreferrer">
