@@ -1,11 +1,16 @@
 /**
- * OpenAI over plain HTTPS. No SDK. Each shop pastes its own key so answers
- * about that shop go to that shop's OpenAI account, not a shared Sere key.
+ * OpenAI over plain HTTPS. No SDK.
+ *
+ * A deployment can set OPENAI_API_KEY (recommended: gpt-4o-mini plus a $5
+ * monthly budget in OpenAI). A shop can still paste its own key to override.
  */
 
 const API = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
 
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+
+/** Short JSON replies. gpt-4o-mini at this size stays well under a $5 month. */
+export const OPENAI_MAX_TOKENS = 400;
 
 export class OpenAIError extends Error {
   constructor(message: string, readonly status?: number) {
@@ -23,6 +28,18 @@ export function looksLikeOpenAIKey(key: string): boolean {
   if (trimmed.length < 20) return false;
   if (/^sk_(live|test)_/.test(trimmed)) return false;
   return /^sk-/.test(trimmed);
+}
+
+export type OpenAICredentials = {
+  apiKey: string;
+  model: string;
+};
+
+export function openaiFromEnv(): OpenAICredentials | null {
+  const apiKey = (process.env.OPENAI_API_KEY || "").trim();
+  if (!looksLikeOpenAIKey(apiKey)) return null;
+  const model = (process.env.OPENAI_MODEL || "").trim() || DEFAULT_OPENAI_MODEL;
+  return { apiKey, model };
 }
 
 export type OpenAIChatJson = {
@@ -86,6 +103,7 @@ export async function completeShopJson(
     body: JSON.stringify({
       model: model || DEFAULT_OPENAI_MODEL,
       temperature: 0.2,
+      max_tokens: OPENAI_MAX_TOKENS,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },

@@ -3,7 +3,7 @@ import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { decryptSecret, encryptSecret, maskSecret } from "../lib/crypto";
 import { csvCell, csvFileName, csvTable } from "../lib/csv";
-import { looksLikeOpenAIKey } from "../lib/openai";
+import { DEFAULT_OPENAI_MODEL, looksLikeOpenAIKey, openaiFromEnv } from "../lib/openai";
 import { encodeParams, looksLikeStripeSecret, readConnectState, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled, verifyWebhookSignature, usdCents, chargeNetCents } from "../lib/stripe";
 import { paypalAmount } from "../lib/paypal";
 import { squarePaymentNetCents, verifySquareSignature } from "../lib/square";
@@ -172,6 +172,23 @@ test("OpenAI keys are recognised and Stripe secrets are rejected", () => {
   assert.equal(looksLikeOpenAIKey("sk_live_abc"), false);
   assert.equal(looksLikeOpenAIKey("sk-short"), false);
   assert.equal(looksLikeOpenAIKey(""), false);
+});
+
+test("a deployment OPENAI_API_KEY turns the assistant on without a shop paste", () => {
+  const previous = process.env.OPENAI_API_KEY;
+  const previousModel = process.env.OPENAI_MODEL;
+  process.env.OPENAI_API_KEY = "sk-proj-abcdefghijklmnopqrstuv";
+  delete process.env.OPENAI_MODEL;
+  assert.deepEqual(openaiFromEnv(), {
+    apiKey: "sk-proj-abcdefghijklmnopqrstuv",
+    model: DEFAULT_OPENAI_MODEL,
+  });
+  process.env.OPENAI_API_KEY = "sk_live_not_openai";
+  assert.equal(openaiFromEnv(), null);
+  if (previous === undefined) delete process.env.OPENAI_API_KEY;
+  else process.env.OPENAI_API_KEY = previous;
+  if (previousModel === undefined) delete process.env.OPENAI_MODEL;
+  else process.env.OPENAI_MODEL = previousModel;
 });
 
 test("CSV cells quote commas and quotes", () => {

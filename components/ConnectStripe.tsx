@@ -4,6 +4,7 @@ import { stripeConnectEnabled } from "@/lib/stripe";
 export const STRIPE_KEYS_URL = "https://dashboard.stripe.com/apikeys";
 export const SQUARE_KEYS_URL = "https://developer.squareup.com/apps";
 export const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
+export const OPENAI_LIMITS_URL = "https://platform.openai.com/settings/organization/limits";
 
 export function ConnectStripeButton({
   label = "Connect Stripe",
@@ -55,6 +56,14 @@ export function OpenAIKeyLink() {
   return (
     <a href={OPENAI_KEYS_URL} target="_blank" rel="noreferrer">
       Get an API key from OpenAI
+    </a>
+  );
+}
+
+export function OpenAILimitsLink() {
+  return (
+    <a href={OPENAI_LIMITS_URL} target="_blank" rel="noreferrer">
+      Set a monthly budget in OpenAI
     </a>
   );
 }
@@ -175,10 +184,10 @@ export function ConnectAssistantCallout({
       <div className="connect-cta-block">
         <strong>Connect OpenAI</strong>
         <p>
-          Paste your own API key. The Sere assistant then answers in English
-          about this shop&apos;s jobs, invoices, and cash. Your key, your OpenAI
-          bill. Completing or moving a job still goes through Sere, not the
-          model. Need a key? <OpenAIKeyLink />.
+          Paste an API key if you want this shop billed on its own OpenAI
+          account. Completing or moving a job still goes through Sere, not the
+          model. Need a key? <OpenAIKeyLink />. Cap spend with{" "}
+          <OpenAILimitsLink /> — $5 a month is enough for gpt-4o-mini.
         </p>
         <ConnectOpenAIPaste next={next} />
       </div>

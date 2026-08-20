@@ -3,6 +3,7 @@ import { decryptSecret, encryptSecret } from "./crypto";
 import { db, nowISO } from "./db";
 import { integrations, organizations } from "./schema";
 import { deauthorizeStripeConnect, stripePlatformSecret } from "./stripe";
+import { DEFAULT_OPENAI_MODEL, openaiFromEnv } from "./openai";
 
 /**
  * Each shop connects its own accounts. Stripe is read so the shop can see
@@ -266,10 +267,10 @@ export async function openaiConfig(organizationId: number): Promise<OpenAIConfig
   if (saved?.apiKey) {
     return {
       apiKey: saved.apiKey,
-      model: saved.model || "gpt-4o-mini",
+      model: saved.model || DEFAULT_OPENAI_MODEL,
     };
   }
-  return null;
+  return openaiFromEnv();
 }
 
 export type OnlinePayMethods = {
@@ -345,6 +346,7 @@ export async function integrationStatus(
     ]);
   const stripeEnv = stripeEnvConfig();
   const emailEnv = emailEnvConfig();
+  const openaiEnv = openaiFromEnv();
   const stripeReady = Boolean(stripeSaved && fromStoredStripe(stripeSaved));
   const stripeUnreadable = Boolean(stripeRow) && !stripeReady;
   const emailUnreadable = Boolean(emailRow) && !emailSaved?.apiKey;
@@ -394,6 +396,12 @@ export async function integrationStatus(
       paypalUnreadable,
     ),
     quickbooks: status(qbRow, Boolean(qbSaved?.accessToken && qbSaved?.realmId), qbUnreadable),
-    openai: status(openaiRow, Boolean(openaiSaved?.apiKey), openaiUnreadable),
+    openai: status(
+      openaiRow,
+      Boolean(openaiSaved?.apiKey),
+      openaiUnreadable,
+      Boolean(openaiEnv),
+      openaiEnv ? "Deployment environment key" : "",
+    ),
   };
 }

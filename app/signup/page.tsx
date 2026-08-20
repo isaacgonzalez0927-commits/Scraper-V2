@@ -120,9 +120,10 @@ export default async function SignupPage({
               Sere assistant <span className="optional-tag">Optional</span>
             </legend>
             <p className="signup-benefit">
-              Paste your OpenAI API key if you want the assistant to answer in
-              English about this shop. Completing or moving a job still goes
-              through Sere. Skip and connect later in Settings.
+              Skip this if Sere already has an OpenAI key on the server. Paste
+              your own only if you want GPT billed to you. Completing or moving
+              a job still goes through Sere. Cap spend in OpenAI — $5 a month is
+              enough for gpt-4o-mini.
             </p>
             <div className="signup-keys">
               <div className="signup-key">
@@ -137,8 +138,9 @@ export default async function SignupPage({
                   />
                 </label>
                 <p className="help">
-                  Your key, your OpenAI bill. Sere stores it encrypted.{" "}
-                  <a href={OPENAI_KEYS} target="_blank" rel="noreferrer">Get an API key from OpenAI</a>.
+                  Optional. <a href={OPENAI_KEYS} target="_blank" rel="noreferrer">Get an API key from OpenAI</a>
+                  {" "}·{" "}
+                  <a href="https://platform.openai.com/settings/organization/limits" target="_blank" rel="noreferrer">Set a monthly budget</a>.
                 </p>
               </div>
             </div>
