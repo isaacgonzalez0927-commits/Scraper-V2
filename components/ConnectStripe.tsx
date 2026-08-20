@@ -37,9 +37,8 @@ export function ConnectStripeCallout() {
       <div>
         <strong>Let customers pay invoices online.</strong>
         <p>
-          Connect the shop's own Stripe account. That is the main way customers pay
-          an invoice by card. Square and PayPal are available too if that is what
-          the shop already uses.
+          About a minute. Open the shop&apos;s Stripe, copy the secret key, paste it
+          in Settings. Money goes to their Stripe, not yours.
         </p>
       </div>
       <ConnectStripeButton large />

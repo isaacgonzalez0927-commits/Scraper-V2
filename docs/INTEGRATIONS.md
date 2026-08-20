@@ -31,6 +31,9 @@ Cash, check, Zelle, Venmo, and bank transfers are still recorded by hand under
 
 ### One-click Connect (Sere operator)
 
+Skip this if you cannot verify an identity for a Stripe platform account. Shops do
+not need it. They paste a secret key instead.
+
 This is what turns the button into a real Stripe redirect instead of a paste-keys form.
 It is configured once for the whole product, in Vercel:
 
@@ -52,8 +55,10 @@ It is configured once for the whole product, in Vercel:
    - Events: `checkout.session.completed` and `checkout.session.async_payment_succeeded`
    - Listen to events on **Connected accounts**
 
-Until those are set, **Connect Stripe** still works: it opens Settings so the shop can
-paste their own API keys.
+Until those are set, shops connect in about a minute: open
+[Stripe API keys](https://dashboard.stripe.com/apikeys), copy the secret key
+(`sk_test_...` or `sk_live_...`), paste it in **Settings → Integrations**, tap
+**Connect Stripe**. Each shop uses their own Stripe account.
 
 ### Trying it without real money
 
