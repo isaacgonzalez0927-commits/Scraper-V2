@@ -99,6 +99,110 @@ export async function ensureSchema(): Promise<void> {
       created_at TEXT NOT NULL,
       UNIQUE(user_id, organization_id)
     );
+    CREATE TABLE IF NOT EXISTS nova_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tool_name TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS nova_messages_org ON nova_messages (organization_id, id);
+    CREATE TABLE IF NOT EXISTS nova_memory (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'note',
+      key TEXT NOT NULL DEFAULT '',
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS nova_memory_org ON nova_memory (organization_id, updated_at);
+    CREATE TABLE IF NOT EXISTS nexus_companies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      place_id TEXT NOT NULL DEFAULT '',
+      name TEXT NOT NULL,
+      website TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
+      address TEXT NOT NULL DEFAULT '',
+      city TEXT NOT NULL DEFAULT '',
+      state TEXT NOT NULL DEFAULT '',
+      trade TEXT NOT NULL DEFAULT '',
+      review_count INTEGER NOT NULL DEFAULT 0,
+      source TEXT NOT NULL DEFAULT 'places',
+      search_query TEXT NOT NULL DEFAULT '',
+      stage TEXT NOT NULL DEFAULT 'new',
+      disqualified_reason TEXT NOT NULL DEFAULT '',
+      research_status TEXT NOT NULL DEFAULT 'pending',
+      research_error TEXT NOT NULL DEFAULT '',
+      research_pages INTEGER NOT NULL DEFAULT 0,
+      fact TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS nexus_companies_place ON nexus_companies (place_id);
+    CREATE INDEX IF NOT EXISTS nexus_companies_stage ON nexus_companies (stage);
+    CREATE TABLE IF NOT EXISTS nexus_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company_id INTEGER NOT NULL,
+      email TEXT NOT NULL,
+      name TEXT NOT NULL DEFAULT '',
+      role TEXT NOT NULL DEFAULT '',
+      source_url TEXT NOT NULL DEFAULT '',
+      confidence INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS nexus_contacts_email ON nexus_contacts (email);
+    CREATE TABLE IF NOT EXISTS nexus_drafts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company_id INTEGER NOT NULL,
+      contact_id INTEGER,
+      to_email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      model TEXT NOT NULL DEFAULT '',
+      variant TEXT NOT NULL DEFAULT 'a',
+      status TEXT NOT NULL DEFAULT 'pending_review',
+      confidence INTEGER NOT NULL DEFAULT 0,
+      rejection_reason TEXT NOT NULL DEFAULT '',
+      reviewed_at TEXT,
+      sent_at TEXT,
+      provider_id TEXT NOT NULL DEFAULT '',
+      opened_demo_at TEXT,
+      replied_at TEXT,
+      signed_up_at TEXT,
+      bounced_at TEXT,
+      complained_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS nexus_drafts_status ON nexus_drafts (status);
+    CREATE INDEX IF NOT EXISTS nexus_drafts_sent ON nexus_drafts (sent_at);
+    CREATE TABLE IF NOT EXISTS nexus_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      payload TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'queued',
+      run_after TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      max_attempts INTEGER NOT NULL DEFAULT 4,
+      locked_at TEXT,
+      last_error TEXT NOT NULL DEFAULT '',
+      dedupe_key TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS nexus_jobs_ready ON nexus_jobs (status, run_after);
+    CREATE TABLE IF NOT EXISTS nexus_actions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      actor TEXT NOT NULL DEFAULT 'nova',
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL DEFAULT '',
+      entity_id TEXT NOT NULL DEFAULT '',
+      detail TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS nexus_actions_at ON nexus_actions (created_at);
     CREATE TABLE IF NOT EXISTS password_resets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
