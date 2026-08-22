@@ -1,11 +1,13 @@
-import { connectOpenAIAction, connectSquareAction, connectStripeAction, startStripeConnectAction } from "@/app/actions";
-import { stripeConnectEnabled } from "@/lib/stripe";
+import { connectOpenAIAction, connectSquareAction, connectStripeAction } from "@/app/actions";
+import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
+import { STRIPE_API_KEYS_URL } from "@/lib/stripe-keys";
 
-export const STRIPE_KEYS_URL = "https://dashboard.stripe.com/apikeys";
+export { STRIPE_API_KEYS_URL as STRIPE_KEYS_URL };
 export const SQUARE_KEYS_URL = "https://developer.squareup.com/apps";
 export const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
 export const OPENAI_LIMITS_URL = "https://platform.openai.com/settings/organization/limits";
 
+/** Stripe Connect OAuth — optional; needs a verified platform account. */
 export function ConnectStripeButton({
   label = "Connect Stripe",
   secondary,
@@ -20,19 +22,10 @@ export function ConnectStripeButton({
     secondary ? "btn-secondary" : "btn-stripe",
     large ? "btn-connect-lg" : "",
   ].filter(Boolean).join(" ");
-  if (!stripeConnectEnabled()) {
-    return (
-      <a className={className} href="/settings?tab=integrations#stripe">
-        {label}
-      </a>
-    );
-  }
   return (
-    <form action={startStripeConnectAction}>
-      <button className={className} type="submit">
-        {label}
-      </button>
-    </form>
+    <a className={className} href="/settings?tab=integrations#stripe">
+      {label}
+    </a>
   );
 }
 
@@ -53,8 +46,8 @@ export function ConnectSquareButton({
 
 export function StripeKeyLink() {
   return (
-    <a href={STRIPE_KEYS_URL} target="_blank" rel="noreferrer">
-      Get the key from Stripe
+    <a href={STRIPE_API_KEYS_URL} target="_blank" rel="noreferrer">
+      Stripe API keys
     </a>
   );
 }
@@ -85,22 +78,25 @@ export function OpenAILimitsLink() {
 
 function ConnectStripePaste({ next }: { next: string }) {
   return (
-    <form action={connectStripeAction} className="connect-paste">
-      <input type="hidden" name="next" value={next} />
-      <input
-        className="input"
-        name="stripe_secret_key"
-        type="password"
-        autoComplete="off"
-        required
-        spellCheck={false}
-        placeholder="Paste sk_live_... or sk_test_..."
-        aria-label="Stripe secret key"
-      />
-      <button className="btn btn-stripe btn-connect-lg" type="submit">
-        Connect Stripe
-      </button>
-    </form>
+    <>
+      <StripeKeyTutorial defaultOpen={false} />
+      <form action={connectStripeAction} className="connect-paste">
+        <input type="hidden" name="next" value={next} />
+        <input
+          className="input"
+          name="stripe_secret_key"
+          type="password"
+          autoComplete="off"
+          required
+          spellCheck={false}
+          placeholder="Paste rk_live_... or rk_test_..."
+          aria-label="Stripe restricted key"
+        />
+        <button className="btn btn-stripe btn-connect-lg" type="submit">
+          Connect Stripe
+        </button>
+      </form>
+    </>
   );
 }
 
@@ -143,9 +139,9 @@ export function ConnectCashCallout({
         <div className="connect-cta-block">
           <strong>Connect Stripe</strong>
           <p>
-            Paste the shop&apos;s secret key here. Overview then shows cash that
-            actually landed. Need the key? <StripeKeyLink /> — reveal Secret key,
-            copy, come back and paste.
+            Create a <strong>restricted key</strong> in Stripe (<code>rk_live_...</code>),
+            paste it here, and Overview shows cash that actually landed.{" "}
+            <StripeKeyLink /> — Create restricted key, not the secret key.
           </p>
           <ConnectStripePaste next={next} />
         </div>

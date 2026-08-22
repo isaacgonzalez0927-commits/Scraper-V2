@@ -56,7 +56,7 @@ async function request<T>(
     stripeAccount?: string;
   } = {},
 ): Promise<T> {
-  if (!secretKey) throw new StripeError("No Stripe secret key is configured.");
+  if (!secretKey) throw new StripeError("No Stripe API key is configured.");
   const method = options.method || "GET";
   const body = options.params ? encodeParams(options.params) : "";
   const url = method === "GET" && body ? `${API}${path}?${body}` : `${API}${path}`;

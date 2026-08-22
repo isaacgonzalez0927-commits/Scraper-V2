@@ -33,7 +33,8 @@ import { looksLikeOpenAIKey, validateOpenAIKey, DEFAULT_OPENAI_MODEL } from "@/l
 import { paypalAccountLabel } from "@/lib/paypal";
 import { quickBooksCompanyName } from "@/lib/quickbooks";
 import { listSquareLocations, squareAccountLabel } from "@/lib/square";
-import { accountLabel, looksLikeStripeSecret, retrieveAccount, signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
+import { signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
+import { validateStripeKeyForSere } from "@/lib/stripe-keys";
 import { DEMO_EMAIL } from "@/lib/seed";
 import { requireWritableContext, trialEndsISO } from "@/lib/trial";
 import { absoluteBaseUrl } from "@/lib/url";
@@ -705,7 +706,7 @@ export async function startStripeConnectAction() {
   if (!stripeConnectEnabled()) {
     redirect(
       `${INTEGRATIONS_TAB}&error=${encodeURIComponent(
-        "One-click Connect is not enabled on this deployment. Paste a Stripe secret key below.",
+        "One-click Connect is not enabled on this deployment. Create a restricted key in Stripe and paste it below.",
       )}`,
     );
   }
@@ -724,24 +725,13 @@ export async function connectStripeAction(form: FormData) {
   const publishableKey = str(form, "stripe_publishable_key");
   const webhookSecret = str(form, "stripe_webhook_secret");
   if (!secretKey) {
-    connectRedirect(form, "error", "Paste your Stripe secret key first.");
+    connectRedirect(form, "error", "Paste your Stripe restricted key first (rk_live_ or rk_test_).");
   }
-  if (!looksLikeStripeSecret(secretKey)) {
-    connectRedirect(
-      form,
-      "error",
-      "That does not look like a Stripe secret key. It starts with sk_live_, sk_test_, or rk_live_.",
-    );
+  const keyCheck = await validateStripeKeyForSere(secretKey);
+  if (!keyCheck.ok) {
+    connectRedirect(form, "error", keyCheck.problems.join(" "));
   }
-
-  let failure = "";
-  let label = "";
-  try {
-    label = accountLabel(await retrieveAccount(secretKey));
-  } catch (error) {
-    failure = (error as Error).message;
-  }
-  if (failure) connectRedirect(form, "error", failure);
+  const label = keyCheck.label;
 
   await saveIntegration(org.id, "stripe", {
     secretKey,
