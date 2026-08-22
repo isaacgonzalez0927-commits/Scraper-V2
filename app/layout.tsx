@@ -1,15 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Newsreader } from "next/font/google";
 import Script from "next/script";
 import { THEME_BOOT, THEME_DARK_COLOR, THEME_LIGHT_COLOR } from "@/lib/theme";
 import "./globals.css";
-
-const display = Newsreader({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-display",
-  weight: ["400", "500", "600"],
-});
 
 export const metadata: Metadata = {
   title: "Sere",
@@ -41,7 +33,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={display.variable} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body>
         <Script id="sere-theme" strategy="beforeInteractive">
           {THEME_BOOT}

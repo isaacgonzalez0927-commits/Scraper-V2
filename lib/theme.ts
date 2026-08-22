@@ -1,6 +1,6 @@
 export const THEME_KEY = "sere-theme";
-export const THEME_DARK_COLOR = "#12100e";
-export const THEME_LIGHT_COLOR = "#f3efe6";
+export const THEME_DARK_COLOR = "#0e1218";
+export const THEME_LIGHT_COLOR = "#ffffff";
 
 export type ThemePref = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
