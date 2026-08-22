@@ -3,12 +3,10 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Nova's face: an animated wireframe sphere that reacts to what she is doing.
+ * Serenity's face: an animated wireframe sphere in Sere purple.
  *
- * Ported from RideBy's NovaMeshOrb — the maths is the original, retinted from
- * cyan/pink to Sere's violet. It is canvas rather than a GIF so the motion can
- * carry state: it turns faster while thinking and pulses while speaking, which
- * is the only feedback you get during a voice turn with no text on screen.
+ * Canvas rather than a GIF so the motion can carry state: it turns faster
+ * while thinking and pulses while speaking.
  */
 
 export type OrbPhase = "idle" | "listening" | "thinking" | "speaking";
@@ -27,17 +25,7 @@ function rotateX(p: Vec3, a: number): Vec3 {
   return { x: p.x, y: p.y * c - p.z * s, z: p.y * s + p.z * c };
 }
 
-const VIOLET: [number, number, number] = [124, 92, 255];
-const SKY: [number, number, number] = [86, 200, 255];
-
-function mixColor(a: [number, number, number], b: [number, number, number], t: number): number[] {
-  const u = Math.max(0, Math.min(1, t));
-  return [
-    Math.round(a[0] + (b[0] - a[0]) * u),
-    Math.round(a[1] + (b[1] - a[1]) * u),
-    Math.round(a[2] + (b[2] - a[2]) * u),
-  ];
-}
+const PURPLE = "91,56,214";
 
 export function NovaOrb({
   phase,
@@ -150,13 +138,13 @@ export function NovaOrb({
         cy,
         radius * 1.35,
       );
-      halo.addColorStop(0, `rgba(124, 92, 255, ${0.24 * glow})`);
-      halo.addColorStop(0.5, `rgba(86, 200, 255, ${0.09 * glow})`);
+      halo.addColorStop(0, `rgba(91, 56, 214, ${0.28 * glow})`);
+      halo.addColorStop(0.55, `rgba(91, 56, 214, ${0.1 * glow})`);
       halo.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = halo;
       ctx.fillRect(0, 0, width, height);
 
-      type Proj = { x: number; y: number; z: number; c: number };
+      type Proj = { x: number; y: number; z: number };
       const projected: Proj[][] = [];
       for (let i = 0; i <= rings; i += 1) {
         const row: Proj[] = [];
@@ -170,13 +158,10 @@ export function NovaOrb({
           let p3 = { x: b.x * bulge, y: b.y * bulge, z: b.z * bulge };
           p3 = rotateY(p3, rotY);
           p3 = rotateX(p3, rotX);
-          const cool = Math.max(0, -p3.x * 0.55 - p3.y * 0.45 + p3.z * 0.15);
-          const warm = Math.max(0, p3.x * 0.55 + p3.y * 0.35 - p3.z * 0.1);
           row.push({
             x: cx + p3.x * radius,
             y: cy + p3.y * radius,
             z: p3.z,
-            c: warm / (cool + warm + 0.001),
           });
         }
         projected.push(row);
@@ -187,8 +172,7 @@ export function NovaOrb({
       const segment = (a: Proj, b: Proj) => {
         const depth = (a.z + b.z) * 0.5;
         const alpha = (0.2 + (depth + 1) * 0.28) * lineAlpha;
-        const [r, g, bl] = mixColor(SKY, VIOLET, (a.c + b.c) * 0.5);
-        ctx.strokeStyle = `rgba(${r},${g},${bl},${alpha})`;
+        ctx.strokeStyle = `rgba(${PURPLE},${alpha})`;
         ctx.lineWidth = 0.6 + (depth + 1) * 0.5;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
@@ -217,8 +201,7 @@ export function NovaOrb({
         for (let j = 0; j <= segs; j += 2) {
           const pt = projected[i][j];
           if (pt.z < -0.2) continue;
-          const [r, g, bl] = mixColor([180, 225, 255], [190, 170, 255], pt.c);
-          ctx.fillStyle = `rgba(${r},${g},${bl},${0.22 + (pt.z + 1) * 0.32})`;
+          ctx.fillStyle = `rgba(${PURPLE},${0.22 + (pt.z + 1) * 0.32})`;
           ctx.beginPath();
           ctx.arc(pt.x, pt.y, 0.7 + (pt.z + 1) * 0.8, 0, Math.PI * 2);
           ctx.fill();

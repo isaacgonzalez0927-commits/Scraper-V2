@@ -44,6 +44,7 @@ export async function loadApp() {
       brief,
       setup,
       shopMode: parseShopMode(org.operatingMode),
+      native: false,
     },
   };
 }

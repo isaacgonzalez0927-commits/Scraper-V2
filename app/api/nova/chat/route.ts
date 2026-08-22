@@ -17,7 +17,7 @@ export const maxDuration = 60;
 
 export async function POST(request: Request) {
   await boot();
-  const ctx = await currentContext();
+  const ctx = await currentContext(request);
   if (!ctx) return Response.json({ error: "Sign in first." }, { status: 401 });
 
   let message = "";
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
         const text =
           error instanceof NovaError
             ? error.message
-            : `Nova hit a problem: ${(error as Error).message}`;
+            : `Serenity hit a problem: ${(error as Error).message}`;
         send("error", { error: text });
       } finally {
         controller.close();

@@ -14,9 +14,9 @@ import { ensureTrialClock, shopAccess } from "@/lib/trial";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   await boot();
-  const ctx = await currentContext();
+  const ctx = await currentContext(request);
   if (!ctx) return Response.json({ error: "Sign in first." }, { status: 401 });
 
   const isDemo = ctx.user.email === DEMO_EMAIL;

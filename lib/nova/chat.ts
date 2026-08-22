@@ -18,6 +18,7 @@ import {
   rememberNova,
   saveNovaMessage,
 } from "./memory";
+import { SERENITY_NAME } from "../serenity";
 import { NOVA_TOOLS, runNovaTool, tradeWords, type ToolContext } from "./tools";
 
 const API = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
@@ -52,7 +53,7 @@ type Words = Awaited<ReturnType<typeof tradeWords>>;
 export function novaSystemPrompt(words: Words, ownerName: string, shopName: string): string {
   const unit = words.job.toLowerCase();
   const work = words.jobs.toLowerCase();
-  return `You are Nova — the operating intelligence for ${shopName}, a ${words.trade.toLowerCase()} shop. Think Jarvis for ${ownerName}: shop co-pilot and the person who watches the money. Peer, not assistant.
+  return `You are ${SERENITY_NAME}, the operating intelligence for ${shopName}, a ${words.trade.toLowerCase()} shop. Think Jarvis for ${ownerName}: shop co-pilot and the person who watches the money. Peer, not assistant.
 
 Personality and voice:
 - First person. Warm, direct, conversational. Short sentences beat paragraphs.
@@ -212,7 +213,7 @@ export async function runNova(
   opts: { onDelta?: (delta: string) => void } = {},
 ): Promise<NovaChatResult> {
   const apiKey = novaKey();
-  if (!apiKey) throw new NovaError("Nova needs OPENAI_API_KEY on the server.");
+  if (!apiKey) throw new NovaError(`${SERENITY_NAME} needs OPENAI_API_KEY on the server.`);
   const trimmed = userMessage.trim();
   if (!trimmed) throw new NovaError("Empty message.");
 
