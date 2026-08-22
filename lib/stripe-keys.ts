@@ -14,6 +14,38 @@ import {
 
 export const STRIPE_API_KEYS_URL = "https://dashboard.stripe.com/apikeys";
 
+/**
+ * Dashboard slugs for Create restricted key. Stripe documents this as
+ * https://dashboard.stripe.com/apikeys/create?permissions[0]=rak_...
+ * Write implies Read on the same resource.
+ */
+export const SERE_STRIPE_RAK_PERMISSIONS = [
+  "rak_account_read",
+  "rak_balance_read",
+  "rak_charge_read",
+  "rak_payout_read",
+  "rak_customer_write",
+  "rak_invoice_write",
+  "rak_invoiceitem_write",
+  "rak_checkout_session_write",
+] as const;
+
+/** Opens Stripe's create-key screen with Sere's permissions already selected. */
+export function stripeCreateRestrictedKeyUrl(opts: { test?: boolean } = {}): string {
+  const base = opts.test
+    ? "https://dashboard.stripe.com/test/apikeys/create"
+    : "https://dashboard.stripe.com/apikeys/create";
+  const params = new URLSearchParams();
+  params.set("name", "Sere");
+  SERE_STRIPE_RAK_PERMISSIONS.forEach((permission, index) => {
+    params.set(`permissions[${index}]`, permission);
+  });
+  return `${base}?${params.toString()}`;
+}
+
+export const STRIPE_CREATE_KEY_URL = stripeCreateRestrictedKeyUrl();
+export const STRIPE_CREATE_TEST_KEY_URL = stripeCreateRestrictedKeyUrl({ test: true });
+
 export function looksLikeStripeRestrictedKey(key: string): boolean {
   return /^rk_(test|live)_/.test(key.trim());
 }

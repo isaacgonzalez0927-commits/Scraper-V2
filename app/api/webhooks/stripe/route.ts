@@ -3,9 +3,16 @@ import { boot } from "@/lib/boot";
 import { db } from "@/lib/db";
 import { recordOnlinePayment } from "@/lib/finance";
 import { connectedStripeShops, stripeConfig } from "@/lib/integrations";
-import { retrieveStripeInvoice, verifyWebhookSignature, type StripeInvoice } from "@/lib/stripe";
+import {
+  retrieveStripeCustomer,
+  retrieveStripeInvoice,
+  verifyWebhookSignature,
+  type StripeCustomer,
+  type StripeInvoice,
+} from "@/lib/stripe";
+import { ingestStripeCustomer, stripeCustomerEventNames } from "@/lib/stripe-customers";
 import { ingestStripeInvoice, stripeInvoiceEventNames } from "@/lib/stripe-invoices";
-import { invoices } from "@/lib/schema";
+import { customers, invoices } from "@/lib/schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +37,11 @@ type StripeEvent = {
       created?: number;
       total?: number;
       subtotal?: number;
+      deleted?: boolean;
+      email?: string | null;
+      name?: string | null;
+      phone?: string | null;
+      address?: StripeCustomer["address"];
       lines?: StripeInvoice["lines"];
     };
   };
@@ -45,6 +57,21 @@ function eventOrgId(object: NonNullable<StripeEvent["data"]>["object"]): number 
   return Number(metadata.organization_id || metadata.sere_organization_id || 0);
 }
 
+async function orgFromSignature(
+  payload: string,
+  header: string | null,
+  organizationId: number,
+): Promise<number> {
+  const config = await stripeConfig(organizationId);
+  const secrets = Array.from(
+    new Set([config?.webhookSecret || "", process.env.STRIPE_WEBHOOK_SECRET || ""].filter(Boolean)),
+  );
+  if (secrets.some((secret) => verifyWebhookSignature({ payload, header, secret }))) {
+    return organizationId;
+  }
+  return 0;
+}
+
 async function resolveOrganization(
   payload: string,
   header: string | null,
@@ -52,28 +79,26 @@ async function resolveOrganization(
 ): Promise<number> {
   const named = eventOrgId(object);
   if (named) {
-    const config = await stripeConfig(named);
-    const secrets = Array.from(
-      new Set([config?.webhookSecret || "", process.env.STRIPE_WEBHOOK_SECRET || ""].filter(Boolean)),
-    );
-    if (secrets.some((secret) => verifyWebhookSignature({ payload, header, secret }))) {
-      return named;
-    }
+    const matched = await orgFromSignature(payload, header, named);
+    if (matched) return matched;
   }
 
   if (object?.id) {
-    const [linked] = await db()
+    const [linkedInvoice] = await db()
       .select()
       .from(invoices)
       .where(eq(invoices.stripeInvoiceId, object.id));
-    if (linked) {
-      const config = await stripeConfig(linked.organizationId);
-      const secrets = Array.from(
-        new Set([config?.webhookSecret || "", process.env.STRIPE_WEBHOOK_SECRET || ""].filter(Boolean)),
-      );
-      if (secrets.some((secret) => verifyWebhookSignature({ payload, header, secret }))) {
-        return linked.organizationId;
-      }
+    if (linkedInvoice) {
+      const matched = await orgFromSignature(payload, header, linkedInvoice.organizationId);
+      if (matched) return matched;
+    }
+    const [linkedCustomer] = await db()
+      .select()
+      .from(customers)
+      .where(eq(customers.stripeCustomerId, object.id));
+    if (linkedCustomer) {
+      const matched = await orgFromSignature(payload, header, linkedCustomer.organizationId);
+      if (matched) return matched;
     }
   }
 
@@ -92,8 +117,8 @@ async function resolveOrganization(
 }
 
 /**
- * Stripe tells Sere about checkout payments and about invoices created in the
- * Stripe dashboard. Signature is checked against the shop's webhook secret.
+ * Stripe tells Sere about checkout payments, invoices, and customers created
+ * in the Stripe dashboard. Signature is checked against the shop's webhook secret.
  */
 export async function POST(request: Request) {
   await boot();
@@ -132,6 +157,34 @@ export async function POST(request: Request) {
       notes: "Paid online through Stripe Checkout",
     });
     return Response.json({ received: true, recorded: !result.alreadyRecorded });
+  }
+
+  if (stripeCustomerEventNames().includes(event.type || "") && object.id) {
+    const config = await stripeConfig(organizationId);
+    let remote: StripeCustomer = {
+      id: object.id,
+      name: object.name,
+      email: object.email,
+      phone: object.phone,
+      address: object.address,
+      metadata: object.metadata,
+      deleted: event.type === "customer.deleted" || object.deleted,
+    };
+    if (config?.secretKey && event.type !== "customer.deleted") {
+      try {
+        remote = await retrieveStripeCustomer(config.secretKey, object.id, {
+          stripeAccount: config.stripeAccount,
+        });
+      } catch {
+        // Use the event payload.
+      }
+    }
+    const ingested = await ingestStripeCustomer(organizationId, remote);
+    return Response.json({
+      received: true,
+      customerId: ingested?.customerId || null,
+      created: ingested?.created || false,
+    });
   }
 
   if (stripeInvoiceEventNames().includes(event.type || "") && object.id) {

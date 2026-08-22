@@ -261,24 +261,37 @@ export function retrieveCheckoutSession(
   });
 }
 
+export type StripeAddress = {
+  line1?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  country?: string | null;
+};
+
 export type StripeCustomer = {
   id: string;
   email?: string | null;
   name?: string | null;
   phone?: string | null;
+  deleted?: boolean;
+  address?: StripeAddress | null;
   metadata?: Record<string, string> | null;
+};
+
+export type StripeCustomerWrite = {
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: StripeAddress;
+  metadata?: Record<string, string | number>;
+  stripeAccount?: string;
+  idempotencyKey?: string;
 };
 
 export function createStripeCustomer(
   secretKey: string,
-  opts: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    metadata?: Record<string, string | number>;
-    stripeAccount?: string;
-    idempotencyKey?: string;
-  },
+  opts: StripeCustomerWrite,
 ): Promise<StripeCustomer> {
   return stripeRequest<StripeCustomer>(secretKey, "/customers", {
     method: "POST",
@@ -288,6 +301,7 @@ export function createStripeCustomer(
       name: opts.name,
       email: opts.email,
       phone: opts.phone,
+      address: opts.address,
       metadata: opts.metadata,
     },
   });
@@ -306,13 +320,7 @@ export function retrieveStripeCustomer(
 export function updateStripeCustomer(
   secretKey: string,
   id: string,
-  opts: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    metadata?: Record<string, string | number>;
-    stripeAccount?: string;
-  },
+  opts: StripeCustomerWrite,
 ): Promise<StripeCustomer> {
   return stripeRequest<StripeCustomer>(secretKey, `/customers/${encodeURIComponent(id)}`, {
     method: "POST",
@@ -321,9 +329,32 @@ export function updateStripeCustomer(
       name: opts.name,
       email: opts.email,
       phone: opts.phone,
+      address: opts.address,
       metadata: opts.metadata,
     },
   });
+}
+
+export async function listStripeCustomers(
+  secretKey: string,
+  opts: {
+    limit?: number;
+    startingAfter?: string;
+    stripeAccount?: string;
+  } = {},
+): Promise<{ data: StripeCustomer[]; hasMore: boolean }> {
+  const payload = await stripeRequest<{ data?: StripeCustomer[]; has_more?: boolean }>(
+    secretKey,
+    "/customers",
+    {
+      stripeAccount: opts.stripeAccount,
+      params: {
+        limit: opts.limit || 100,
+        starting_after: opts.startingAfter,
+      },
+    },
+  );
+  return { data: payload.data || [], hasMore: Boolean(payload.has_more) };
 }
 
 export type StripeInvoiceLine = {

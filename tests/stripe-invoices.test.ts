@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { encodeParams } from "../lib/stripe";
-import { looksLikeStripeRestrictedKey, SERE_STRIPE_PERMISSIONS } from "../lib/stripe-keys";
+import { looksLikeStripeRestrictedKey, SERE_STRIPE_PERMISSIONS, stripeCreateRestrictedKeyUrl } from "../lib/stripe-keys";
 import { stripeInvoiceEventNames } from "../lib/stripe-invoices";
 
 test("restricted keys are the only keys shops should paste", () => {
@@ -15,6 +15,9 @@ test("invoice sync permissions include customers and invoices as write", () => {
   assert.ok(writes.includes("Customers"));
   assert.ok(writes.includes("Invoices"));
   assert.ok(writes.includes("Invoice Items"));
+  const url = stripeCreateRestrictedKeyUrl();
+  assert.ok(url.includes("rak_customer_write"));
+  assert.ok(url.includes("rak_invoiceitem_write"));
 });
 
 test("Stripe invoice webhooks cover create, pay, and void", () => {

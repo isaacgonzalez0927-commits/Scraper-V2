@@ -1,30 +1,36 @@
 import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { addNoteAction, archiveCustomerAction } from "@/app/actions";
-import { Badge, Blank, Card, KeyValue, RowLink, Rows, Stat } from "@/components/ui";
+import { Badge, Banner, Blank, Card, KeyValue, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
+import { integrationStatus, stripeConfig } from "@/lib/integrations";
 import { formatMoney } from "@/lib/money";
 import { label, prettyDate, prettyWhen } from "@/lib/labels";
 import { filledDetails, parseDetails, tradeFieldsFor } from "@/lib/business";
 import { loadApp } from "@/lib/page";
 import { customerBalanceCents, customerLifetimeCents } from "@/lib/queries";
+import { stripeDashboardCustomerUrl } from "@/lib/stripe-customers";
 import { customers, invoices, jobs, notes, payments } from "@/lib/schema";
 
 export default async function CustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
   const { org, shell, voice } = await loadApp();
   const { id } = await params;
+  const q = await searchParams;
   const [customer] = await db()
     .select()
     .from(customers)
     .where(and(eq(customers.id, Number(id)), eq(customers.organizationId, org.id)));
   if (!customer) notFound();
-  const [lifetime, balance, jobRows, invoiceRows, paymentRows, noteRows] = await Promise.all([
+  const [lifetime, balance, jobRows, invoiceRows, paymentRows, noteRows, integrations, stripe] =
+    await Promise.all([
     customerLifetimeCents(org.id, customer.id),
     customerBalanceCents(org.id, customer.id),
     db().select().from(jobs).where(and(eq(jobs.organizationId, org.id), eq(jobs.customerId, customer.id))),
@@ -35,6 +41,8 @@ export default async function CustomerDetailPage({
       .from(notes)
       .where(and(eq(notes.organizationId, org.id), eq(notes.customerId, customer.id)))
       .orderBy(desc(notes.createdAt)),
+    integrationStatus(org.id),
+    stripeConfig(org.id),
   ]);
 
   const billing = formatAddress(customer.billingLine1, customer.billingCity, customer.billingState, customer.billingPostal);
@@ -63,6 +71,7 @@ export default async function CustomerDetailPage({
         </>
       }
     >
+      <Banner error={q.error} ok={q.ok} />
       <div className="grid grid-3">
         <Stat label="Paid to date" value={formatMoney(lifetime)} note="Payments received" tone="good" />
         <Stat
@@ -84,6 +93,22 @@ export default async function CustomerDetailPage({
               ],
               ["Billing", billing || <Blank />],
               [voice.siteLabel, service || <Blank text="Same as billing" />],
+              [
+                "Stripe",
+                customer.stripeCustomerId ? (
+                  <a
+                    href={stripeDashboardCustomerUrl(customer.stripeCustomerId, stripe?.secretKey)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open in Stripe
+                  </a>
+                ) : integrations.stripe.connected ? (
+                  "Not linked yet. Edit and save, or tap Sync with Stripe on the list."
+                ) : (
+                  <a href="/settings?tab=integrations#stripe">Connect Stripe</a>
+                ),
+              ],
             ]}
           />
         </Card>

@@ -1,27 +1,34 @@
-import { STRIPE_API_KEYS_URL } from "@/lib/stripe-keys";
+import {
+  STRIPE_CREATE_KEY_URL,
+  STRIPE_CREATE_TEST_KEY_URL,
+} from "@/lib/stripe-keys";
 
 export function StripeKeyTutorial({ defaultOpen = true }: { defaultOpen?: boolean }) {
   return (
     <div className={`key-guide${defaultOpen ? "" : " key-guide-collapsed"}`}>
       <p className="key-guide-lede">
-        Three taps in Stripe. Paste the <code>rk_</code> key here. Never the secret{" "}
-        <code>sk_</code> key — that one can move money.
+        One link in Stripe. The Sere boxes are already checked. Paste the{" "}
+        <code>rk_</code> key here. Never the secret <code>sk_</code> key. That
+        one can move money.
       </p>
       <ol className="key-steps">
         <li>
-          <a href={STRIPE_API_KEYS_URL} target="_blank" rel="noreferrer">
-            Open Stripe API keys
+          <a className="btn btn-sm btn-stripe" href={STRIPE_CREATE_KEY_URL} target="_blank" rel="noreferrer">
+            Create the Sere key in Stripe
           </a>
+          <span className="tiny" style={{ display: "block", marginTop: 6 }}>
+            Live mode.{" "}
+            <a href={STRIPE_CREATE_TEST_KEY_URL} target="_blank" rel="noreferrer">
+              Test mode instead
+            </a>
+            .
+          </span>
         </li>
         <li>
-          Click <strong>Create restricted key</strong> · name it <em>Sere</em>
+          Confirm the name is <em>Sere</em>, create the key, copy it (
+          <code>rk_live_</code> or <code>rk_test_</code>).
         </li>
-        <li>
-          Turn on <strong>Read</strong> for Account, Balance, Charges, Payouts.
-          For invoices to sync, also turn on <strong>Write</strong> for Customers,
-          Invoices, and Invoice Items.
-        </li>
-        <li>Copy the key (<code>rk_live_</code> or <code>rk_test_</code>) and paste below.</li>
+        <li>Paste below and tap Connect.</li>
       </ol>
     </div>
   );

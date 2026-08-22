@@ -1,8 +1,10 @@
 import { and, eq, isNotNull, isNull, like, or } from "drizzle-orm";
-import { Empty, RecordTable, SearchField, Tabs } from "@/components/ui";
+import { syncCustomersWithStripeAction } from "@/app/actions";
+import { Banner, Empty, RecordTable, SearchField, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
+import { integrationStatus } from "@/lib/integrations";
 import { formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
 import { loadApp } from "@/lib/page";
@@ -12,7 +14,7 @@ import { customers } from "@/lib/schema";
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; show?: string }>;
+  searchParams: Promise<{ q?: string; show?: string; ok?: string; error?: string }>;
 }) {
   const { org, shell, voice } = await loadApp();
   const q = await searchParams;
@@ -33,7 +35,10 @@ export default async function CustomersPage({
       )!,
     );
   }
-  const rows = await db().select().from(customers).where(and(...filters));
+  const [rows, integrations] = await Promise.all([
+    db().select().from(customers).where(and(...filters)),
+    integrationStatus(org.id),
+  ]);
   const cards = await Promise.all(
     rows.map(async (customer) => ({
       customer,
@@ -48,8 +53,28 @@ export default async function CustomersPage({
       path="/customers"
       title={voice.customers}
       sub={<p className="page-sub">{voice.customersSub}</p>}
-      actions={<a className="btn" href="/customers/new">{voice.newCustomer}</a>}
+      actions={
+        <>
+          {integrations.stripe.connected ? (
+            <form action={syncCustomersWithStripeAction}>
+              <button className="btn btn-secondary" type="submit">
+                Sync with Stripe
+              </button>
+            </form>
+          ) : null}
+          <a className="btn" href="/customers/new">{voice.newCustomer}</a>
+        </>
+      }
     >
+      <Banner error={q.error} ok={q.ok} />
+      {integrations.stripe.connected ? (
+        <p className="help">
+          Saving a customer here creates them in Stripe. New Stripe customers
+          come back through the webhook, or tap Sync with Stripe to pull the
+          ones already there.
+        </p>
+      ) : null}
+
       <div className="toolbar">
         <Tabs
           tabs={[
@@ -82,6 +107,7 @@ export default async function CustomersPage({
                 <a className="rowlink" href={`/customers/${customer.id}`}>{displayName(customer)}</a>
                 <div className="tiny">
                   {formatAddress("", customer.serviceCity, customer.serviceState, customer.servicePostal)}
+                  {customer.stripeCustomerId ? " · Stripe" : ""}
                 </div>
               </>,
               <>
