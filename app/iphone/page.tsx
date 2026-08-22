@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Newsreader } from "next/font/google";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
@@ -9,15 +10,24 @@ import {
   iphoneHomeScreenSteps,
 } from "@/lib/iphone";
 
+const display = Newsreader({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-landing",
+  weight: ["400", "500", "600"],
+});
+
 export const metadata = {
   title: "Sere for iPhone",
-  description: "Open Sere on your iPhone. Add it to the home screen. The App Store wrapper comes later.",
+  description: "Open Sere on your iPhone. Same login. Same book.",
 };
 
 export default function IphonePage() {
   const copy = iphoneCopy();
+  const primaryHref = IPHONE_STORE_URL || IPHONE_OPEN_HREF;
+  const primaryLabel = IPHONE_STORE_URL ? "Get on the App Store" : "Open Sere";
   return (
-    <div className="landing">
+    <div className={`landing ${display.variable}`}>
       <header className="landing-nav">
         <Link href="/" className="brand" aria-label="Sere">
           <BrandLogo className="brand-lockup" />
@@ -27,45 +37,32 @@ export default function IphonePage() {
           <Link href="/login">Sign in</Link>
         </nav>
       </header>
-      <main className="landing-main iphone-page">
-        <section className="hero">
-          <div className="hero-copy">
-            <h1>Sere on your iPhone</h1>
-            <p className="hero-lede">{copy[0]}</p>
-            <div className="hero-actions">
-              {IPHONE_STORE_URL ? (
-                <a className="btn" href={IPHONE_STORE_URL}>
-                  Get on the App Store
-                </a>
-              ) : (
-                <a className="btn" href={IPHONE_OPEN_HREF}>
-                  Open Sere
-                </a>
-              )}
-              <a className="btn btn-secondary" href={IPHONE_DEMO_HREF}>
-                Try Harbor Air
-              </a>
-            </div>
-            <p className="hero-note">{copy[1]}</p>
-          </div>
+      <main className="iphone-shell">
+        <div className="iphone-mark" aria-hidden="true">
+          <BrandLogo crop="icon" className="iphone-mark-logo" />
+        </div>
+        <h1>Sere for iPhone</h1>
+        <p className="iphone-lede">{copy[0]}</p>
+        <a className="btn iphone-cta" href={primaryHref}>
+          {primaryLabel}
+        </a>
+        <p className="iphone-fine">{copy[1]}</p>
+
+        <section className="iphone-card">
+          <p className="iphone-card-kicker">{copy[2]}</p>
+          <ol>
+            {iphoneHomeScreenSteps().map((step, i) => (
+              <li key={step}>
+                <span>{i + 1}</span>
+                {step}
+              </li>
+            ))}
+          </ol>
         </section>
 
-        <section className="landing-points">
-          <article>
-            <h2>Keep it on the home screen</h2>
-            <p>{copy[2]}</p>
-            <ol className="iphone-steps">
-              {iphoneHomeScreenSteps().map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          </article>
-          <article>
-            <h2>App Store</h2>
-            <p>{copy[3]}</p>
-          </article>
-        </section>
-
+        <p className="iphone-demo">
+          Just looking? <a href={IPHONE_DEMO_HREF}>See a live shop</a>
+        </p>
         <p className="landing-legal">
           <Link href="/">Home</Link>
           <span aria-hidden="true"> · </span>
@@ -74,14 +71,6 @@ export default function IphonePage() {
           <a href="/privacy">Privacy</a>
         </p>
       </main>
-      <div className="landing-dock">
-        <a className="btn" href={IPHONE_STORE_URL || IPHONE_OPEN_HREF}>
-          {IPHONE_STORE_URL ? "Get on the App Store" : "Open Sere"}
-        </a>
-        <a className="btn btn-secondary" href={IPHONE_DEMO_HREF}>
-          Try Harbor Air
-        </a>
-      </div>
     </div>
   );
 }

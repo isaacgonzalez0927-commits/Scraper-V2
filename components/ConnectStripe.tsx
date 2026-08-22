@@ -1,4 +1,4 @@
-import { STRIPE_API_KEYS_URL, STRIPE_SANDBOX_API_KEYS_URL } from "@/lib/stripe-keys";
+import { stripeCreateRestrictedKeyUrl, STRIPE_API_KEYS_URL } from "@/lib/stripe-keys";
 
 export { STRIPE_API_KEYS_URL as STRIPE_KEYS_URL };
 export const CONNECT_STRIPE_HREF = "/settings?tab=integrations#stripe";
@@ -25,8 +25,8 @@ export function ConnectSquareButton() {
 
 export function StripeKeyLink() {
   return (
-    <a href={STRIPE_SANDBOX_API_KEYS_URL} target="_blank" rel="noreferrer">
-      Open Stripe Developers (sandbox)
+    <a href={stripeCreateRestrictedKeyUrl({ test: true })} target="_blank" rel="noreferrer">
+      Create the Sere key
     </a>
   );
 }
@@ -42,21 +42,13 @@ export function SquareKeyLink() {
 export function SquareKeyTutorial() {
   return (
     <div className="key-guide">
-      <p className="key-guide-lede">Three steps. Same idea as Stripe.</p>
-      <ol className="key-steps">
-        <li>
-          Open{" "}
-          <a href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
-            Square Developers
-          </a>
-          . Pick your app, or create one.
-        </li>
-        <li>
-          Credentials → Production. Copy the access token. Use Sandbox only if
-          that is a test app.
-        </li>
-        <li>Paste it below. Tap Connect Square.</li>
-      </ol>
+      <a className="btn btn-square key-guide-cta" href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
+        Open Square Developers
+      </a>
+      <p className="key-guide-lede">
+        Pick your app, open Credentials, copy the production access token, and
+        paste it below. Use sandbox only for a test app.
+      </p>
     </div>
   );
 }
@@ -91,8 +83,18 @@ export function ConnectCashCallout({
     <div className="connect-cta connect-cta-compact">
       <div className="connect-cta-block">
         <strong>See cash that actually landed</strong>
-        <p>Connect the account you already take cards with. The walkthrough is on Integrations.</p>
+        <p>Connect the account you already take cards with. Use a real restricted key, not a secret key.</p>
         <div className="connect-cta-actions">
+          {needStripe ? (
+            <a
+              className="btn btn-connect btn-stripe"
+              href={stripeCreateRestrictedKeyUrl({ test: true })}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Create the Sere key
+            </a>
+          ) : null}
           {needStripe ? <ConnectStripeButton /> : null}
           {needSquare ? <ConnectSquareButton /> : null}
         </div>

@@ -21,17 +21,10 @@ export const STRIPE_SANDBOX_API_KEYS_URL =
   "https://dashboard.stripe.com/test/apikeys";
 export const STRIPE_LIVE_API_KEYS_URL = "https://dashboard.stripe.com/apikeys";
 
-/** Default connect link: sandbox Developers, not the live create-key wizard. */
-export const STRIPE_API_KEYS_URL = STRIPE_SANDBOX_API_KEYS_URL;
-export const STRIPE_CREATE_KEY_URL = STRIPE_SANDBOX_API_KEYS_URL;
-export const STRIPE_CREATE_TEST_KEY_URL = STRIPE_SANDBOX_API_KEYS_URL;
-
 /**
- * Stripe slugs for the permissions Sere needs. Kept as a reference for
- * error hints. Do not stuff these into a create-key URL. Stripe's current
- * "another website" wizard ignores query-string slugs, names the key from
- * `name=`, and applies a default third-party set unless Customize
- * permissions is ticked by hand.
+ * Dashboard slugs for Create restricted key. Stripe's form reads `permissions[]`
+ * the same way ChargebackStop and Stripe's own docs do. `permissions[0]` is
+ * ignored, which is why an earlier Sere link created a key with no boxes checked.
  */
 export const SERE_STRIPE_RAK_PERMISSIONS = [
   "rak_connected_account_read",
@@ -50,10 +43,22 @@ export function stripeDevelopersApiKeysUrl(opts: { test?: boolean } = {}): strin
   return opts.test === false ? STRIPE_LIVE_API_KEYS_URL : STRIPE_SANDBOX_API_KEYS_URL;
 }
 
-/** @deprecated Use stripeDevelopersApiKeysUrl. Permission query params do nothing. */
+/** Opens Stripe's create-key screen with Sere's permissions already selected. */
 export function stripeCreateRestrictedKeyUrl(opts: { test?: boolean } = {}): string {
-  return stripeDevelopersApiKeysUrl(opts);
+  const test = opts.test !== false;
+  const path = test ? "/test/apikeys/create" : "/apikeys/create";
+  const params = new URLSearchParams();
+  params.set("name", "Sere");
+  params.set("url", SERE_SITE_URL);
+  for (const permission of SERE_STRIPE_RAK_PERMISSIONS) {
+    params.append("permissions[]", permission);
+  }
+  return `https://dashboard.stripe.com${path}?${params.toString()}`;
 }
+
+export const STRIPE_API_KEYS_URL = STRIPE_SANDBOX_API_KEYS_URL;
+export const STRIPE_CREATE_KEY_URL = stripeCreateRestrictedKeyUrl({ test: true });
+export const STRIPE_CREATE_TEST_KEY_URL = STRIPE_CREATE_KEY_URL;
 
 export function looksLikeStripeRestrictedKey(key: string): boolean {
   return /^rk_(test|live)_/.test(key.trim());
@@ -67,8 +72,8 @@ export function restrictedKeyRequiredMessage(): string {
   return (
     "Sere only accepts restricted keys (rk_live_ or rk_test_). Full secret keys " +
     "can move money and change payout accounts. Too risky to paste into any app. " +
-    "Create a restricted key in Stripe Developers (sandbox). Settings → Integrations " +
-    "has the steps."
+    "Create a restricted key from Settings → Integrations. The Sere key link " +
+    "opens Stripe with the permissions already filled."
   );
 }
 
@@ -134,10 +139,9 @@ export function stripeKeyDeniedMessage(problems: string[]): string {
     .filter(Boolean);
   const list = missing.join(", ") || "the permissions Sere needs";
   return (
-    `That key is missing ${list}. The key Stripe named Sere with its default ` +
-    `set will keep failing. Open Stripe Developers (sandbox), create a new ` +
-    `restricted key, tick Customize permissions, set those rows, and paste ` +
-    `the new rk_test_ key.`
+    `That key is missing ${list}. Open the Sere key link on Settings → ` +
+    `Integrations so Stripe fills the permissions, then paste the new ` +
+    `rk_test_ or rk_live_ key.`
   );
 }
 

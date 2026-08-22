@@ -25,7 +25,8 @@ function rotateX(p: Vec3, a: number): Vec3 {
   return { x: p.x, y: p.y * c - p.z * s, z: p.y * s + p.z * c };
 }
 
-const PURPLE = "91,56,214";
+const PURPLE = "123,97,232";
+const CORE = "186,172,248";
 
 export function NovaOrb({
   phase,
@@ -100,8 +101,8 @@ export function NovaOrb({
       let rotSpeed = 0.2;
       let waveAmp = 0.04;
       let waveFreq = 2.2;
-      let glow = 0.5;
-      let lineAlpha = 0.5;
+      let glow = 0.85;
+      let lineAlpha = 0.82;
       if (p === "listening") {
         rotSpeed = 0.34;
         waveAmp = 0.07;
@@ -138,11 +139,15 @@ export function NovaOrb({
         cy,
         radius * 1.35,
       );
-      halo.addColorStop(0, `rgba(91, 56, 214, ${0.28 * glow})`);
-      halo.addColorStop(0.55, `rgba(91, 56, 214, ${0.1 * glow})`);
+      halo.addColorStop(0, `rgba(${CORE}, ${0.55 * glow})`);
+      halo.addColorStop(0.45, `rgba(${PURPLE}, ${0.2 * glow})`);
       halo.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = halo;
       ctx.fillRect(0, 0, width, height);
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 0.9, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${CORE}, ${0.32 * glow})`;
+      ctx.fill();
 
       type Proj = { x: number; y: number; z: number };
       const projected: Proj[][] = [];
@@ -182,7 +187,7 @@ export function NovaOrb({
 
       // Front face first, then the far side faintly, so the sphere reads solid.
       for (const near of [true, false]) {
-        ctx.globalAlpha = near ? 1 : 0.32;
+        ctx.globalAlpha = near ? 1 : 0.5;
         for (let i = 0; i < rings; i += 1) {
           for (let j = 0; j < segs; j += 1) {
             const a = projected[i][j];
@@ -201,7 +206,7 @@ export function NovaOrb({
         for (let j = 0; j <= segs; j += 2) {
           const pt = projected[i][j];
           if (pt.z < -0.2) continue;
-          ctx.fillStyle = `rgba(${PURPLE},${0.22 + (pt.z + 1) * 0.32})`;
+          ctx.fillStyle = `rgba(${CORE},${0.35 + (pt.z + 1) * 0.4})`;
           ctx.beginPath();
           ctx.arc(pt.x, pt.y, 0.7 + (pt.z + 1) * 0.8, 0, Math.PI * 2);
           ctx.fill();

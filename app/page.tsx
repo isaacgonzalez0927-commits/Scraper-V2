@@ -29,7 +29,7 @@ const POINTS = [
   },
   {
     title: "See the cash in Stripe or Square",
-    body: "Create a restricted key in Stripe, paste it on Overview. Then you see what actually landed.",
+    body: "Create a restricted key in Stripe. The Sere key link fills the permissions. Paste it on Settings → Integrations. Then you see what actually landed.",
   },
 ];
 
@@ -61,7 +61,7 @@ export default function LandingPage() {
             </p>
             <div className="hero-actions">
               <ConnectSereButton />
-              <a className="btn btn-connect btn-secondary" href="/demo">Try Harbor Air</a>
+              <a className="btn btn-connect btn-secondary" href="/demo">See a live shop</a>
             </div>
             <p className="hero-note">HVAC shop in Fort Myers. Open it with no account.</p>
           </div>
@@ -184,7 +184,7 @@ export default function LandingPage() {
 
       <div className="landing-dock">
         <ConnectSereButton />
-        <a className="btn btn-connect btn-secondary" href="/demo">Try Harbor Air</a>
+        <a className="btn btn-connect btn-secondary" href="/demo">See a live shop</a>
       </div>
     </div>
   );

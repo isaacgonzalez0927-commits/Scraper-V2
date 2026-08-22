@@ -16,8 +16,8 @@ test("invoice sync permissions include customers and invoices as write", () => {
   assert.ok(writes.includes("Invoices"));
   assert.ok(writes.includes("Invoice Items"));
   const url = stripeCreateRestrictedKeyUrl();
-  assert.equal(url, "https://dashboard.stripe.com/test/apikeys");
-  assert.equal(url.includes("rak_"), false);
+  assert.ok(url.includes("/test/apikeys/create"));
+  assert.ok(url.includes("rak_invoice_write"));
 });
 
 test("Stripe invoice webhooks cover create, pay, and void", () => {

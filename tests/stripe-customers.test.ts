@@ -13,14 +13,15 @@ import {
   stripeDashboardCustomerUrl,
 } from "../lib/stripe-customers";
 
-test("connect link opens Stripe sandbox Developers, not a named create-key wizard", () => {
+test("create-key URL preselects Sere permissions and names the key", () => {
   const sandbox = stripeCreateRestrictedKeyUrl();
   const live = stripeCreateRestrictedKeyUrl({ test: false });
-  assert.equal(sandbox, "https://dashboard.stripe.com/test/apikeys");
-  assert.equal(live, "https://dashboard.stripe.com/apikeys");
-  assert.equal(sandbox.includes("create"), false);
-  assert.equal(sandbox.includes("name="), false);
-  assert.equal(sandbox.includes("permissions"), false);
+  assert.equal(sandbox.startsWith("https://dashboard.stripe.com/test/apikeys/create?"), true);
+  assert.equal(live.startsWith("https://dashboard.stripe.com/apikeys/create?"), true);
+  assert.ok(sandbox.includes("name=Sere"));
+  assert.ok(sandbox.includes("permissions"));
+  assert.ok(sandbox.includes("rak_connected_account_read"));
+  assert.ok(sandbox.includes("rak_customer_write"));
   assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_customer_write"));
   assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_connected_account_read"));
 });
@@ -72,7 +73,7 @@ test("missing Customers Write gets a create-key hint", () => {
   const hint = customerWriteHint(
     "The provided key does not have the required permissions. Having the 'rak_customer_write' permission would allow this request to continue.",
   );
-  assert.match(hint, /Customize permissions/);
+  assert.match(hint, /Sere key link/);
 });
 
 test("a rejected key names the missing rows instead of dumping Stripe's error", () => {
@@ -82,8 +83,7 @@ test("a rejected key names the missing rows instead of dumping Stripe's error", 
   ]);
   assert.match(message, /Balance \(needs Read\)/);
   assert.match(message, /Charges \(needs Read\)/);
-  assert.match(message, /Customize permissions/);
-  assert.equal(message.includes("rk_live_"), false);
+  assert.match(message, /Sere key link/);
 });
 
 test("Stripe customer dashboard URL follows test vs live keys", () => {

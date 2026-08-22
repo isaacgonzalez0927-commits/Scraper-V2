@@ -1168,10 +1168,22 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 
 .key-guide {
   margin: 8px 0 0;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--bg);
+}
+.key-guide-cta {
+  display: inline-flex;
+  margin-bottom: 10px;
+}
+.key-guide-collapsed {
+  padding: 10px 12px;
+  background: transparent;
+}
+.connect-paste .disclosure.full {
+  flex: 1 1 100%;
+  width: 100%;
 }
 .key-guide-lede {
   margin: 0 0 8px;
@@ -1870,14 +1882,96 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 .landing-legal a { color: var(--ink-2); }
 .landing-legal a:hover { color: var(--ink); }
 
-.iphone-steps {
-  margin: 10px 0 0;
-  padding-left: 1.2em;
+.iphone-shell {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 36px 24px 48px;
+  text-align: center;
+}
+.iphone-mark {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: #f3eeff;
+  box-shadow: 0 12px 32px rgba(91, 56, 214, 0.16);
+}
+.iphone-mark-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+.iphone-shell h1 {
+  margin: 0 0 10px;
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.iphone-lede {
+  margin: 0 0 22px;
+  color: var(--ink-2);
+  font-size: 17px;
+  line-height: 1.45;
+}
+.iphone-cta {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+.iphone-fine {
+  margin: 10px 0 28px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.iphone-card {
+  text-align: left;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.iphone-card-kicker {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.iphone-card ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.iphone-card li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
   color: var(--ink-2);
   font-size: 15px;
-  line-height: 1.5;
 }
-.iphone-steps li { margin: 6px 0; }
+.iphone-card li span {
+  flex: 0 0 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #f3eeff;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+.iphone-demo {
+  margin: 22px 0 0;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+.iphone-demo a { font-weight: 600; }
 
 .landing-pricing { margin-top: 56px; }
 .landing-pricing-head h2 {
@@ -2417,13 +2511,13 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .connect-paste .btn,
   .key-guide .btn,
   .btn-connect {
-    width: auto;
-    min-height: 26px;
-    padding: 0 8px;
-    font-size: 12px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px;
+    font-size: 15px;
     font-weight: 600;
-    border-radius: 4px;
-    align-self: flex-start;
+    border-radius: 10px;
+    align-self: stretch;
     flex: 0 0 auto;
   }
   .btn-connect-lg {
@@ -2631,8 +2725,9 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   }
   .hero-actions { display: none; }
   .hero-note { display: none; }
-  .iphone-page .hero-actions { display: flex; }
-  .iphone-page .hero-note { display: block; }
+  .iphone-shell {
+    padding: 28px 20px calc(36px + env(safe-area-inset-bottom));
+  }
 
   .preview-app {
     border-radius: 14px;
@@ -2870,7 +2965,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: transparent;
+  background: radial-gradient(circle at 40% 35%, rgba(186, 172, 248, 0.55), rgba(123, 97, 232, 0.12) 62%, transparent 78%);
   cursor: pointer;
   transition: transform 0.14s var(--ease);
 }

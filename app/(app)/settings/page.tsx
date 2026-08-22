@@ -19,7 +19,7 @@ import {
   startStripeConnectAction,
 } from "@/app/actions";
 import { ConnectSereButton } from "@/components/ConnectSere";
-import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, SquareKeyTutorial } from "@/components/ConnectStripe";
+import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyTutorial } from "@/components/ConnectStripe";
 import { HashScroll } from "@/components/HashScroll";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { ThemeChooser } from "@/components/ThemeToggle";
@@ -217,6 +217,11 @@ export default async function SettingsPage({
               </div>
             )}
           </Card>
+          <p className="section-label">Cash</p>
+          <p className="muted">
+            Stripe or Square. Use a real restricted key or access token from your
+            own account. Overview then shows cash that actually landed.
+          </p>
           <Card
             id="stripe"
             title="Stripe"
@@ -391,31 +396,24 @@ export default async function SettingsPage({
             ) : null}
           </Card>
 
-          <p className="section-label mt-1">Also works with</p>
-          <p className="muted">
-            Square is the same idea: paste the access token and tap Connect Square.
-            Overview then shows cash that actually landed in Square. OpenAI is for
-            Serenity. PayPal and QuickBooks stay optional extras.
-          </p>
-
           <Card
             id="square"
             title="Square"
-              note="Read the shop's Square so Overview shows payments and payouts, not just invoices you typed in."
-              action={
-                <span
-                  className={`badge badge-${
-                    integrations.square.connected ? "paid" : integrations.square.unreadable ? "partial" : "draft"
-                  }`}
-                >
-                  {integrations.square.connected
-                    ? "Connected"
-                    : integrations.square.unreadable
-                      ? "Needs reconnecting"
-                      : "Not connected"}
-                </span>
-              }
-            >
+            note="Read the shop's Square so Overview shows payments and payouts, not just invoices you typed in."
+            action={
+              <span
+                className={`badge badge-${
+                  integrations.square.connected ? "paid" : integrations.square.unreadable ? "partial" : "draft"
+                }`}
+              >
+                {integrations.square.connected
+                  ? "Connected"
+                  : integrations.square.unreadable
+                    ? "Needs reconnecting"
+                    : "Not connected"}
+              </span>
+            }
+          >
               {integrations.square.connected ? (
                 <>
                   <div className="kv">
@@ -456,31 +454,24 @@ export default async function SettingsPage({
               ) : (
                 <>
                   <SquareKeyTutorial />
-                  <p className="help">
-                    Create an app if you do not have one. <SquareKeyLink />.
-                  </p>
-                  <form action={connectSquareAction} className="form-grid mt-2">
-                    <div className="field full">
-                      <label>Access token</label>
-                      <input
-                        name="square_access_token"
-                        type="password"
-                        autoComplete="off"
-                        required
-                        placeholder="EAAA..."
-                      />
-                      <p className="help">
-                        Stored encrypted. Sere never shows it again. Used to read
-                        payments and payouts.
-                      </p>
-                    </div>
-                    <details className="disclosure">
-                      <summary>Optional: location, sandbox, webhook</summary>
+                  <form action={connectSquareAction} className="connect-paste mt-2">
+                    <input
+                      className="input"
+                      name="square_access_token"
+                      type="password"
+                      autoComplete="off"
+                      required
+                      placeholder="EAAA..."
+                    />
+                    <button className="btn btn-connect btn-square" type="submit">
+                      Connect Square
+                    </button>
+                    <details className="disclosure full">
+                      <summary>Location, sandbox, webhook</summary>
                       <div className="form-grid mt-2">
                         <div className="field">
                           <label>Location ID (optional)</label>
                           <input name="square_location_id" placeholder="L..." autoComplete="off" />
-                          <p className="help">Blank uses the first active location.</p>
                         </div>
                         <div className="field">
                           <label>Webhook signature key</label>
@@ -492,20 +483,16 @@ export default async function SettingsPage({
                         </label>
                       </div>
                     </details>
-                    <div className="form-actions">
-                      <button className="btn btn-connect btn-square" type="submit">
-                        Connect Square
-                      </button>
-                    </div>
                   </form>
                 </>
               )}
           </Card>
 
+          <p className="section-label">Serenity</p>
           <Card
             id="openai"
             title="Serenity"
-            note="Serenity answers in English about this shop. Completing or moving a job still goes through Sere. gpt-4o-mini plus a $5 monthly budget in OpenAI is enough."
+            note="Ask about the board and the books. Completing or moving a job still goes through Sere."
             action={
               <span
                 className={`badge badge-${
@@ -572,10 +559,9 @@ export default async function SettingsPage({
             ) : (
               <>
                 <p className="help">
-                  Put <code>OPENAI_API_KEY</code> on the server, or paste a key
-                  below. Use gpt-4o-mini and <OpenAILimitsLink /> — $5 a month
-                  is plenty. Starts with <code>sk-</code> or <code>sk-proj-</code>.{" "}
-                  <OpenAIKeyLink />.
+                  Paste a real OpenAI key from <OpenAIKeyLink />. Use gpt-4o-mini
+                  and <OpenAILimitsLink />. $5 a month is plenty. Starts with{" "}
+                  <code>sk-</code> or <code>sk-proj-</code>.
                 </p>
                 <form action={connectOpenAIAction} className="form-grid mt-2">
                   <div className="field full">
@@ -637,9 +623,10 @@ export default async function SettingsPage({
             ) : null}
           </Card>
 
+          <p className="section-label">More</p>
           <Card
             title="PayPal"
-              note="Checkout for invoices. Shown under Stripe when both are connected."
+            note="Checkout for invoices. Shown under Stripe when both are connected."
               action={
                 <span
                   className={`badge badge-${
@@ -710,7 +697,7 @@ export default async function SettingsPage({
           <Card
             id="quickbooks"
             title="QuickBooks"
-              note="Books link only. Invoices and card checkout still live in Sere."
+            note="Books link only. Invoices and card checkout still live in Sere."
               action={
                 <span
                   className={`badge badge-${

@@ -4,12 +4,10 @@ Every shop connects its own accounts. Stripe and Square are for the shop's books
 Sere reads live payments and payouts so Overview is accurate. Email goes out from
 the shop's own domain.
 
-Shop owners paste the secret on **Overview** (or Reports, Payments, Settings) and tap
-**Connect Stripe**. That is the connect action. **Open Stripe Developers (sandbox)**
-opens Stripe's test-mode Developers → API keys page. That link is not the button
-that connects, and it does not pre-check permission boxes. Stripe's current wizard
-ignores those query params and applies a default third-party set unless you tick
-**Customize permissions for this key**.
+Shop owners tap **Create the Sere key** on Overview or Settings → Integrations.
+That opens Stripe's create-key screen with Sere's permissions already filled.
+They copy the `rk_test_` or `rk_live_` key, paste it on Integrations, and tap
+**Connect Stripe**. Never paste a full secret key (`sk_`).
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
 key derived from `SERE_SECRET_KEY`. Nothing shows a saved secret back on screen. If you
@@ -27,17 +25,10 @@ accurate than invoices typed in by hand.
 
 ### What the shop owner does
 
-1. Open [Stripe Developers in the sandbox](https://dashboard.stripe.com/test/apikeys)
-   (Test mode → Developers → API keys). Start here, not the live create-key page.
-2. Create restricted key. When Stripe asks how you will use it, pick **Providing this
-   key to another website**.
-3. Name it **Sere**. Website URL: `https://www.sere.cash`. Tick **Customize
-   permissions for this key**. If you skip that, Stripe names the key Sere and
-   applies its own default set. That key will fail in Sere.
-4. Set **Read** on Balance, Charges, Payouts, and Connect → Accounts. Set **Write**
-   on Customers, Invoices, Invoice Items, and Checkout Sessions.
-5. Create the key. Copy the restricted key (`rk_test_...` in the sandbox,
-   `rk_live_...` for real cash from [live API keys](https://dashboard.stripe.com/apikeys)).
+1. Tap **Create the Sere key**. Stripe opens with the name and permissions filled.
+2. Create the key. Copy the restricted key (`rk_test_...` in the sandbox,
+   `rk_live_...` for real cash).
+3. Paste it on Settings → Integrations and tap **Connect Stripe**.
 6. Paste it in Sere under **Settings → Integrations → Stripe** and tap **Connect**.
 
 Sere **rejects full secret keys** (`sk_live_...`). They can move money and change payout

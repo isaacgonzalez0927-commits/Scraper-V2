@@ -20,10 +20,10 @@ test("iPhone is a web link until the App Store listing exists", () => {
 
 test("the iPhone page tells people to add Sere from Safari", () => {
   const text = [...iphoneCopy(), ...iphoneHomeScreenSteps()].join("\n");
-  assert.match(text, /Open Sere/);
+  assert.match(text, /same shop/i);
   assert.match(text, /Safari/);
   assert.match(text, /Add to Home Screen/);
-  assert.match(text, /wrapper/i);
-  assert.match(text, /do not need Xcode/i);
+  assert.equal(text.includes("Xcode"), false);
+  assert.equal(text.includes("wrapper"), false);
   assert.equal(text.includes("—"), false);
 });
