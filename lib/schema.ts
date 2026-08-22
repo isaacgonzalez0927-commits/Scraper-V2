@@ -388,3 +388,39 @@ export const activities = sqliteTable("activities", {
   link: text("link").notNull().default(""),
   createdAt: text("created_at").notNull(),
 });
+
+/**
+ * Per-shop monthly spend on Sere's OpenAI key. $1.00 = 1_000_000 micros.
+ * Shops never paste their own key. Nexus outreach is not billed here.
+ */
+export const openaiUsage = sqliteTable(
+  "openai_usage",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    month: text("month").notNull(),
+    promptTokens: integer("prompt_tokens").notNull().default(0),
+    completionTokens: integer("completion_tokens").notNull().default(0),
+    costMicros: integer("cost_micros").notNull().default(0),
+    callCount: integer("call_count").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("openai_usage_org_month").on(t.organizationId, t.month)],
+);
+
+export const openaiUsageEvents = sqliteTable(
+  "openai_usage_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    month: text("month").notNull(),
+    source: text("source").notNull(),
+    model: text("model").notNull().default(""),
+    promptTokens: integer("prompt_tokens").notNull().default(0),
+    completionTokens: integer("completion_tokens").notNull().default(0),
+    costMicros: integer("cost_micros").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("openai_usage_events_org").on(t.organizationId, t.createdAt)],
+);

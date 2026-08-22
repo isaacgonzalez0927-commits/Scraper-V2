@@ -207,6 +207,14 @@ test("OpenAI keys are recognised and Stripe secrets are rejected", () => {
   assert.equal(looksLikeOpenAIKey(""), false);
 });
 
+test("shops do not paste an OpenAI key on Integrations", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const page = await readFile(new URL("../app/(app)/settings/page.tsx", import.meta.url), "utf8");
+  assert.equal(page.includes("openai_api_key"), false);
+  assert.equal(page.includes("Paste a real OpenAI key"), false);
+  assert.match(page, /You do not paste an OpenAI key/);
+});
+
 test("a deployment OPENAI_API_KEY turns the assistant on without a shop paste", () => {
   const previous = process.env.OPENAI_API_KEY;
   const previousModel = process.env.OPENAI_MODEL;
