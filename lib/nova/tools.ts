@@ -399,7 +399,7 @@ async function moveJob(
   await logActivity(
     ctx.organizationId,
     "job_rescheduled",
-    `Nova moved ${row.job.title}`,
+    `Serenity moved ${row.job.title}`,
     null,
     `/jobs/${jobId}`,
   );
@@ -431,7 +431,7 @@ async function completeJob(ctx: ToolContext, jobId: number): Promise<Record<stri
   await logActivity(
     ctx.organizationId,
     "job_completed",
-    `Nova completed ${row.job.title}`,
+    `Serenity completed ${row.job.title}`,
     null,
     `/jobs/${jobId}`,
   );

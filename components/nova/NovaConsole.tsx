@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SERENITY_NAME } from "@/lib/serenity";
 import { NovaOrb, type OrbPhase } from "./NovaOrb";
 
 /**
@@ -129,7 +130,7 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
         });
         if (!response.ok || !response.body) {
           const payload = (await response.json().catch(() => ({}))) as { error?: string };
-          throw new Error(payload.error || "Nova is not answering.");
+          throw new Error(payload.error || `${SERENITY_NAME} is not answering.`);
         }
 
         const reader = response.body.getReader();
@@ -169,7 +170,7 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
                 return next;
               });
             } else if (kind === "error") {
-              throw new Error(data.error || "Nova hit a problem.");
+              throw new Error(data.error || `${SERENITY_NAME} hit a problem.`);
             }
           }
         }
@@ -214,12 +215,12 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
 
   const label =
     phase === "listening"
-      ? "Listening — tap to stop"
+      ? "Listening. Tap to stop"
       : phase === "thinking"
         ? "Working"
         : phase === "speaking"
-          ? "Speaking — tap to stop"
-          : "Tap to talk to Nova";
+          ? "Speaking. Tap to stop"
+          : `Tap to talk to ${SERENITY_NAME}`;
 
   return (
     <div className="nova">
@@ -237,7 +238,7 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
           }}
         />
         <div className="nova-head-copy">
-          <h1 className="nova-title">Nova</h1>
+          <h1 className="nova-title">{SERENITY_NAME}</h1>
           <p className="nova-sub">
             {status
               ? `${status.shop} · ${status.headline}`
@@ -246,7 +247,7 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
           <p className="nova-meta">
             {status?.online
               ? `${status.model}${status.writable ? "" : " · read only"}`
-              : "No model key on the server — Nova cannot answer yet."}
+              : `No model key on the server. ${SERENITY_NAME} cannot answer yet.`}
             {status ? ` · ${status.clock.timeWithZone}` : ""}
           </p>
         </div>
@@ -315,8 +316,8 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder={busy ? "Working\u2026" : "Ask Nova"}
-          aria-label="Ask Nova"
+          placeholder={busy ? "Working\u2026" : `Ask ${SERENITY_NAME}`}
+          aria-label={`Ask ${SERENITY_NAME}`}
           enterKeyHint="send"
           disabled={busy}
         />

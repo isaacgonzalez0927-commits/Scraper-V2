@@ -395,7 +395,7 @@ export default async function SettingsPage({
           <p className="muted">
             Square is the same idea: paste the access token and tap Connect Square.
             Overview then shows cash that actually landed in Square. OpenAI is for
-            the Sere assistant. PayPal and QuickBooks stay optional extras.
+            Serenity. PayPal and QuickBooks stay optional extras.
           </p>
 
           <Card
@@ -504,8 +504,8 @@ export default async function SettingsPage({
 
           <Card
             id="openai"
-            title="Sere assistant"
-            note="GPT answers in English about this shop. Completing or moving a job still goes through Sere. gpt-4o-mini plus a $5 monthly budget in OpenAI is enough."
+            title="Serenity"
+            note="Serenity answers in English about this shop. Completing or moving a job still goes through Sere. gpt-4o-mini plus a $5 monthly budget in OpenAI is enough."
             action={
               <span
                 className={`badge badge-${
@@ -546,8 +546,8 @@ export default async function SettingsPage({
                   <div>
                     <strong>
                       {integrations.openai.fromEnv
-                        ? "The assistant is using the deployment OpenAI key."
-                        : "The assistant can use GPT on this shop."}
+                        ? "Serenity is using the deployment OpenAI key."
+                        : "Serenity can use GPT on this shop."}
                     </strong>
                     <p className="mt-1">
                       {integrations.openai.fromEnv
@@ -590,7 +590,7 @@ export default async function SettingsPage({
                     />
                     <p className="help">
                       Stored encrypted. Sere never shows it again. Used only for
-                      the assistant on this shop.
+                      Serenity on this shop.
                     </p>
                   </div>
                   <details className="disclosure">

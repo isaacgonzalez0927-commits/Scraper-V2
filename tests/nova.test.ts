@@ -59,6 +59,8 @@ test("the clock is generated per request and names its timezone", () => {
 
 test("the prompt speaks the shop's trade and forbids invented numbers", () => {
   const prompt = novaSystemPrompt(WORDS, "Isaac", "Gulf Plumbing");
+  assert.ok(prompt.includes("Serenity"));
+  assert.equal(prompt.includes("You are Nova"), false);
   assert.ok(prompt.includes("Gulf Plumbing"));
   assert.ok(prompt.includes("Isaac"));
   // A plumber has calls, not jobs.

@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "./db";
@@ -13,11 +13,29 @@ function secret() {
   return new TextEncoder().encode(process.env.SERE_SECRET_KEY || process.env.AUTH_SECRET || "sere-dev-only-change-me");
 }
 
-export async function createSession(userId: number, organizationId: number) {
-  const jwt = await new SignJWT({ userId, organizationId })
+export async function issueSessionToken(userId: number, organizationId: number): Promise<string> {
+  return new SignJWT({ userId, organizationId })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("30d")
     .sign(secret());
+}
+
+export async function readSessionToken(
+  token: string,
+): Promise<{ userId: number; organizationId: number } | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret());
+    const userId = Number(payload.userId);
+    const organizationId = Number(payload.organizationId);
+    if (!userId || !organizationId) return null;
+    return { userId, organizationId };
+  } catch {
+    return null;
+  }
+}
+
+export async function createSession(userId: number, organizationId: number) {
+  const jwt = await issueSessionToken(userId, organizationId);
   (await cookies()).set(COOKIE, jwt, {
     httpOnly: true,
     sameSite: "lax",
@@ -34,19 +52,24 @@ export async function clearSession() {
 export async function readSession(): Promise<{ userId: number; organizationId: number } | null> {
   const value = (await cookies()).get(COOKIE)?.value;
   if (!value) return null;
-  try {
-    const { payload } = await jwtVerify(value, secret());
-    const userId = Number(payload.userId);
-    const organizationId = Number(payload.organizationId);
-    if (!userId || !organizationId) return null;
-    return { userId, organizationId };
-  } catch {
-    return null;
-  }
+  return readSessionToken(value);
 }
 
-export async function currentContext() {
-  const session = await readSession();
+export async function readSessionFromRequest(
+  request?: Request,
+): Promise<{ userId: number; organizationId: number } | null> {
+  const header = request
+    ? request.headers.get("authorization") || ""
+    : (await headers()).get("authorization") || "";
+  if (header.toLowerCase().startsWith("bearer ")) {
+    const fromHeader = await readSessionToken(header.slice(7).trim());
+    if (fromHeader) return fromHeader;
+  }
+  return readSession();
+}
+
+export async function currentContext(request?: Request) {
+  const session = await readSessionFromRequest(request);
   if (!session) return null;
   const [user] = await db().select().from(users).where(eq(users.id, session.userId));
   const [membership] = await db()

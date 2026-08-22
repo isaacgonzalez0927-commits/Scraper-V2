@@ -73,6 +73,7 @@ export function Shell({
   brief,
   setup,
   shopMode,
+  native,
   path,
   title,
   sub,
@@ -93,6 +94,7 @@ export function Shell({
   brief?: AssistantBrief;
   setup?: { guide: SetupGuideView } | null;
   shopMode?: ShopMode;
+  native?: boolean;
   path: string;
   title: string;
   sub?: React.ReactNode;
@@ -103,7 +105,7 @@ export function Shell({
   const modeNote = !isDemo && shopMode ? shopModeBanner(shopMode) : null;
   const nav: [string, string, string][] = [
     ["/overview", "Overview", "grid"],
-    ["/nova", "Nova", "spark"],
+    ["/serenity", "Serenity", "spark"],
     ["/jobs", jobsLabel, "briefcase"],
     ["/customers", customersLabel, "users"],
     ["/invoices", "Invoices", "file"],
@@ -115,12 +117,12 @@ export function Shell({
   const bottom: [string, string, string][] = [
     ["/overview", "Home", "grid"],
     ["/jobs", jobsLabel, "briefcase"],
-    ["/nova", "Nova", "spark"],
+    ["/serenity", "Serenity", "spark"],
     ["/invoices", "Invoices", "file"],
     ["/settings", "Settings", "settings"],
   ];
   return (
-    <div className="app">
+    <div className={`app${native ? " app-native" : ""}`}>
       <aside className="sidebar" id="sidebar">
         <a className="brand" href="/overview">
           <BrandLogo className="brand-lockup" />

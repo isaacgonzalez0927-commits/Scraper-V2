@@ -229,6 +229,24 @@ body.locked {
   min-height: 100vh;
   min-height: 100dvh;
 }
+.app-native .sidebar,
+.app-native .topbar,
+.app-native .bottom-nav,
+.app-native .setup-guide,
+.app-native .scrim,
+.app-native .assistant-dock {
+  display: none !important;
+}
+.app-native {
+  display: block;
+}
+.app-native .content {
+  min-height: 100dvh;
+}
+.app-native .main {
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+}
+.app-native .page-head { margin-bottom: 14px; }
 
 .content {
   flex: 1;
