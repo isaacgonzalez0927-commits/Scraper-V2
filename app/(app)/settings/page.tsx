@@ -181,7 +181,7 @@ export default async function SettingsPage({
             title="How the shop runs"
             note={
               shopMode === "sandbox"
-                ? "Sandbox is practice. Test keys only. The book you build stays when you leave."
+                ? "Sandbox mode. Changes and payments are not live."
                 : shopMode === "desk"
                   ? `${DESK_MODE_NAME} is live with no Stripe or Square. Overview will not show cash that actually landed. Less useful until you connect.`
                   : "Live. Connect Stripe or Square so Overview can show cash that actually landed."
@@ -192,8 +192,8 @@ export default async function SettingsPage({
               <p className="muted">Harbor Air is the demo. It stays Live.</p>
             ) : shopMode === "sandbox" ? (
               <p className="help">
-                Finish the corner list, then pick Live or {DESK_MODE_NAME} on{" "}
-                <a href="/mode">How the shop runs</a>.
+                Finish the corner list, then connect a payment platform on{" "}
+                <a href="/mode">Go live</a>.
               </p>
             ) : (
               <div className="row mt-2">

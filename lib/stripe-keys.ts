@@ -23,15 +23,12 @@ export const STRIPE_LIVE_API_KEYS_URL = "https://dashboard.stripe.com/apikeys";
 
 /** Default connect link: sandbox Developers, not the live create-key wizard. */
 export const STRIPE_API_KEYS_URL = STRIPE_SANDBOX_API_KEYS_URL;
-export const STRIPE_CREATE_KEY_URL = STRIPE_SANDBOX_API_KEYS_URL;
-export const STRIPE_CREATE_TEST_KEY_URL = STRIPE_SANDBOX_API_KEYS_URL;
+export const STRIPE_CREATE_KEY_URL = "https://dashboard.stripe.com/test/apikeys/create";
+export const STRIPE_CREATE_TEST_KEY_URL = STRIPE_CREATE_KEY_URL;
 
 /**
- * Stripe slugs for the permissions Sere needs. Kept as a reference for
- * error hints. Do not stuff these into a create-key URL. Stripe's current
- * "another website" wizard ignores query-string slugs, names the key from
- * `name=`, and applies a default third-party set unless Customize
- * permissions is ticked by hand.
+ * Stripe slugs for the permissions Sere needs. The create-key URL sends
+ * these as `permissions[]` so the Sere key is pre-ticked.
  */
 export const SERE_STRIPE_RAK_PERMISSIONS = [
   "rak_connected_account_read",
@@ -50,9 +47,19 @@ export function stripeDevelopersApiKeysUrl(opts: { test?: boolean } = {}): strin
   return opts.test === false ? STRIPE_LIVE_API_KEYS_URL : STRIPE_SANDBOX_API_KEYS_URL;
 }
 
-/** @deprecated Use stripeDevelopersApiKeysUrl. Permission query params do nothing. */
+/**
+ * Stripe's create-restricted-key screen, named Sere, with Sere's permissions
+ * already selected. Live mode uses the live dashboard.
+ */
 export function stripeCreateRestrictedKeyUrl(opts: { test?: boolean } = {}): string {
-  return stripeDevelopersApiKeysUrl(opts);
+  const path = opts.test === false ? "/apikeys/create" : "/test/apikeys/create";
+  const params = new URLSearchParams();
+  params.set("name", "Sere");
+  params.set("url", SERE_SITE_URL);
+  for (const permission of SERE_STRIPE_RAK_PERMISSIONS) {
+    params.append("permissions[]", permission);
+  }
+  return `https://dashboard.stripe.com${path}?${params.toString()}`;
 }
 
 export function looksLikeStripeRestrictedKey(key: string): boolean {

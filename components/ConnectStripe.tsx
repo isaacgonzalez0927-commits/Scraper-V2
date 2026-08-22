@@ -1,8 +1,13 @@
-import { STRIPE_API_KEYS_URL, STRIPE_SANDBOX_API_KEYS_URL } from "@/lib/stripe-keys";
+import {
+  STRIPE_API_KEYS_URL,
+  STRIPE_SANDBOX_API_KEYS_URL,
+  stripeCreateRestrictedKeyUrl,
+} from "@/lib/stripe-keys";
 
 export { STRIPE_API_KEYS_URL as STRIPE_KEYS_URL };
 export const CONNECT_STRIPE_HREF = "/settings?tab=integrations#stripe";
 export const CONNECT_SQUARE_HREF = "/settings?tab=integrations#square";
+export const CONNECT_QUICKBOOKS_HREF = "/settings?tab=integrations#quickbooks";
 export const SQUARE_KEYS_URL = "https://developer.squareup.com/apps";
 export const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
 export const OPENAI_LIMITS_URL = "https://platform.openai.com/settings/organization/limits";
@@ -19,6 +24,33 @@ export function ConnectSquareButton() {
   return (
     <a className="btn btn-connect btn-square" href={CONNECT_SQUARE_HREF}>
       Connect Square
+    </a>
+  );
+}
+
+export function CreateSereKeyButton({
+  live = false,
+  className = "btn btn-connect btn-stripe btn-connect-lg",
+}: {
+  live?: boolean;
+  className?: string;
+}) {
+  return (
+    <a
+      className={className}
+      href={stripeCreateRestrictedKeyUrl({ test: !live })}
+      target="_blank"
+      rel="noreferrer"
+    >
+      Create the Sere key
+    </a>
+  );
+}
+
+export function ConnectQuickBooksButton() {
+  return (
+    <a className="btn btn-connect btn-quickbooks" href={CONNECT_QUICKBOOKS_HREF}>
+      QuickBooks
     </a>
   );
 }

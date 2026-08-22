@@ -34,6 +34,8 @@ test("Desk mode is the named live-no-integrations path", () => {
 test("Sandbox banner points at the mode screen", () => {
   const banner = shopModeBanner("sandbox");
   assert.equal(banner?.href, "/mode");
+  assert.equal(banner?.title, "Sandbox mode. Changes and payments are not live.");
+  assert.equal(banner?.body, "");
   assert.equal(shopModeBanner("live"), null);
   assert.equal(leftSandbox("sandbox"), false);
   assert.equal(leftSandbox("desk"), true);
