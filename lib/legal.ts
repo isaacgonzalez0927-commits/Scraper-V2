@@ -61,6 +61,7 @@ export const TERMS_SECTIONS: { id: string; title: string; body: string[] }[] = [
       "You decide the permissions on a restricted key. A key that cannot read balance, charges, and payouts cannot show live cash. A key that cannot write customers or invoices cannot sync those records.",
       "Sere stores connected secrets encrypted. We do not show them back to you. We use them only to provide the features you turned on.",
       "Stripe, Square, PayPal, Intuit, OpenAI, Resend, and other third parties have their own terms and privacy policies. You must follow those as well. We are not those companies and we do not control their outages, fees, holds, or account closures.",
+      "You do not paste an OpenAI key. Serenity and the shop assistant run on our key, within the monthly credit described below.",
       "Sere never takes custody of customer card numbers for checkout. Hosted checkout, if you turn it on, runs at the processor.",
     ],
   },
@@ -72,6 +73,15 @@ export const TERMS_SECTIONS: { id: string; title: string; body: string[] }[] = [
       "You must have the right to store the personal information you enter, including customer names, phones, emails, and addresses.",
       "Export and deletion: you may ask us to export or delete a shop. Deletion is permanent after we finish the request, except copies we must keep for security, disputes, or law, and backups that expire on their normal cycle.",
       "The Privacy Policy explains what we collect and who we share it with.",
+    ],
+  },
+  {
+    id: "assistant",
+    title: "Serenity and the assistant",
+    body: [
+      "Serenity and the shop assistant run on our OpenAI account. You do not paste your own OpenAI key.",
+      "Each shop gets a monthly credit of $3.00 of model use. When the credit is used up, those features pause until the next month. We may change the credit amount.",
+      "Questions you ask and the shop facts needed to answer them go to OpenAI under our contract with them. Do not paste secrets you would not send to a model.",
     ],
   },
   {
@@ -166,7 +176,7 @@ export const PRIVACY_SECTIONS: { id: string; title: string; body: string[] }[] =
     id: "use",
     title: "How we use it",
     body: [
-      "To run your shop book, show cash from a processor you connected, send invoices you ask us to send, and operate the assistant if you turn it on.",
+      "To run your shop book, show cash from a processor you connected, send invoices you ask us to send, and operate Serenity and the assistant within your monthly credit.",
       "To keep the service up, fix bugs, prevent abuse, and meet the law.",
       "We do not sell your shop data. We do not use your customer list to market our own product to those customers.",
     ],
@@ -177,7 +187,7 @@ export const PRIVACY_SECTIONS: { id: string; title: string; body: string[] }[] =
     body: [
       "Processors you connect (Stripe, Square, PayPal, Intuit) receive only what that connection needs.",
       "Email (Resend or similar) receives invoice and reset mail you trigger.",
-      "If you connect OpenAI, questions you ask the assistant and the shop facts needed to answer them go to that model provider under your key or our deployment key.",
+      "Questions you ask Serenity or the assistant, and the shop facts needed to answer them, go to OpenAI under our key and within your monthly credit.",
       "Hosting and database providers (for example Vercel and Turso) store the application and data under our contract with them.",
       "We share data if the law requires it, or to protect a person from serious harm. We will narrow that request when we can.",
     ],

@@ -15,6 +15,61 @@ export function databaseUrl(): string {
   return "file:./data/sere.db";
 }
 
+function configuredDatabaseUrl(): string {
+  return (process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || "").trim();
+}
+
+/**
+ * True when signups and the shop book will still be there after a cold start.
+ * Local file SQLite is fine on a laptop. On Vercel, /tmp is wiped, so Turso
+ * (or any remote libSQL URL) is required. Supabase is not part of this stack.
+ */
+export function isDurableDatabase(): boolean {
+  const configured = configuredDatabaseUrl();
+  if (configured) return !configured.startsWith("file:");
+  return !process.env.VERCEL;
+}
+
+export type DataStoreSummary = {
+  durable: boolean;
+  kind: "turso" | "remote" | "local" | "ephemeral";
+  label: string;
+};
+
+export function dataStoreSummary(): DataStoreSummary {
+  if (!isDurableDatabase()) {
+    return {
+      durable: false,
+      kind: "ephemeral",
+      label: "Temporary file on this server. Accounts vanish when it goes cold.",
+    };
+  }
+  if (process.env.TURSO_DATABASE_URL) {
+    return {
+      durable: true,
+      kind: "turso",
+      label: "Turso (libSQL). Accounts and the shop book persist.",
+    };
+  }
+  if (databaseUrl().startsWith("file:")) {
+    return {
+      durable: true,
+      kind: "local",
+      label: "Local file database on this machine.",
+    };
+  }
+  return {
+    durable: true,
+    kind: "remote",
+    label: "Remote libSQL database.",
+  };
+}
+
+export const EPHEMERAL_DB_MESSAGE =
+  "Sere cannot keep accounts on this host yet. Add TURSO_DATABASE_URL and " +
+  "TURSO_AUTH_TOKEN in Vercel (a free Turso database), then redeploy. " +
+  "You do not need Supabase.";
+
 function ensureLocalDir(url: string) {
   if (!url.startsWith("file:")) return;
   const filePath = url.replace(/^file:\/\//, "").replace(/^file:/, "");
@@ -350,6 +405,31 @@ export async function ensureSchema(): Promise<void> {
       link TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS openai_usage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      month TEXT NOT NULL,
+      prompt_tokens INTEGER NOT NULL DEFAULT 0,
+      completion_tokens INTEGER NOT NULL DEFAULT 0,
+      cost_micros INTEGER NOT NULL DEFAULT 0,
+      call_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(organization_id, month)
+    );
+    CREATE TABLE IF NOT EXISTS openai_usage_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      month TEXT NOT NULL,
+      source TEXT NOT NULL,
+      model TEXT NOT NULL DEFAULT '',
+      prompt_tokens INTEGER NOT NULL DEFAULT 0,
+      completion_tokens INTEGER NOT NULL DEFAULT 0,
+      cost_micros INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS openai_usage_events_org
+      ON openai_usage_events (organization_id, created_at);
   `);
   await addColumnIfMissing("organizations", "business_type", "TEXT NOT NULL DEFAULT 'general'");
   await addColumnIfMissing("organizations", "plan", "TEXT NOT NULL DEFAULT 'trial'");

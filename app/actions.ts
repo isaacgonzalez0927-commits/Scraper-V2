@@ -3,8 +3,15 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { boot } from "@/lib/boot";
-import { clearSession, createSession, hashPassword, requireContext, verifyPassword } from "@/lib/auth";
-import { db, nowISO, token } from "@/lib/db";
+import {
+  clearSession,
+  createSession,
+  hashPassword,
+  requireContext,
+  safeAppPath,
+  verifyPassword,
+} from "@/lib/auth";
+import { db, EPHEMERAL_DB_MESSAGE, isDurableDatabase, nowISO, token } from "@/lib/db";
 import { invoiceEmail, sendEmail } from "@/lib/email";
 import {
   addEvent,
@@ -29,7 +36,6 @@ import {
 import { closeoutDueDate, parseCloseout } from "@/lib/closeout";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
-import { looksLikeOpenAIKey, validateOpenAIKey, DEFAULT_OPENAI_MODEL } from "@/lib/openai";
 import { paypalAccountLabel } from "@/lib/paypal";
 import { quickBooksCompanyName } from "@/lib/quickbooks";
 import { listSquareLocations, squareAccountLabel } from "@/lib/square";
@@ -86,11 +92,14 @@ export async function loginAction(form: FormData) {
   const [membership] = await db().select().from(memberships).where(eq(memberships.userId, user.id));
   if (!membership) redirect("/login?error=No+company+on+this+account.");
   await createSession(user.id, membership.organizationId);
-  redirect("/overview");
+  redirect(safeAppPath(str(form, "next")));
 }
 
 export async function signupAction(form: FormData) {
   await boot();
+  if (!isDurableDatabase()) {
+    redirect(`/signup?error=${encodeURIComponent(EPHEMERAL_DB_MESSAGE)}`);
+  }
   const name = str(form, "name");
   const email = str(form, "email").toLowerCase();
   const password = str(form, "password");
@@ -890,37 +899,20 @@ export async function disconnectSquareAction() {
   redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("Square disconnected.")}`);
 }
 
-export async function connectOpenAIAction(form: FormData) {
-  const { org, user } = await requireContext();
-  if (user.email === DEMO_EMAIL) redirect(demoBlocked());
-  const apiKey = str(form, "openai_api_key");
-  const model = str(form, "openai_model") || DEFAULT_OPENAI_MODEL;
-  if (!apiKey) {
-    connectRedirect(form, "error", "Paste your OpenAI API key first.");
-  }
-  if (!looksLikeOpenAIKey(apiKey)) {
-    connectRedirect(
-      form,
-      "error",
-      "That does not look like an OpenAI key. It starts with sk- or sk-proj-.",
-    );
-  }
-  let failure = "";
-  let label = "";
-  try {
-    label = await validateOpenAIKey(apiKey);
-  } catch (error) {
-    failure = (error as Error).message;
-  }
-  if (failure) connectRedirect(form, "error", failure);
-  await saveIntegration(org.id, "openai", { apiKey, model }, label);
-  connectRedirect(form, "ok", `OpenAI connected. The Sere assistant can use GPT now.`);
+export async function connectOpenAIAction(_form: FormData) {
+  redirect(
+    `${INTEGRATIONS_TAB}&ok=${encodeURIComponent(
+      "Shops do not paste an OpenAI key. Serenity uses Sere's key, with a $3 credit each month.",
+    )}`,
+  );
 }
 
 export async function disconnectOpenAIAction() {
-  const { org } = await requireContext();
-  await disconnectIntegration(org.id, "openai");
-  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("OpenAI disconnected. The assistant is rules-only again.")}`);
+  redirect(
+    `${INTEGRATIONS_TAB}&ok=${encodeURIComponent(
+      "Serenity stays on Sere's key. There is nothing to disconnect.",
+    )}`,
+  );
 }
 
 export async function connectPaypalAction(form: FormData) {

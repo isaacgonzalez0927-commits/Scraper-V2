@@ -62,9 +62,11 @@ Two rules the code keeps:
 ## Deploy on Vercel
 
 1. Import this repo in Vercel. Framework preset: Next.js.
-2. Create a [Turso](https://turso.tech) database for real data. Without Turso, Sere
-   still boots a demo database in `/tmp` so you can sign in as Harbor Air, but that file
-   disappears when the serverless instance goes cold.
+2. Create a [Turso](https://turso.tech) database for real data. Signup on Vercel is
+   refused until `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are set. Without Turso,
+   Sere can still boot Harbor Air in `/tmp`, but that file disappears when the
+   serverless instance goes cold. You do not need Supabase. Auth is email and
+   password in this database.
 3. Set environment variables:
 
 | Variable | Required | Purpose |
@@ -79,8 +81,9 @@ Two rules the code keeps:
 | `STRIPE_CONNECT_CLIENT_ID` | Optional | Enables the one-click **Connect Stripe** button (`ca_...`) |
 | `STRIPE_WEBHOOK_SECRET` | Optional | Platform webhook signing secret for Connect shops |
 | `RESEND_API_KEY` and `SERE_EMAIL_FROM` | Optional | Deployment-wide email fallback |
-| `OPENAI_API_KEY` | Optional | Turns on GPT for the Sere assistant on every shop. Use gpt-4o-mini and a $5 monthly budget in OpenAI |
+| `OPENAI_API_KEY` | Optional | Operator key for Serenity and the star assistant. Shops never paste a key. Each shop gets $3/month |
 | `OPENAI_MODEL` | Optional | Defaults to `gpt-4o-mini` |
+| `OPENAI_SHOP_BUDGET_DOLLARS` | Optional | Per-shop monthly credit. Defaults to `3` |
 
 Keep `SERE_SECRET_KEY` stable. Rotating it signs everyone out and makes saved payment
 and email credentials unreadable, so each shop would have to reconnect.
@@ -113,9 +116,10 @@ displayed again.
 - **QuickBooks.** Optional books link. Not used for customer checkout.
 - **Email.** Paste a Resend API key and a verified from address to email invoices
   instead of copying links.
-- **Sere assistant.** Set `OPENAI_API_KEY` on the deployment (gpt-4o-mini) and a
-  $5 monthly budget in OpenAI. Every shop, including the demo, then gets GPT
-  answers. A shop can still paste its own key in Settings to bill separately.
+- **Serenity.** Set `OPENAI_API_KEY` on the deployment. That is your key. Every
+  shop, including the demo, gets GPT answers on a **$3/month credit**. Shops do
+  not paste an OpenAI key. When a shop hits the cap, Serenity pauses until the
+  1st. Set a hard limit in OpenAI as a backstop for the whole account.
 
 Without an online processor, payments are recorded by hand as card, bank transfer, cash,
 check, Zelle, or Venmo.

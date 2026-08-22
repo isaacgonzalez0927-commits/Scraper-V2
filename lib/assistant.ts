@@ -8,6 +8,13 @@ import { formatMoney } from "./money";
 import { collectedCents, isoDate, outstandingTotals, weekBounds } from "./queries";
 import { customers, invoices, jobs, organizations } from "./schema";
 import { integrationStatus, openaiConfig } from "./integrations";
+import {
+  assertShopCredit,
+  estimatedUsage,
+  loadShopCredit,
+  OpenAIBudgetError,
+  recordShopUsage,
+} from "./openai-budget";
 import { completeShopJson, DEFAULT_OPENAI_MODEL, type OpenAIChatJson } from "./openai";
 import { loadStripeCash } from "./stripe-cash";
 import { loadSquareCash } from "./square-cash";
@@ -27,7 +34,7 @@ export type AssistantBrief = {
   summary: string;
   alerts: AssistantAlert[];
   suggestions: string[];
-  /** True when this shop has its own OpenAI key connected. */
+  /** True when Sere's OpenAI key is on and this shop still has monthly credit. */
   gpt: boolean;
 };
 
@@ -291,13 +298,15 @@ export async function buildBrief(
   const voice = tradeCopy(businessType);
   const today = isoDate(now);
   const week = weekBounds(now);
-  const [{ outstanding, overdue }, integrations, jobRows, invoiceRows, collected] = await Promise.all([
-    outstandingTotals(organizationId),
-    integrationStatus(organizationId),
-    db().select().from(jobs).where(eq(jobs.organizationId, organizationId)),
-    db().select().from(invoices).where(eq(invoices.organizationId, organizationId)),
-    collectedCents(organizationId, week.start, week.end),
-  ]);
+  const [{ outstanding, overdue }, integrations, jobRows, invoiceRows, collected, credit] =
+    await Promise.all([
+      outstandingTotals(organizationId),
+      integrationStatus(organizationId),
+      db().select().from(jobs).where(eq(jobs.organizationId, organizationId)),
+      db().select().from(invoices).where(eq(invoices.organizationId, organizationId)),
+      collectedCents(organizationId, week.start, week.end),
+      loadShopCredit(organizationId, now),
+    ]);
 
   const jobsToday = jobRows.filter((j) => j.scheduledStart?.slice(0, 10) === today && j.status !== "cancelled");
   const tomorrow = isoDate(addDays(now, 1));
@@ -394,7 +403,7 @@ export async function buildBrief(
       overdue > 0 ? "Show overdue invoices" : dueSoon.length ? "What's due soon" : voice.suggestions[1],
       unscheduled[0] ? `Move ${unscheduled[0].title} to tomorrow` : voice.suggestions[2],
     ].slice(0, 3),
-    gpt: integrations.openai.connected,
+    gpt: integrations.openai.connected && !credit.exhausted,
   };
 }
 
@@ -517,11 +526,17 @@ async function askOpenAIForIntent(
   message: string,
   now: Date,
 ): Promise<AssistantIntent | null> {
-  const config = await openaiConfig(organizationId);
+  const config = await openaiConfig();
   if (!config) return null;
   try {
+    await assertShopCredit(organizationId, now);
+  } catch (error) {
+    if (error instanceof OpenAIBudgetError) return null;
+    return null;
+  }
+  try {
     const { shop, snapshot } = await shopSnapshot(organizationId, now);
-    const plan = await completeShopJson(
+    const { plan, usage } = await completeShopJson(
       config.apiKey,
       config.model || DEFAULT_OPENAI_MODEL,
       [
@@ -537,6 +552,15 @@ async function askOpenAIForIntent(
       ].join(" "),
       `Snapshot:\n${snapshot}\n\nOwner said:\n${message}`,
     );
+    const billed =
+      usage.promptTokens || usage.completionTokens ? usage : estimatedUsage("assistant");
+    await recordShopUsage(organizationId, {
+      source: "assistant",
+      model: config.model || DEFAULT_OPENAI_MODEL,
+      promptTokens: billed.promptTokens,
+      completionTokens: billed.completionTokens,
+      at: now,
+    });
     return planToIntent(plan, now);
   } catch {
     return null;
@@ -577,27 +601,33 @@ export async function runAssistant(
   }
 
   if (intent.kind === "help" || intent.kind === "unknown") {
-    const gpt = Boolean(await openaiConfig(organizationId));
+    const gpt = Boolean(await openaiConfig());
+    const credit = gpt ? await loadShopCredit(organizationId, now) : null;
     const work = voice.jobs.toLowerCase();
     const unit = voice.job.toLowerCase();
+    const unknownText = !gpt
+      ? [
+          `I did not catch that. I can show today's ${work}, catch you up,`,
+          `list overdue invoices, or move a ${unit}. Serenity is not on this host yet.`,
+          `Try: move the next ${unit} to Friday.`,
+        ].join(" ")
+      : credit?.exhausted
+        ? [
+            `I did not catch that. This shop used its Serenity credit for the month.`,
+            `I can still show today's ${work}, overdue invoices, or move a ${unit}.`,
+          ].join(" ")
+        : `I did not catch that. Try today's ${work}, overdue invoices, or move a ${unit} to Friday.`;
     return {
       text:
         intent.kind === "unknown"
-          ? gpt
-            ? `I did not catch that. Try today's ${work}, overdue invoices, or move a ${unit} to Friday.`
-            : [
-                `I did not catch that. I can show today's ${work}, catch you up,`,
-                `list overdue invoices, or move a ${unit}. Connect an OpenAI key`,
-                `in Settings if you want me to answer in plain English.`,
-                `Try: move the next ${unit} to Friday.`,
-              ].join(" ")
+          ? unknownText
           : [
               `I watch ${shop} for you. Ask for today's ${work}, overdue invoices,`,
               `or cash this week. Or say move the next ${unit} to Friday.`,
             ].join(" "),
       links:
-        intent.kind === "unknown" && !gpt
-          ? [{ href: "/settings?tab=integrations#openai", label: "Connect OpenAI" }]
+        intent.kind === "unknown" && credit?.exhausted
+          ? [{ href: "/settings?tab=integrations#openai", label: "Serenity credit" }]
           : [],
     };
   }

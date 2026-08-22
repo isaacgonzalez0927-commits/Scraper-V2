@@ -165,8 +165,7 @@ export function AssistantDock({
               )}
               {!brief.gpt ? (
                 <p className="tiny">
-                  Sere is on rules. <a href="/settings?tab=integrations#openai">Connect OpenAI</a> to
-                  answer in English about this shop.
+                  Sere is on rules until Serenity credit is available this month.
                 </p>
               ) : null}
 

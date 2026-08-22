@@ -7,6 +7,21 @@ import { memberships, organizations, users } from "./schema";
 
 export { hashPassword, verifyPassword } from "./password";
 
+/**
+ * In-app path only. Blocks protocol-relative URLs, off-site hops, and
+ * bouncing back into the auth screens.
+ */
+export function safeAppPath(next: string | null | undefined, fallback = "/overview"): string {
+  const raw = String(next || "").trim();
+  if (!raw.startsWith("/")) return fallback;
+  if (raw.startsWith("//")) return fallback;
+  if (raw.includes("://")) return fallback;
+  if (raw.startsWith("/login") || raw.startsWith("/signup") || raw.startsWith("/forgot")) {
+    return fallback;
+  }
+  return raw;
+}
+
 const COOKIE = "sere_session";
 
 function secret() {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { databaseUrl } from "../lib/db";
+import { databaseUrl, isDurableDatabase } from "../lib/db";
 import { DEMO_PASSWORD_HASH, verifyPassword } from "../lib/password";
 
 test("Vercel uses /tmp for the local file database", () => {
@@ -14,6 +14,48 @@ test("Vercel uses /tmp for the local file database", () => {
   delete process.env.DATABASE_URL;
   try {
     assert.equal(databaseUrl(), "file:/tmp/sere.db");
+  } finally {
+    if (previous.VERCEL === undefined) delete process.env.VERCEL;
+    else process.env.VERCEL = previous.VERCEL;
+    if (previous.TURSO_DATABASE_URL === undefined) delete process.env.TURSO_DATABASE_URL;
+    else process.env.TURSO_DATABASE_URL = previous.TURSO_DATABASE_URL;
+    if (previous.DATABASE_URL === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous.DATABASE_URL;
+  }
+});
+
+test("Vercel without Turso is not a durable database", () => {
+  const previous = {
+    VERCEL: process.env.VERCEL,
+    TURSO_DATABASE_URL: process.env.TURSO_DATABASE_URL,
+    DATABASE_URL: process.env.DATABASE_URL,
+  };
+  process.env.VERCEL = "1";
+  delete process.env.TURSO_DATABASE_URL;
+  delete process.env.DATABASE_URL;
+  try {
+    assert.equal(isDurableDatabase(), false);
+  } finally {
+    if (previous.VERCEL === undefined) delete process.env.VERCEL;
+    else process.env.VERCEL = previous.VERCEL;
+    if (previous.TURSO_DATABASE_URL === undefined) delete process.env.TURSO_DATABASE_URL;
+    else process.env.TURSO_DATABASE_URL = previous.TURSO_DATABASE_URL;
+    if (previous.DATABASE_URL === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous.DATABASE_URL;
+  }
+});
+
+test("a Turso URL is durable even on Vercel", () => {
+  const previous = {
+    VERCEL: process.env.VERCEL,
+    TURSO_DATABASE_URL: process.env.TURSO_DATABASE_URL,
+    DATABASE_URL: process.env.DATABASE_URL,
+  };
+  process.env.VERCEL = "1";
+  process.env.TURSO_DATABASE_URL = "libsql://sere.turso.io";
+  delete process.env.DATABASE_URL;
+  try {
+    assert.equal(isDurableDatabase(), true);
   } finally {
     if (previous.VERCEL === undefined) delete process.env.VERCEL;
     else process.env.VERCEL = previous.VERCEL;
