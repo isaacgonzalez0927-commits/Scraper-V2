@@ -146,7 +146,7 @@ export async function chooseTradeAction(form: FormData) {
       });
     }
   }
-  redirect("/overview");
+  redirect("/setup");
 }
 
 export async function logoutAction() {

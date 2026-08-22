@@ -1,6 +1,7 @@
 import { Newsreader } from "next/font/google";
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ConnectSereButton } from "@/components/ConnectSere";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TRADE_LIST } from "@/lib/business";
 import { formatPlanPrice, PLANS, PRICING_NOTE, signupHref } from "@/lib/pricing";
@@ -44,7 +45,7 @@ export default function LandingPage() {
           <ThemeToggle />
           <a href="#pricing">Pricing</a>
           <Link href="/login">Sign in</Link>
-          <Link className="btn" href="/signup">Start 14-day trial</Link>
+          <ConnectSereButton />
         </nav>
       </header>
 
@@ -57,8 +58,8 @@ export default function LandingPage() {
               together, so the number on the screen is the number in the bank.
             </p>
             <div className="hero-actions">
-              <Link className="btn" href="/signup">Start 14-day trial</Link>
-              <a className="btn btn-secondary" href="/demo">Try Harbor Air</a>
+              <ConnectSereButton />
+              <a className="btn btn-connect btn-secondary" href="/demo">Try Harbor Air</a>
             </div>
             <p className="hero-note">HVAC shop in Fort Myers. Open it with no account.</p>
           </div>
@@ -173,8 +174,8 @@ export default function LandingPage() {
       </main>
 
       <div className="landing-dock">
-        <Link className="btn" href="/signup">Start 14-day trial</Link>
-        <a className="btn btn-secondary" href="/demo">Try Harbor Air</a>
+        <ConnectSereButton />
+        <a className="btn btn-connect btn-secondary" href="/demo">Try Harbor Air</a>
       </div>
     </div>
   );

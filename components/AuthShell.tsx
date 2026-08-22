@@ -2,8 +2,8 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 /**
- * Every screen you see before the shop opens: sign in, create, reset, and the
- * one setup question. Same frame every time so nothing feels like a new app.
+ * Every screen you see before the shop opens: sign in, create, reset, the
+ * trade question, and the how-Sere-works walkthrough. Same frame every time.
  */
 export function AuthShell({
   title,

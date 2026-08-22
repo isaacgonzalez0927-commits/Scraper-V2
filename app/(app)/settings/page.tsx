@@ -17,7 +17,9 @@ import {
   sendTestEmailAction,
   startStripeConnectAction,
 } from "@/app/actions";
-import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink } from "@/components/ConnectStripe";
+import { ConnectSereButton } from "@/components/ConnectSere";
+import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, SquareKeyTutorial } from "@/components/ConnectStripe";
+import { SereSetupTutorial } from "@/components/SereSetupTutorial";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { ThemeChooser } from "@/components/ThemeToggle";
 import { Banner, Card } from "@/components/ui";
@@ -85,6 +87,11 @@ export default async function SettingsPage({
       ) : null}
 
       {tab === "company" ? (
+        <>
+        <details className="card how-sere-card">
+          <summary>How Sere works</summary>
+          <SereSetupTutorial voice={voice} />
+        </details>
         <form action={saveSettingsAction} className="card form-grid narrow">
           <input type="hidden" name="section" value="company" />
           <div className="field"><label>Business name</label><input name="name" defaultValue={org.name} /></div>
@@ -119,6 +126,7 @@ export default async function SettingsPage({
             <p className="help">This is the name and address printed on every invoice.</p>
           </div>
         </form>
+        </>
       ) : null}
 
       {tab === "invoices" ? (
@@ -192,7 +200,7 @@ export default async function SettingsPage({
                     Connect Stripe from your own shop so keys are not saved where anyone can open the demo.
                   </p>
                   <p className="mt-1">
-                    <a className="btn" href="/signup">Create your shop</a>
+                    <ConnectSereButton />
                   </p>
                 </div>
               </Banner>
@@ -252,7 +260,7 @@ export default async function SettingsPage({
                     autoComplete="off"
                     required
                   />
-                  <button className="btn btn-sm btn-stripe" type="submit">
+                  <button className="btn btn-connect btn-stripe" type="submit">
                     Connect
                   </button>
                 </form>
@@ -404,10 +412,9 @@ export default async function SettingsPage({
                 <p className="muted">Create your shop to connect Square.</p>
               ) : (
                 <>
+                  <SquareKeyTutorial />
                   <p className="help">
-                    Copy the Production access token from Square, paste it below, tap
-                    Connect Square. Create an app if you do not have one.{" "}
-                    <SquareKeyLink />.
+                    Create an app if you do not have one. <SquareKeyLink />.
                   </p>
                   <form action={connectSquareAction} className="form-grid mt-2">
                     <div className="field full">
@@ -443,7 +450,7 @@ export default async function SettingsPage({
                       </div>
                     </details>
                     <div className="form-actions">
-                      <button className="btn btn-sm btn-square" type="submit">
+                      <button className="btn btn-connect btn-square" type="submit">
                         Connect Square
                       </button>
                     </div>
@@ -557,7 +564,7 @@ export default async function SettingsPage({
                     </div>
                   </details>
                   <div className="form-actions">
-                    <button className="btn btn-sm btn-openai" type="submit">
+                    <button className="btn btn-connect btn-openai" type="submit">
                       Connect OpenAI
                     </button>
                   </div>
@@ -651,7 +658,7 @@ export default async function SettingsPage({
                     Sandbox
                   </label>
                   <div className="form-actions">
-                    <button className="btn btn-secondary" type="submit">Connect PayPal</button>
+                    <button className="btn btn-connect btn-secondary" type="submit">Connect PayPal</button>
                   </div>
                 </form>
               )}
@@ -711,7 +718,7 @@ export default async function SettingsPage({
                     Sandbox
                   </label>
                   <div className="form-actions">
-                    <button className="btn btn-secondary" type="submit">Connect QuickBooks</button>
+                    <button className="btn btn-connect btn-secondary" type="submit">Connect QuickBooks</button>
                   </div>
                 </form>
               )}

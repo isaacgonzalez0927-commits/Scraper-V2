@@ -16,7 +16,7 @@ export function StripeKeyTutorial({ defaultOpen = true }: { defaultOpen?: boolea
       <ol className="key-steps">
         <li>
           <a
-            className="btn btn-sm btn-stripe"
+            className="btn btn-connect btn-stripe"
             href={STRIPE_SANDBOX_API_KEYS_URL}
             target="_blank"
             rel="noreferrer"
