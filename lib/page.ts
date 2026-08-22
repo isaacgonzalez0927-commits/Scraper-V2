@@ -1,5 +1,4 @@
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
-import { headers } from "next/headers";
 import { requireContext } from "./auth";
 import { buildBrief } from "./assistant";
 import { tradeCopy } from "./business";
@@ -9,7 +8,6 @@ import { unreadCount } from "./queries";
 import { customers, invoices, jobs } from "./schema";
 import { DEMO_EMAIL } from "./seed";
 import { buildSetupGuide, type SetupSnapshot } from "./sere-setup";
-import { isSereIosUserAgent } from "./serenity";
 import { parseShopMode } from "./shop-mode";
 import { ensureTrialClock, shopAccess } from "./trial";
 
@@ -19,7 +17,6 @@ export async function loadApp() {
   const org = await ensureTrialClock(ctx.org, isDemo);
   const access = shopAccess(org, isDemo);
   const voice = tradeCopy(org.businessType);
-  const native = isSereIosUserAgent((await headers()).get("user-agent") || "");
   const [unread, brief, setup] = await Promise.all([
     unreadCount(org.id),
     buildBrief(org.id, ctx.user.name, org.businessType),
@@ -47,7 +44,7 @@ export async function loadApp() {
       brief,
       setup,
       shopMode: parseShopMode(org.operatingMode),
-      native,
+      native: false,
     },
   };
 }

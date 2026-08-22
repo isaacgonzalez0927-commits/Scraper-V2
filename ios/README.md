@@ -1,30 +1,25 @@
 # Sere for iPhone
 
-Native SwiftUI app for the App Store. Home is a Wallet-style purple card with the cash that landed. Jobs and invoices are searchable lists, like Square. More is iOS Settings. Serenity is a native chat with a purple orb, like Messages. New records and longer forms open a slim in-app page of sere.cash.
+You do not need Xcode on your Mac to use Sere on an iPhone.
 
-The assistant is named **Serenity**. Old `/nova` links redirect there.
+## Use it today (the link)
 
-## Open it
+On the iPhone, open [sere.cash/iphone](https://www.sere.cash/iphone) and tap **Open Sere**. Same login as the computer.
 
-1. On a Mac, install Xcode 16 or newer.
-2. Open `ios/Sere.xcodeproj`.
-3. Set the team under Signing & Capabilities (your Apple Developer account).
-4. Pick an iPhone simulator or a device and press Run.
+To keep it on the home screen: Safari → Share → Add to Home Screen.
 
-Sign in with a real Sere shop. Harbor Air works if you want the demo. The default host is `https://www.sere.cash`. Under Shop address you can point at a preview or `http://localhost:3000` while `next dev` is running.
+## App Store later (the wrapper)
 
-## Put it on the App Store
+`ios/Sere.xcodeproj` is a thin wrapper around `https://www.sere.cash`. It is one WebView, a splash, pull to refresh, and an error screen. Stripe, Square, phone, and mail links open outside the wrapper.
 
-1. Create the app in App Store Connect: name **Sere**, bundle id **cash.sere.app**, category Business.
-2. In Xcode: Product → Archive, then Distribute App → App Store Connect.
-3. Screenshots: Home, a job list, an invoice, and Serenity. Use a real shop, not placeholder latin.
-4. Privacy: the app already ships `PrivacyInfo.xcprivacy`. In App Store Connect say you collect email for account login, not for tracking. Sere does not use advertising SDKs. The session token lives in the Keychain.
-5. Review notes: this is the shop book. Card checkout stays on Stripe or Square. Restricted keys are pasted on the website, not in the iOS form.
-6. Age rating: none of the high-risk categories apply. 4+ is the usual pick for a shop ledger.
-7. Export compliance: Info.plist already sets `ITSAppUsesNonExemptEncryption` to false.
+Apple still needs a paid Apple Developer account and a Mac that can run a current Xcode to Archive and upload. An old Mac cannot do that step. When you are ready:
 
-Apple will reject a blank website wrapper. This project is not that: native tabs, native lists, native Serenity. The web view is only for forms that already exist on the site.
+1. Use a newer Mac, a friend's Mac, or a rented cloud Mac.
+2. Open `ios/Sere.xcodeproj`, set the team, Archive, upload to App Store Connect.
+3. Put the App Store URL in `IPHONE_STORE_URL` in `lib/iphone.ts` so the iPhone page becomes the store link.
 
-## What you still need from Apple
+GitHub can compile the wrapper on a hosted Mac (`macos-14` in `.github/workflows/ios.yml`) so we know it builds. Uploading still needs your Apple signing.
 
-A paid Apple Developer Program membership, a unique bundle id if `cash.sere.app` is taken, and a 1024px App Store screenshot set. The icon in this folder is the Sere mark on lavender.
+## Review notes
+
+This wrapper opens the shop the owner already uses in the browser. Card checkout stays on Stripe or Square. Restricted keys are pasted on the website, not in the iPhone shell.

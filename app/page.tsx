@@ -4,6 +4,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { ConnectSereButton } from "@/components/ConnectSere";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TRADE_LIST } from "@/lib/business";
+import { IPHONE_PATH } from "@/lib/iphone";
 import { formatPlanPrice, PLANS, PRICING_NOTE, signupHref } from "@/lib/pricing";
 
 const display = Newsreader({
@@ -44,6 +45,7 @@ export default function LandingPage() {
         <nav>
           <ThemeToggle />
           <a href="#pricing">Pricing</a>
+          <Link href={IPHONE_PATH}>iPhone</Link>
           <Link href="/login">Sign in</Link>
           <ConnectSereButton />
         </nav>
@@ -172,6 +174,8 @@ export default function LandingPage() {
 
         <p className="landing-trades">{TRADES.join(" · ")}</p>
         <p className="landing-legal">
+          <Link href={IPHONE_PATH}>iPhone</Link>
+          <span aria-hidden="true"> · </span>
           <a href="/terms">Terms</a>
           <span aria-hidden="true"> · </span>
           <a href="/privacy">Privacy</a>
