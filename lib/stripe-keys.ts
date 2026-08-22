@@ -92,5 +92,10 @@ export const SERE_STRIPE_PERMISSIONS = {
     { resource: "Charges", permission: "Read" },
     { resource: "Payouts", permission: "Read" },
   ],
-  optional: [{ resource: "Checkout Sessions", permission: "Write", for: "Pay with Stripe on invoice links" }],
+  optional: [
+    { resource: "Customers", permission: "Write", for: "Invoice sync" },
+    { resource: "Invoices", permission: "Write", for: "Invoice sync" },
+    { resource: "Invoice Items", permission: "Write", for: "Invoice sync" },
+    { resource: "Checkout Sessions", permission: "Write", for: "Pay with Stripe on invoice links" },
+  ],
 } as const;

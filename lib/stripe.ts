@@ -46,11 +46,11 @@ export function encodeParams(params: Params, prefix = ""): string {
   return parts.filter(Boolean).join("&");
 }
 
-async function request<T>(
+export async function stripeRequest<T>(
   secretKey: string,
   path: string,
   options: {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "DELETE";
     params?: Params;
     idempotencyKey?: string;
     stripeAccount?: string;
@@ -59,7 +59,7 @@ async function request<T>(
   if (!secretKey) throw new StripeError("No Stripe API key is configured.");
   const method = options.method || "GET";
   const body = options.params ? encodeParams(options.params) : "";
-  const url = method === "GET" && body ? `${API}${path}?${body}` : `${API}${path}`;
+  const url = (method === "GET" || method === "DELETE") && body ? `${API}${path}?${body}` : `${API}${path}`;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${secretKey}`,
     "Stripe-Version": API_VERSION,
@@ -106,7 +106,7 @@ export function accountLabel(account: StripeAccount): string {
 
 /** Confirms a secret key works and reports which account it belongs to. */
 export function retrieveAccount(secretKey: string): Promise<StripeAccount> {
-  return request<StripeAccount>(secretKey, "/account");
+  return stripeRequest<StripeAccount>(secretKey, "/account");
 }
 
 type StripeFund = { amount?: number; currency?: string };
@@ -126,7 +126,7 @@ export function retrieveBalance(
   secretKey: string,
   opts: { stripeAccount?: string } = {},
 ): Promise<StripeBalance> {
-  return request<StripeBalance>(secretKey, "/balance", { stripeAccount: opts.stripeAccount });
+  return stripeRequest<StripeBalance>(secretKey, "/balance", { stripeAccount: opts.stripeAccount });
 }
 
 export type StripeCharge = {
@@ -156,7 +156,7 @@ export async function listCharges(
       ? { gte: opts.createdGte, lt: opts.createdLt }
       : undefined;
   while (rows.length < max) {
-    const payload = await request<{ data?: StripeCharge[]; has_more?: boolean }>(
+    const payload = await stripeRequest<{ data?: StripeCharge[]; has_more?: boolean }>(
       secretKey,
       "/charges",
       {
@@ -193,7 +193,7 @@ export async function listPayouts(
   secretKey: string,
   opts: { limit?: number; stripeAccount?: string } = {},
 ): Promise<StripePayout[]> {
-  const payload = await request<{ data?: StripePayout[] }>(secretKey, "/payouts", {
+  const payload = await stripeRequest<{ data?: StripePayout[] }>(secretKey, "/payouts", {
     stripeAccount: opts.stripeAccount,
     params: { limit: opts.limit || 5 },
   });
@@ -226,7 +226,7 @@ export function createCheckoutSession(
     stripeAccount?: string;
   },
 ): Promise<CheckoutSession> {
-  return request<CheckoutSession>(secretKey, "/checkout/sessions", {
+  return stripeRequest<CheckoutSession>(secretKey, "/checkout/sessions", {
     method: "POST",
     idempotencyKey: opts.idempotencyKey,
     stripeAccount: opts.stripeAccount,
@@ -256,8 +256,200 @@ export function retrieveCheckoutSession(
   id: string,
   opts: { stripeAccount?: string } = {},
 ): Promise<CheckoutSession> {
-  return request<CheckoutSession>(secretKey, `/checkout/sessions/${encodeURIComponent(id)}`, {
+  return stripeRequest<CheckoutSession>(secretKey, `/checkout/sessions/${encodeURIComponent(id)}`, {
     stripeAccount: opts.stripeAccount,
+  });
+}
+
+export type StripeCustomer = {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  phone?: string | null;
+  metadata?: Record<string, string> | null;
+};
+
+export function createStripeCustomer(
+  secretKey: string,
+  opts: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    metadata?: Record<string, string | number>;
+    stripeAccount?: string;
+    idempotencyKey?: string;
+  },
+): Promise<StripeCustomer> {
+  return stripeRequest<StripeCustomer>(secretKey, "/customers", {
+    method: "POST",
+    stripeAccount: opts.stripeAccount,
+    idempotencyKey: opts.idempotencyKey,
+    params: {
+      name: opts.name,
+      email: opts.email,
+      phone: opts.phone,
+      metadata: opts.metadata,
+    },
+  });
+}
+
+export function retrieveStripeCustomer(
+  secretKey: string,
+  id: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<StripeCustomer> {
+  return stripeRequest<StripeCustomer>(secretKey, `/customers/${encodeURIComponent(id)}`, {
+    stripeAccount: opts.stripeAccount,
+  });
+}
+
+export function updateStripeCustomer(
+  secretKey: string,
+  id: string,
+  opts: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    metadata?: Record<string, string | number>;
+    stripeAccount?: string;
+  },
+): Promise<StripeCustomer> {
+  return stripeRequest<StripeCustomer>(secretKey, `/customers/${encodeURIComponent(id)}`, {
+    method: "POST",
+    stripeAccount: opts.stripeAccount,
+    params: {
+      name: opts.name,
+      email: opts.email,
+      phone: opts.phone,
+      metadata: opts.metadata,
+    },
+  });
+}
+
+export type StripeInvoiceLine = {
+  id?: string;
+  description?: string | null;
+  quantity?: number | null;
+  amount?: number;
+  unit_amount?: number | null;
+  price?: { unit_amount?: number | null } | null;
+};
+
+export type StripeInvoice = {
+  id: string;
+  status?: string | null;
+  customer?: string | StripeCustomer | null;
+  number?: string | null;
+  description?: string | null;
+  hosted_invoice_url?: string | null;
+  invoice_pdf?: string | null;
+  amount_due?: number | null;
+  amount_paid?: number | null;
+  total?: number | null;
+  subtotal?: number | null;
+  due_date?: number | null;
+  created?: number | null;
+  metadata?: Record<string, string> | null;
+  lines?: { data?: StripeInvoiceLine[] } | null;
+};
+
+export function createStripeInvoice(
+  secretKey: string,
+  opts: {
+    customer: string;
+    description?: string;
+    collectionMethod?: "send_invoice" | "charge_automatically";
+    daysUntilDue?: number;
+    dueDate?: number;
+    metadata?: Record<string, string | number>;
+    stripeAccount?: string;
+    idempotencyKey?: string;
+  },
+): Promise<StripeInvoice> {
+  return stripeRequest<StripeInvoice>(secretKey, "/invoices", {
+    method: "POST",
+    stripeAccount: opts.stripeAccount,
+    idempotencyKey: opts.idempotencyKey,
+    params: {
+      customer: opts.customer,
+      auto_advance: false,
+      collection_method: opts.collectionMethod || "send_invoice",
+      days_until_due: opts.daysUntilDue,
+      due_date: opts.dueDate,
+      description: opts.description,
+      metadata: opts.metadata,
+    },
+  });
+}
+
+export function retrieveStripeInvoice(
+  secretKey: string,
+  id: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<StripeInvoice> {
+  return stripeRequest<StripeInvoice>(secretKey, `/invoices/${encodeURIComponent(id)}`, {
+    stripeAccount: opts.stripeAccount,
+    params: { expand: ["lines.data"] },
+  });
+}
+
+export function addStripeInvoiceItem(
+  secretKey: string,
+  opts: {
+    customer: string;
+    invoice: string;
+    description: string;
+    amountCents: number;
+    quantity?: number;
+    currency?: string;
+    stripeAccount?: string;
+  },
+): Promise<{ id: string }> {
+  return stripeRequest<{ id: string }>(secretKey, "/invoiceitems", {
+    method: "POST",
+    stripeAccount: opts.stripeAccount,
+    params: {
+      customer: opts.customer,
+      invoice: opts.invoice,
+      description: opts.description,
+      amount: opts.amountCents,
+      quantity: opts.quantity || 1,
+      currency: opts.currency || "usd",
+    },
+  });
+}
+
+export function voidStripeInvoice(
+  secretKey: string,
+  id: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<StripeInvoice> {
+  return stripeRequest<StripeInvoice>(secretKey, `/invoices/${encodeURIComponent(id)}/void`, {
+    method: "POST",
+    stripeAccount: opts.stripeAccount,
+  });
+}
+
+export function finalizeStripeInvoice(
+  secretKey: string,
+  id: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<StripeInvoice> {
+  return stripeRequest<StripeInvoice>(secretKey, `/invoices/${encodeURIComponent(id)}/finalize`, {
+    method: "POST",
+    stripeAccount: opts.stripeAccount,
+  });
+}
+
+export function payStripeInvoiceOutOfBand(
+  secretKey: string,
+  id: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<StripeInvoice> {
+  return stripeRequest<StripeInvoice>(secretKey, `/invoices/${encodeURIComponent(id)}/pay`, {
+    method: "POST",
+    stripeAccount: opts.stripeAccount,
+    params: { paid_out_of_band: true },
   });
 }
 

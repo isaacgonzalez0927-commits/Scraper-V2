@@ -32,9 +32,21 @@ accurate than invoices typed in by hand.
 5. Paste it in Sere under **Settings → Integrations → Stripe** and tap **Connect Stripe**.
 
 Sere **rejects full secret keys** (`sk_live_...`). They can move money and change payout
-accounts. Restricted keys can only read what Sere needs for Overview.
+accounts. Restricted keys can only do what you grant.
 
-The in-app tutorial under Stripe settings walks through each step.
+### Invoice sync
+
+When the restricted key also has **Write** on Customers, Invoices, and Invoice Items:
+
+- Creating or sending an invoice in Sere creates a matching Stripe Invoice for that
+  customer (linked by `stripe_invoice_id`).
+- Recording a payment in Sere marks the Stripe invoice paid out of band.
+- Voiding in Sere voids in Stripe.
+- Invoices created in the Stripe dashboard come into Sere when the shop webhook
+  includes `invoice.created`, `invoice.paid`, and `invoice.voided`.
+
+Sere stays the book. Stripe is the payment rail and a mirror — not a second set of
+books fighting the first.
 
 Overview then shows **In Stripe**. Reports shows Stripe charges next to money logged
 in Sere. The two will not always match, and that is the point.

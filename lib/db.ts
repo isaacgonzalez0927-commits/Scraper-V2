@@ -355,6 +355,9 @@ export async function ensureSchema(): Promise<void> {
   await addColumnIfMissing("organizations", "trial_ends_at", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing("customers", "details", "TEXT NOT NULL DEFAULT '{}'");
   await addColumnIfMissing("jobs", "details", "TEXT NOT NULL DEFAULT '{}'");
+  await addColumnIfMissing("customers", "stripe_customer_id", "TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing("invoices", "stripe_invoice_id", "TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing("invoices", "stripe_hosted_url", "TEXT NOT NULL DEFAULT ''");
 }
 
 async function addColumnIfMissing(table: string, column: string, definition: string): Promise<void> {

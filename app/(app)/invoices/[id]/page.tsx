@@ -138,6 +138,24 @@ export default async function InvoiceDetailPage({
             </div>
             <div className="kv mt-2">
               <div className="kv-row">
+                <span className="kv-key">Stripe invoice</span>
+                <span className="kv-value">
+                  {invoice.stripeInvoiceId ? (
+                    invoice.stripeHostedUrl ? (
+                      <a href={invoice.stripeHostedUrl} target="_blank" rel="noreferrer">
+                        Open in Stripe
+                      </a>
+                    ) : (
+                      "Linked"
+                    )
+                  ) : integrations.stripe.connected ? (
+                    "Will sync when you send it"
+                  ) : (
+                    <a href="/settings?tab=integrations#stripe">Connect Stripe</a>
+                  )}
+                </span>
+              </div>
+              <div className="kv-row">
                 <span className="kv-key">Stripe cash</span>
                 <span className="kv-value">
                   {integrations.stripe.connected

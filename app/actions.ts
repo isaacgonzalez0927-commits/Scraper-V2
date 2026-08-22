@@ -35,6 +35,11 @@ import { quickBooksCompanyName } from "@/lib/quickbooks";
 import { listSquareLocations, squareAccountLabel } from "@/lib/square";
 import { signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
 import { validateStripeKeyForSere } from "@/lib/stripe-keys";
+import {
+  markStripePaidIfLinked,
+  pushInvoiceToStripe,
+  voidStripeIfLinked,
+} from "@/lib/stripe-invoices";
 import { DEMO_EMAIL } from "@/lib/seed";
 import { requireWritableContext, trialEndsISO } from "@/lib/trial";
 import { absoluteBaseUrl } from "@/lib/url";
@@ -518,6 +523,10 @@ export async function saveInvoiceAction(form: FormData) {
       });
     }
     await refreshInvoice(id, org.id);
+    const sync = await pushInvoiceToStripe(org.id, id);
+    if (sync.error) {
+      redirect(`/invoices/${id}?notice=${encodeURIComponent(`Saved. Stripe: ${sync.error}`)}`);
+    }
     redirect(`/invoices/${id}`);
   }
   const number = await nextInvoiceNumber(org.id);
@@ -543,6 +552,10 @@ export async function saveInvoiceAction(form: FormData) {
   }
   await addEvent(org.id, invoice.id, "created", `${number} created`);
   await refreshInvoice(invoice.id, org.id);
+  const sync = await pushInvoiceToStripe(org.id, invoice.id);
+  if (sync.error) {
+    redirect(`/invoices/${invoice.id}?notice=${encodeURIComponent(`Saved. Stripe: ${sync.error}`)}`);
+  }
   redirect(`/invoices/${invoice.id}`);
 }
 
@@ -584,6 +597,12 @@ export async function sendInvoiceAction(form: FormData) {
       notice = `Marked as sent, but the email did not go out. ${(error as Error).message}`;
     }
   }
+  const sync = await pushInvoiceToStripe(org.id, id, { finalize: true });
+  if (sync.ok && sync.hostedUrl) {
+    notice = `${notice} Also in Stripe.`;
+  } else if (sync.error) {
+    notice = `${notice} Stripe did not take the invoice: ${sync.error}`;
+  }
   redirect(`/invoices/${id}?notice=${encodeURIComponent(notice)}`);
 }
 
@@ -594,6 +613,7 @@ export async function voidInvoiceAction(form: FormData) {
   if (paid.length) redirect(`/invoices/${id}?error=Void+the+payments+first.`);
   await db().update(invoices).set({ status: "void", voidedAt: nowISO() }).where(and(eq(invoices.id, id), eq(invoices.organizationId, org.id)));
   await addEvent(org.id, id, "voided", "Invoice voided");
+  await voidStripeIfLinked(org.id, id);
   redirect(`/invoices/${id}`);
 }
 
@@ -611,6 +631,7 @@ export async function recordPaymentAction(form: FormData) {
       notes: str(form, "notes"),
     });
     const invoiceId = Number(str(form, "invoice_id") || 0);
+    if (invoiceId) await markStripePaidIfLinked(org.id, invoiceId);
     redirect(invoiceId ? `/invoices/${invoiceId}` : `/payments/${id}`);
   } catch (error) {
     redirect(`/payments/new?error=${encodeURIComponent((error as Error).message)}`);
