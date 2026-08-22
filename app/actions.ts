@@ -147,7 +147,7 @@ export async function chooseTradeAction(form: FormData) {
       });
     }
   }
-  redirect("/overview?guide=open");
+  redirect("/overview");
 }
 
 export async function logoutAction() {
@@ -456,48 +456,6 @@ export async function invoiceFromJobAction(form: FormData) {
   if (!job) redirect("/jobs");
   const result = await invoiceForJob(org, job);
   redirect(`/invoices/${result.invoice.id}`);
-}
-
-export async function setupInvoiceAction(form: FormData) {
-  const { org } = await requireWritableContext("/overview");
-  const back = isSafeAppPath(str(form, "next")) ? str(form, "next") : "/overview";
-  const jobId = Number(str(form, "job_id"));
-  let amount = 0;
-  try {
-    amount = dollarsToCents(str(form, "amount"));
-  } catch {
-    redirect(withQuery(back, "error", "Enter an amount greater than zero."));
-  }
-  if (!jobId || amount <= 0) {
-    redirect(withQuery(back, "error", "Enter an amount greater than zero."));
-  }
-  const [job] = await db()
-    .select()
-    .from(jobs)
-    .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
-  if (!job) redirect(withQuery(back, "error", "Add a job first."));
-  await db()
-    .update(jobs)
-    .set({ estimatedRevenueCents: amount })
-    .where(eq(jobs.id, job.id));
-  await invoiceForJob(org, { ...job, estimatedRevenueCents: amount });
-  redirect(back);
-}
-
-export async function saveShopSetupAction(form: FormData) {
-  const { org } = await requireWritableContext("/overview");
-  const back = isSafeAppPath(str(form, "next")) ? str(form, "next") : "/overview";
-  const name = str(form, "name") || org.name;
-  if (!name) redirect(withQuery(back, "error", "A shop name is required."));
-  await db()
-    .update(organizations)
-    .set({
-      name,
-      phone: str(form, "phone"),
-      email: str(form, "email") || org.email,
-    })
-    .where(eq(organizations.id, org.id));
-  redirect(back);
 }
 
 export async function finishJobAction(form: FormData) {

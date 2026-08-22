@@ -1,13 +1,13 @@
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { requireContext } from "./auth";
 import { buildBrief } from "./assistant";
-import { tradeCopy, tradeFieldsFor } from "./business";
+import { tradeCopy } from "./business";
 import { db } from "./db";
 import { integrationStatus } from "./integrations";
 import { unreadCount } from "./queries";
 import { customers, invoices, jobs } from "./schema";
 import { DEMO_EMAIL } from "./seed";
-import { buildSetupGuide, setupFields, type SetupSnapshot } from "./sere-setup";
+import { buildSetupGuide, type SetupSnapshot } from "./sere-setup";
 import { ensureTrialClock, shopAccess } from "./trial";
 
 export async function loadApp() {
@@ -84,12 +84,5 @@ async function loadSetupForShell(
     latestJobId: jobRows[0]?.id,
     latestJobTitle: jobRows[0]?.title,
   };
-  return {
-    guide: buildSetupGuide(snapshot, voice),
-    snapshot,
-    customerFields: setupFields(tradeFieldsFor(org.businessType, "customer")),
-    jobFields: setupFields(tradeFieldsFor(org.businessType, "job")),
-    jobTitleLabel: voice.jobTitleLabel,
-    jobPlaceholder: voice.jobPlaceholder,
-  };
+  return { guide: buildSetupGuide(snapshot, voice) };
 }
