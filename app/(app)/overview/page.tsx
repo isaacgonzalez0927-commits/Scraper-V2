@@ -1,5 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { ConnectAssistantCallout, ConnectCashCallout } from "@/components/ConnectStripe";
+import { SereSetupTutorial } from "@/components/SereSetupTutorial";
+import { shopNeedsSetupGuide } from "@/lib/sere-setup";
 import { Badge, Banner, Card, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
@@ -32,7 +34,7 @@ export default async function OverviewPage({
   const month = monthBounds();
   const week = weekBounds();
   const today = isoDate(new Date());
-  const [revenue, collected, { outstanding, overdue }, jobRows, activity, invoiceRows, integrations, stripeCash, squareCash] =
+  const [revenue, collected, { outstanding, overdue }, jobRows, activity, invoiceRows, customerRows, integrations, stripeCash, squareCash] =
     await Promise.all([
     invoicedRevenueCents(org.id, month.start, month.end),
     collectedCents(org.id, month.start, month.end),
@@ -49,6 +51,7 @@ export default async function OverviewPage({
       .orderBy(desc(activities.createdAt))
       .limit(8),
     db().select().from(invoices).where(eq(invoices.organizationId, org.id)),
+    db().select({ id: customers.id }).from(customers).where(eq(customers.organizationId, org.id)),
     integrationStatus(org.id),
     loadStripeCash(org.id, month.start, month.end),
     loadSquareCash(org.id, month.start, month.end),
@@ -94,6 +97,16 @@ export default async function OverviewPage({
       actions={<a className="btn" href="/jobs/new">{voice.newJob}</a>}
     >
       <Banner error={q.error} ok={q.ok} />
+      {!shell.isDemo &&
+      shopNeedsSetupGuide({
+        customers: customerRows.length,
+        jobs: jobRows.length,
+        invoices: invoiceRows.length,
+      }) ? (
+        <div className="card how-sere-card">
+          <SereSetupTutorial voice={voice} />
+        </div>
+      ) : null}
       {!shell.isDemo ? (
         <>
           <ConnectCashCallout

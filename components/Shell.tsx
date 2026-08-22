@@ -136,6 +136,11 @@ export function Shell({
             <strong>{orgName}</strong>
             <span>{tradeName ? `${tradeName} · ${userName}` : userName}</span>
           </a>
+          {isDemo ? null : (
+            <a className="sidebar-setup" href="/setup">
+              How Sere works
+            </a>
+          )}
           <form action={logoutAction}>
             <button className="btn btn-ghost btn-sm btn-block" type="submit">
               {isDemo ? "Leave the demo" : "Sign out"}

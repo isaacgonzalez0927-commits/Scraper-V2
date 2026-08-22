@@ -19,6 +19,7 @@ import {
 } from "@/app/actions";
 import { ConnectSereButton } from "@/components/ConnectSere";
 import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, SquareKeyTutorial } from "@/components/ConnectStripe";
+import { SereSetupTutorial } from "@/components/SereSetupTutorial";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { ThemeChooser } from "@/components/ThemeToggle";
 import { Banner, Card } from "@/components/ui";
@@ -86,6 +87,11 @@ export default async function SettingsPage({
       ) : null}
 
       {tab === "company" ? (
+        <>
+        <details className="card how-sere-card">
+          <summary>How Sere works</summary>
+          <SereSetupTutorial voice={voice} />
+        </details>
         <form action={saveSettingsAction} className="card form-grid narrow">
           <input type="hidden" name="section" value="company" />
           <div className="field"><label>Business name</label><input name="name" defaultValue={org.name} /></div>
@@ -120,6 +126,7 @@ export default async function SettingsPage({
             <p className="help">This is the name and address printed on every invoice.</p>
           </div>
         </form>
+        </>
       ) : null}
 
       {tab === "invoices" ? (

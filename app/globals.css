@@ -1162,6 +1162,35 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 .setup-steps li + li { margin-top: 8px; }
 .setup-steps a { font-weight: 600; }
 
+.how-sere-card {
+  margin-bottom: 16px;
+}
+.how-sere-card > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+.how-sere-card > summary:hover { color: var(--ink); }
+.how-sere-card .how-sere { margin-top: 10px; }
+.how-sere-label {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.how-sere > .how-sere-label:first-of-type { margin-top: 0; }
+.how-sere-done { margin: 16px 0 0; }
+.sidebar-setup {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.sidebar-setup:hover { color: var(--ink); }
+
 /* Empty state */
 
 .empty {
@@ -1373,7 +1402,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   box-shadow: var(--shadow-md);
   padding: 32px;
 }
-.auth-card-wide { width: min(600px, 100%); }
+.auth-card-wide { width: min(640px, 100%); }
 .auth-head {
   display: flex;
   align-items: center;
