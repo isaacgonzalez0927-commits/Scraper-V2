@@ -138,7 +138,7 @@ export function Shell({
           </a>
           {isDemo ? null : (
             <a className="sidebar-setup" href="/setup">
-              How Sere works
+              Set up Sere
             </a>
           )}
           <form action={logoutAction}>

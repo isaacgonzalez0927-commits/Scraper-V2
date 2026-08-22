@@ -3,7 +3,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 /**
  * Every screen you see before the shop opens: sign in, create, reset, the
- * trade question, and the how-Sere-works walkthrough. Same frame every time.
+ * trade question, and the setup wizard. Same frame every time.
  */
 export function AuthShell({
   title,
@@ -12,7 +12,7 @@ export function AuthShell({
   children,
   foot,
 }: {
-  title: string;
+  title?: string;
   sub?: React.ReactNode;
   wide?: boolean;
   children: React.ReactNode;
@@ -25,7 +25,7 @@ export function AuthShell({
           <BrandLogo className="brand-lockup" />
           <ThemeToggle />
         </header>
-        <h1 className="auth-title">{title}</h1>
+        {title ? <h1 className="auth-title">{title}</h1> : null}
         {sub ? <p className="auth-sub">{sub}</p> : null}
         {children}
         {foot ? <div className="auth-foot">{foot}</div> : null}

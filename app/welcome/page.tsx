@@ -38,7 +38,10 @@ export default async function WelcomePage() {
           Skip — keep it generic
         </button>
       </form>
-      <p className="auth-fine">Next is a short walkthrough of how the book works. You can change the trade later in Settings.</p>
+      <p className="auth-fine">
+        Next is a short wizard: one screen, one question, Continue. You can
+        change the trade later in Settings.
+      </p>
     </AuthShell>
   );
 }

@@ -19,7 +19,7 @@ import {
 } from "@/app/actions";
 import { ConnectSereButton } from "@/components/ConnectSere";
 import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, SquareKeyTutorial } from "@/components/ConnectStripe";
-import { SereSetupTutorial } from "@/components/SereSetupTutorial";
+import { SetupResumeCard } from "@/components/SereSetupWizard";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { ThemeChooser } from "@/components/ThemeToggle";
 import { Banner, Card } from "@/components/ui";
@@ -88,10 +88,12 @@ export default async function SettingsPage({
 
       {tab === "company" ? (
         <>
-        <details className="card how-sere-card">
-          <summary>How Sere works</summary>
-          <SereSetupTutorial voice={voice} />
-        </details>
+        <SetupResumeCard
+          href="/setup"
+          stepLabel="Shop setup"
+          title="One screen at a time"
+          body="The same shape as Stripe's key wizard. Customer, job, then live cash."
+        />
         <form action={saveSettingsAction} className="card form-grid narrow">
           <input type="hidden" name="section" value="company" />
           <div className="field"><label>Business name</label><input name="name" defaultValue={org.name} /></div>
