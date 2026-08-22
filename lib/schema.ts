@@ -240,7 +240,10 @@ export const customers = sqliteTable(
     createdAt: text("created_at").notNull(),
     stripeCustomerId: text("stripe_customer_id").notNull().default(""),
   },
-  (t) => [index("customers_org").on(t.organizationId)],
+  (t) => [
+    index("customers_org").on(t.organizationId),
+    index("customers_stripe").on(t.stripeCustomerId),
+  ],
 );
 
 export const jobs = sqliteTable(

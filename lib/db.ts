@@ -358,6 +358,9 @@ export async function ensureSchema(): Promise<void> {
   await addColumnIfMissing("customers", "stripe_customer_id", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing("invoices", "stripe_invoice_id", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing("invoices", "stripe_hosted_url", "TEXT NOT NULL DEFAULT ''");
+  await getClient().execute(
+    "CREATE INDEX IF NOT EXISTS customers_stripe ON customers (stripe_customer_id)",
+  );
 }
 
 async function addColumnIfMissing(table: string, column: string, definition: string): Promise<void> {

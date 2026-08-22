@@ -231,9 +231,9 @@ export default async function SettingsPage({
                     <div>
                       <strong>Cash, invoices, and payouts.</strong>
                       <p className="mt-1">
-                        Overview reads the live Stripe balance. Invoices you send in Sere
-                        also appear in Stripe when the restricted key has Customers and
-                        Invoices set to Write. Add a webhook below so invoices created in
+                        Overview reads the live Stripe balance. Customers and
+                        invoices you save in Sere also appear in Stripe. Add a
+                        webhook below so customers and invoices created in
                         Stripe come back into Sere.
                       </p>
                     </div>
@@ -257,11 +257,13 @@ export default async function SettingsPage({
                   </button>
                 </form>
                 <details className="disclosure">
-                  <summary>Webhook — so Stripe invoices and payments come back into Sere</summary>
+                  <summary>Webhook, so Stripe customers, invoices, and payments come back into Sere</summary>
                   <p className="help mt-1">
                     In Stripe, Developers → Webhooks → Add endpoint. Events:{" "}
-                    <code>invoice.created</code>, <code>invoice.paid</code>,{" "}
-                    <code>invoice.voided</code>, <code>checkout.session.completed</code>.
+                    <code>customer.created</code>, <code>customer.updated</code>,{" "}
+                    <code>customer.deleted</code>, <code>invoice.created</code>,{" "}
+                    <code>invoice.paid</code>, <code>invoice.voided</code>,{" "}
+                    <code>checkout.session.completed</code>.
                     Paste the <code>whsec_...</code> it gives you, then reconnect the key above
                     with this field filled in.
                   </p>

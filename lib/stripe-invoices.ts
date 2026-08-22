@@ -15,25 +15,21 @@
  */
 
 import { and, eq } from "drizzle-orm";
-import { displayName } from "./display";
 import { db, nowISO, token } from "./db";
-import { addEvent, applyPayment, refreshInvoice, recordOnlinePayment } from "./finance";
+import { addEvent, refreshInvoice, recordOnlinePayment } from "./finance";
 import { stripeConfig } from "./integrations";
+import { ensureStripeCustomer, findOrCreateSereCustomer } from "./stripe-customers";
 import {
   addStripeInvoiceItem,
-  createStripeCustomer,
   createStripeInvoice,
   finalizeStripeInvoice,
   payStripeInvoiceOutOfBand,
-  retrieveStripeCustomer,
   retrieveStripeInvoice,
-  StripeError,
-  updateStripeCustomer,
   voidStripeInvoice,
   type StripeInvoice,
   type StripeInvoiceLine,
 } from "./stripe";
-import { customers, invoiceLines, invoices, organizations } from "./schema";
+import { invoiceLines, invoices, organizations } from "./schema";
 
 export type StripeSyncResult = {
   ok: boolean;
@@ -62,47 +58,6 @@ function lineUnitCents(line: StripeInvoiceLine): number {
 function customerIdOf(invoice: StripeInvoice): string {
   if (!invoice.customer) return "";
   return typeof invoice.customer === "string" ? invoice.customer : invoice.customer.id;
-}
-
-async function ensureStripeCustomer(
-  organizationId: number,
-  customerId: number,
-  secretKey: string,
-  stripeAccount?: string,
-): Promise<string> {
-  const [customer] = await db()
-    .select()
-    .from(customers)
-    .where(and(eq(customers.id, customerId), eq(customers.organizationId, organizationId)));
-  if (!customer) throw new StripeError("Customer not found.");
-  if (customer.stripeCustomerId) {
-    try {
-      await retrieveStripeCustomer(secretKey, customer.stripeCustomerId, { stripeAccount });
-      await updateStripeCustomer(secretKey, customer.stripeCustomerId, {
-        name: displayName(customer),
-        email: customer.email || undefined,
-        phone: customer.phone || undefined,
-        metadata: { sere_customer_id: customer.id, sere_organization_id: organizationId },
-        stripeAccount,
-      });
-      return customer.stripeCustomerId;
-    } catch {
-      // Stale id — create a new one below.
-    }
-  }
-  const created = await createStripeCustomer(secretKey, {
-    name: displayName(customer),
-    email: customer.email || undefined,
-    phone: customer.phone || undefined,
-    metadata: { sere_customer_id: customer.id, sere_organization_id: organizationId },
-    stripeAccount,
-    idempotencyKey: `sere-cust-${organizationId}-${customer.id}`,
-  });
-  await db()
-    .update(customers)
-    .set({ stripeCustomerId: created.id })
-    .where(eq(customers.id, customer.id));
-  return created.id;
 }
 
 /**
@@ -275,79 +230,6 @@ export async function voidStripeIfLinked(organizationId: number, invoiceId: numb
   }
 }
 
-async function findOrCreateSereCustomer(opts: {
-  organizationId: number;
-  stripeCustomerId: string;
-  secretKey: string;
-  stripeAccount?: string;
-  fallbackName?: string;
-  fallbackEmail?: string;
-}): Promise<number> {
-  const [existing] = await db()
-    .select()
-    .from(customers)
-    .where(
-      and(
-        eq(customers.organizationId, opts.organizationId),
-        eq(customers.stripeCustomerId, opts.stripeCustomerId),
-      ),
-    );
-  if (existing) return existing.id;
-
-  let name = opts.fallbackName || "";
-  let email = opts.fallbackEmail || "";
-  let phone = "";
-  try {
-    const remote = await retrieveStripeCustomer(opts.secretKey, opts.stripeCustomerId, {
-      stripeAccount: opts.stripeAccount,
-    });
-    name = remote.name || name;
-    email = remote.email || email;
-    phone = remote.phone || "";
-    const sereId = Number(remote.metadata?.sere_customer_id || 0);
-    if (sereId) {
-      const [linked] = await db()
-        .select()
-        .from(customers)
-        .where(and(eq(customers.id, sereId), eq(customers.organizationId, opts.organizationId)));
-      if (linked) {
-        await db().update(customers).set({ stripeCustomerId: opts.stripeCustomerId }).where(eq(customers.id, linked.id));
-        return linked.id;
-      }
-    }
-  } catch {
-    // Use fallbacks.
-  }
-
-  if (email) {
-    const [byEmail] = await db()
-      .select()
-      .from(customers)
-      .where(and(eq(customers.organizationId, opts.organizationId), eq(customers.email, email)));
-    if (byEmail) {
-      await db()
-        .update(customers)
-        .set({ stripeCustomerId: opts.stripeCustomerId })
-        .where(eq(customers.id, byEmail.id));
-      return byEmail.id;
-    }
-  }
-
-  const [created] = await db()
-    .insert(customers)
-    .values({
-      organizationId: opts.organizationId,
-      name: name || "Stripe customer",
-      email,
-      phone,
-      stripeCustomerId: opts.stripeCustomerId,
-      customerSince: nowISO().slice(0, 10),
-      createdAt: nowISO(),
-    })
-    .returning({ id: customers.id });
-  return created.id;
-}
-
 function nextSereNumber(prefix: string, stripeNumber?: string | null, fallbackId?: string): string {
   if (stripeNumber && stripeNumber.trim()) return stripeNumber.trim();
   const short = (fallbackId || "").replace(/^in_/, "").slice(0, 8);
@@ -386,7 +268,7 @@ export async function ingestStripeInvoice(
   const stripeCustomerId = customerIdOf(remote);
   if (!stripeCustomerId) return invoice ? { invoiceId: invoice.id, created: false } : null;
 
-  const customerId = await findOrCreateSereCustomer({
+  const { id: customerId } = await findOrCreateSereCustomer({
     organizationId,
     stripeCustomerId,
     secretKey: config?.secretKey || "",

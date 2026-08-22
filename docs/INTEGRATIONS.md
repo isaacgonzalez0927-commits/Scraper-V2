@@ -5,9 +5,9 @@ Sere reads live payments and payouts so Overview is accurate. Email goes out fro
 the shop's own domain.
 
 Shop owners paste the secret on **Overview** (or Reports, Payments, Settings) and tap
-**Connect Stripe**. That is the connect action. A small **Get the key from Stripe**
-link opens Stripe in a new tab so they can copy it — that link is not the button
-that connects.
+**Connect Stripe**. That is the connect action. **Create the Sere key in Stripe**
+opens Stripe's create-key page with Sere's permissions already selected. That link
+is not the button that connects.
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
 key derived from `SERE_SECRET_KEY`. Nothing shows a saved secret back on screen. If you
@@ -25,18 +25,35 @@ accurate than invoices typed in by hand.
 
 ### What the shop owner does
 
-1. Open [Stripe API keys](https://dashboard.stripe.com/apikeys) and sign in as the shop.
-2. Click **Create restricted key** (not the secret key). Name it `Sere cash view`.
-3. Set **Read** on: Account, Balance, Charges, Payouts. Leave everything else **None**.
-4. Copy the restricted key (`rk_test_...` while trying it, `rk_live_...` for real cash).
-5. Paste it in Sere under **Settings → Integrations → Stripe** and tap **Connect Stripe**.
+1. Open [Create the Sere key in Stripe](https://dashboard.stripe.com/apikeys/create?name=Sere). That page
+   already has Sere's permissions selected. (Test mode:
+   [create a test key](https://dashboard.stripe.com/test/apikeys/create?name=Sere).)
+2. Create the key. Copy the restricted key (`rk_test_...` while trying it, `rk_live_...` for real cash).
+3. Paste it in Sere under **Settings → Integrations → Stripe** and tap **Connect**.
 
 Sere **rejects full secret keys** (`sk_live_...`). They can move money and change payout
 accounts. Restricted keys can only do what you grant.
 
+The pre-checked permissions are:
+
+- **Read** on Account, Balance, Charges, Payouts (cash on Overview)
+- **Write** on Customers, Invoices, Invoice Items (two-way customer and invoice sync)
+- **Write** on Checkout Sessions (pay links on invoices, optional)
+
+### Customer sync
+
+When Stripe is connected:
+
+- Saving a customer in Sere creates or updates them in Stripe (`stripe_customer_id`).
+- Customers created or updated in the Stripe dashboard come into Sere when the shop
+  webhook includes `customer.created`, `customer.updated`, and `customer.deleted`.
+- **Customers → Sync with Stripe** pulls existing Stripe customers and pushes Sere
+  customers that are not linked yet. Match order is Stripe id, then Sere metadata,
+  then email, so the same person is not stored twice.
+
 ### Invoice sync
 
-When the restricted key also has **Write** on Customers, Invoices, and Invoice Items:
+When the restricted key has **Write** on Customers, Invoices, and Invoice Items:
 
 - Creating or sending an invoice in Sere creates a matching Stripe Invoice for that
   customer (linked by `stripe_invoice_id`).
@@ -45,7 +62,7 @@ When the restricted key also has **Write** on Customers, Invoices, and Invoice I
 - Invoices created in the Stripe dashboard come into Sere when the shop webhook
   includes `invoice.created`, `invoice.paid`, and `invoice.voided`.
 
-Sere stays the book. Stripe is the payment rail and a mirror — not a second set of
+Sere stays the book. Stripe is the payment rail and a mirror, not a second set of
 books fighting the first.
 
 Overview then shows **In Stripe**. Reports shows Stripe charges next to money logged

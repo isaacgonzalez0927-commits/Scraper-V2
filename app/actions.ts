@@ -36,6 +36,11 @@ import { listSquareLocations, squareAccountLabel } from "@/lib/square";
 import { signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
 import { validateStripeKeyForSere } from "@/lib/stripe-keys";
 import {
+  describeCustomerSync,
+  pushCustomerToStripe,
+  syncCustomersWithStripe,
+} from "@/lib/stripe-customers";
+import {
   markStripePaidIfLinked,
   pushInvoiceToStripe,
   voidStripeIfLinked,
@@ -206,17 +211,25 @@ export async function saveCustomerAction(form: FormData) {
     customerSince: str(form, "customer_since") || new Date().toISOString().slice(0, 10),
   };
   if (!row.name) redirect("/customers/new?error=A+customer+name+is+required.");
+  let customerId = id;
   if (id) {
     await db().update(customers).set(row).where(and(eq(customers.id, id), eq(customers.organizationId, org.id)));
-    redirect(`/customers/${id}`);
+  } else {
+    const [created] = await db()
+      .insert(customers)
+      .values({ ...row, organizationId: org.id, createdAt: nowISO() })
+      .returning();
+    customerId = created.id;
+    await logActivity(org.id, "customer_created", `New customer: ${created.name}`, null, `/customers/${created.id}`);
   }
-  const [created] = await db()
-    .insert(customers)
-    .values({ ...row, organizationId: org.id, createdAt: nowISO() })
-    .returning();
-  await logActivity(org.id, "customer_created", `New customer: ${created.name}`, null, `/customers/${created.id}`);
-  if (str(form, "next") === "job") redirect(`/jobs/new?customerId=${created.id}`);
-  redirect(`/customers/${created.id}`);
+  const sync = await pushCustomerToStripe(org.id, customerId);
+  if (str(form, "next") === "job") {
+    redirect(`/jobs/new?customerId=${customerId}`);
+  }
+  if (sync.error) {
+    redirect(`/customers/${customerId}?error=${encodeURIComponent(sync.error)}`);
+  }
+  redirect(`/customers/${customerId}`);
 }
 
 export async function archiveCustomerAction(form: FormData) {
@@ -229,6 +242,14 @@ export async function archiveCustomerAction(form: FormData) {
     .set({ archivedAt: c.archivedAt ? null : nowISO() })
     .where(eq(customers.id, id));
   redirect(`/customers/${id}`);
+}
+
+export async function syncCustomersWithStripeAction() {
+  const { org } = await requireWritableContext("/customers");
+  const result = await syncCustomersWithStripe(org.id);
+  const message = describeCustomerSync(result);
+  const key = result.ok ? "ok" : "error";
+  redirect(`/customers?${key}=${encodeURIComponent(message)}`);
 }
 
 export async function addNoteAction(form: FormData) {
