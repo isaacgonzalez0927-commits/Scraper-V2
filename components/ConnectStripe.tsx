@@ -15,7 +15,7 @@ export function ConnectStripeButton({
   secondary?: boolean;
   large?: boolean;
 }) {
-  const className = ["btn", "btn-sm", secondary ? "btn-secondary" : "btn-stripe"].filter(Boolean).join(" ");
+  const className = ["btn", "btn-connect", secondary ? "btn-secondary" : "btn-stripe"].filter(Boolean).join(" ");
   return (
     <a className={className} href="/settings?tab=integrations#stripe">
       {label}
@@ -30,7 +30,7 @@ export function ConnectSquareButton({
   large?: boolean;
 }) {
   return (
-    <a className="btn btn-sm btn-square" href="/settings?tab=integrations#square">
+    <a className="btn btn-connect btn-square" href="/settings?tab=integrations#square">
       {label}
     </a>
   );
@@ -49,6 +49,31 @@ export function SquareKeyLink() {
     <a href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
       Square credentials
     </a>
+  );
+}
+
+export function SquareKeyTutorial() {
+  return (
+    <div className="key-guide">
+      <p className="key-guide-lede">
+        Same idea as Stripe. Open Square Developers, copy the Production
+        access token, paste it here.
+      </p>
+      <ol className="key-steps">
+        <li>
+          <a
+            className="btn btn-connect btn-square"
+            href={SQUARE_KEYS_URL}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open Square Developers
+          </a>
+        </li>
+        <li>Credentials → Production. Copy the access token.</li>
+        <li>Paste below and tap Connect.</li>
+      </ol>
+    </div>
   );
 }
 
@@ -82,7 +107,7 @@ function ConnectStripePaste({ next }: { next: string }) {
         placeholder="rk_test_..."
         aria-label="Stripe restricted key"
       />
-      <button className="btn btn-sm btn-stripe" type="submit">
+      <button className="btn btn-connect btn-stripe" type="submit">
         Connect
       </button>
     </form>
@@ -103,7 +128,7 @@ function ConnectSquarePaste({ next }: { next: string }) {
         placeholder="Square access token"
         aria-label="Square access token"
       />
-      <button className="btn btn-sm btn-square" type="submit">
+      <button className="btn btn-connect btn-square" type="submit">
         Connect
       </button>
     </form>
@@ -134,10 +159,7 @@ export function ConnectCashCallout({
       {needSquare ? (
         <div className="connect-cta-block">
           <strong>See live Square cash</strong>
-          <p>
-            From <SquareKeyLink />, open Credentials → Production, copy the access
-            token, paste it here.
-          </p>
+          <SquareKeyTutorial />
           <ConnectSquarePaste next={next} />
         </div>
       ) : null}
@@ -159,7 +181,7 @@ function ConnectOpenAIPaste({ next }: { next: string }) {
         placeholder="sk-... or sk-proj-..."
         aria-label="OpenAI API key"
       />
-      <button className="btn btn-sm btn-openai" type="submit">
+      <button className="btn btn-connect btn-openai" type="submit">
         Connect
       </button>
     </form>

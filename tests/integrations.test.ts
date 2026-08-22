@@ -128,6 +128,12 @@ test("Stripe restricted keys are recognised; full secret keys are not accepted f
   assert.equal(looksLikeStripeSecret(""), false);
 });
 
+test("Connect Sere is the official small connect control, same idea as Stripe", async () => {
+  const { CONNECT_SERE_HREF, connectButtonClass } = await import("../components/ConnectSere");
+  assert.equal(CONNECT_SERE_HREF, "/signup");
+  assert.equal(connectButtonClass("btn-stripe"), "btn btn-connect btn-stripe");
+});
+
 test("Sere connect flow requires restricted keys, not secret keys", async () => {
   const { looksLikeStripeRestrictedKey, isStripeFullSecretKey, restrictedKeyRequiredMessage } =
     await import("../lib/stripe-keys");

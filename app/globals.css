@@ -540,6 +540,34 @@ body.locked {
 }
 a.btn-stripe, a.btn-stripe:hover { color: #fff; }
 
+.btn-connect {
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  gap: 5px;
+  letter-spacing: -0.01em;
+}
+.btn-connect-mark {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  object-fit: contain;
+}
+.btn-sere {
+  background: #5b38d6;
+  border-color: #5b38d6;
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(91, 56, 214, 0.28);
+}
+.btn-sere:hover {
+  background: #4a2bb8;
+  border-color: #4a2bb8;
+  color: #fff;
+}
+a.btn-sere, a.btn-sere:hover { color: #fff; }
+
 .btn-connect-lg {
   min-height: 32px;
   padding: 0 12px;
@@ -1084,8 +1112,8 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 .connect-paste .input {
   flex: 1 1 14rem;
   min-width: 0;
-  min-height: 36px;
-  font-size: 14px;
+  min-height: 28px;
+  font-size: 13px;
 }
 .connect-paste .btn { flex-shrink: 0; }
 
@@ -1458,6 +1486,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 }
 .landing-nav .brand { padding: 0; }
 .landing-nav nav { display: flex; align-items: center; gap: 16px; font-size: 13.5px; }
+.landing-nav nav .btn-connect { min-height: 24px; padding: 0 8px; font-size: 12px; }
 
 .landing-main {
   max-width: 1080px;
@@ -1490,8 +1519,8 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   font-size: 17px;
   line-height: 1.5;
 }
-.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.hero-actions .btn { min-height: 40px; padding: 0 16px; font-size: 14px; }
+.hero-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.hero-actions .btn-connect { min-height: 24px; padding: 0 8px; font-size: 12px; }
 .hero-note { margin-top: 14px; color: var(--ink-3); font-size: 13px; }
 
 .hero-preview { min-width: 0; }
@@ -2043,6 +2072,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .form-actions { flex-direction: column; align-items: stretch; }
   .form-actions .btn { width: 100%; }
   .form-actions .help { text-align: center; }
+  .form-actions .btn-connect,
   .form-actions .btn-connect-lg,
   .form-actions .btn-stripe,
   .form-actions .btn-square,
@@ -2078,17 +2108,27 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   }
   .connect-paste .input {
     width: 100%;
-    min-height: 44px;
+    min-height: 32px;
     font-size: 16px;
   }
   .connect-cta .btn,
   .connect-paste .btn,
+  .key-guide .btn,
+  .btn-connect {
+    width: auto;
+    min-height: 26px;
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 4px;
+    align-self: flex-start;
+    flex: 0 0 auto;
+  }
   .btn-connect-lg {
     width: auto;
-    min-height: 36px;
+    min-height: 32px;
     padding: 0 12px;
     font-size: 13px;
-    font-weight: 600;
     border-radius: 8px;
     align-self: flex-start;
     flex: 0 0 auto;
@@ -2330,6 +2370,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
     border-top: 0.5px solid var(--line);
   }
   .landing-dock .btn { width: 100%; min-height: 44px; font-size: 15px; }
+  .landing-dock .btn-connect { min-height: 32px; font-size: 13px; border-radius: 6px; }
 
   .auth {
     display: block;
