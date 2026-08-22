@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchIcon } from "@/components/ui";
 import type { AssistantBrief } from "@/lib/assistant";
 import type { SetupGuideView } from "@/lib/sere-setup";
+import { shopModeBanner, type ShopMode } from "@/lib/shop-mode";
 
 const PATHS: Record<string, React.ReactNode> = {
   grid: <><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" /></>,
@@ -71,6 +72,7 @@ export function Shell({
   searchHint = "Search customers, jobs, invoices",
   brief,
   setup,
+  shopMode,
   path,
   title,
   sub,
@@ -90,6 +92,7 @@ export function Shell({
   searchHint?: string;
   brief?: AssistantBrief;
   setup?: { guide: SetupGuideView } | null;
+  shopMode?: ShopMode;
   path: string;
   title: string;
   sub?: React.ReactNode;
@@ -97,6 +100,7 @@ export function Shell({
   children: React.ReactNode;
 }) {
   const active = (href: string) => path === href || path.startsWith(`${href}/`);
+  const modeNote = !isDemo && shopMode ? shopModeBanner(shopMode) : null;
   const nav: [string, string, string][] = [
     ["/overview", "Overview", "grid"],
     ["/nova", "Nova", "spark"],
@@ -191,6 +195,12 @@ export function Shell({
             >
               <strong>{trialBanner}</strong>
               <span>{frozen ? "Shop is $39/month when billing opens." : "Shop is $39/month after that."}</span>
+            </a>
+          ) : null}
+          {modeNote ? (
+            <a className={`mode-banner mode-banner-${modeNote.tone}`} href={modeNote.href}>
+              <strong>{modeNote.title}</strong>
+              <span>{modeNote.body}</span>
             </a>
           ) : null}
           <div className="page-head">

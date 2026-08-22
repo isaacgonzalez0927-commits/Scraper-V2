@@ -71,6 +71,7 @@ export async function ensureSchema(): Promise<void> {
       business_type TEXT NOT NULL DEFAULT 'general',
       plan TEXT NOT NULL DEFAULT 'trial',
       trial_ends_at TEXT NOT NULL DEFAULT '',
+      operating_mode TEXT NOT NULL DEFAULT 'live',
       created_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS integrations (
@@ -353,6 +354,7 @@ export async function ensureSchema(): Promise<void> {
   await addColumnIfMissing("organizations", "business_type", "TEXT NOT NULL DEFAULT 'general'");
   await addColumnIfMissing("organizations", "plan", "TEXT NOT NULL DEFAULT 'trial'");
   await addColumnIfMissing("organizations", "trial_ends_at", "TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing("organizations", "operating_mode", "TEXT NOT NULL DEFAULT 'live'");
   await addColumnIfMissing("customers", "details", "TEXT NOT NULL DEFAULT '{}'");
   await addColumnIfMissing("jobs", "details", "TEXT NOT NULL DEFAULT '{}'");
   await addColumnIfMissing("customers", "stripe_customer_id", "TEXT NOT NULL DEFAULT ''");
