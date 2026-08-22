@@ -13,6 +13,7 @@ import {
   disconnectSquareAction,
   disconnectStripeAction,
   logoutAction,
+  chooseShopModeAction,
   saveSettingsAction,
   sendTestEmailAction,
   startStripeConnectAction,
@@ -29,6 +30,7 @@ import { integrationStatus } from "@/lib/integrations";
 import { prettyDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
+import { DESK_MODE_NAME, parseShopMode, shopModeLabel } from "@/lib/shop-mode";
 import { stripeConnectEnabled } from "@/lib/stripe";
 import { absoluteBaseUrl } from "@/lib/url";
 import { TRADE_LIST } from "@/lib/business";
@@ -58,6 +60,7 @@ export default async function SettingsPage({
   const webhookUrl = `${base}/api/webhooks/stripe`;
   const oneClick = stripeConnectEnabled();
   const demoShop = shell.isDemo;
+  const shopMode = parseShopMode(org.operatingMode);
 
   return (
     <Shell
@@ -171,6 +174,49 @@ export default async function SettingsPage({
 
       {tab === "integrations" ? (
         <div className="grid narrow">
+          <Card
+            id="mode"
+            title="How the shop runs"
+            note={
+              shopMode === "sandbox"
+                ? "Sandbox is practice. Test keys only. The book you build stays when you leave."
+                : shopMode === "desk"
+                  ? `${DESK_MODE_NAME} is live with no Stripe or Square. Overview will not show cash that actually landed. Less useful until you connect.`
+                  : "Live. Connect Stripe or Square so Overview can show cash that actually landed."
+            }
+            action={<span className="badge badge-viewed">{shopModeLabel(shopMode)}</span>}
+          >
+            {demoShop ? (
+              <p className="muted">Harbor Air is the demo. It stays Live.</p>
+            ) : shopMode === "sandbox" ? (
+              <p className="help">
+                Finish the corner list, then pick Live or {DESK_MODE_NAME} on{" "}
+                <a href="/mode">How the shop runs</a>.
+              </p>
+            ) : (
+              <div className="row mt-2">
+                {shopMode !== "live" ? (
+                  <form action={chooseShopModeAction}>
+                    <input type="hidden" name="mode" value="live" />
+                    <button className="btn btn-sm" type="submit">
+                      Switch to Live
+                    </button>
+                  </form>
+                ) : null}
+                {shopMode !== "desk" ? (
+                  <form action={chooseShopModeAction}>
+                    <input type="hidden" name="mode" value="desk" />
+                    <button className="btn btn-secondary btn-sm" type="submit">
+                      Switch to {DESK_MODE_NAME}
+                    </button>
+                  </form>
+                ) : null}
+                <a className="btn btn-ghost btn-sm" href="/mode">
+                  See both choices
+                </a>
+              </div>
+            )}
+          </Card>
           <Card
             id="stripe"
             title="Stripe"
@@ -877,6 +923,11 @@ export default async function SettingsPage({
             <form action={logoutAction}>
               <button className="btn btn-secondary" type="submit">Sign out</button>
             </form>
+            <p className="help mt-2">
+              <a href="/terms">Terms</a>
+              {" · "}
+              <a href="/privacy">Privacy</a>
+            </p>
           </Card>
         </div>
       ) : null}

@@ -55,10 +55,18 @@ export default async function SignupPage({
           />
           <span className="auth-hint">At least 8 characters.</span>
         </label>
+        <label className="checkbox">
+          <input name="agree" type="checkbox" value="1" required />
+          <span>
+            I agree to the <a href="/terms">Terms</a> and{" "}
+            <a href="/privacy">Privacy Policy</a>.
+          </span>
+        </label>
         <button className="btn btn-block" type="submit">Create shop</button>
       </form>
       <p className="auth-fine">
-        After 14 days it is $39 a month. We are not taking cards yet.
+        You start in Sandbox, like Stripe test mode. After 14 days it is $39 a
+        month. We are not taking cards yet.
       </p>
     </AuthShell>
   );

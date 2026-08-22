@@ -171,6 +171,11 @@ export default function LandingPage() {
         </section>
 
         <p className="landing-trades">{TRADES.join(" · ")}</p>
+        <p className="landing-legal">
+          <a href="/terms">Terms</a>
+          <span aria-hidden="true"> · </span>
+          <a href="/privacy">Privacy</a>
+        </p>
       </main>
 
       <div className="landing-dock">

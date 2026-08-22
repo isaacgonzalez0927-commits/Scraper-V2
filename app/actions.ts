@@ -47,6 +47,7 @@ import {
 } from "@/lib/stripe-invoices";
 import { DEMO_EMAIL } from "@/lib/seed";
 import { isSafeAppPath, withQuery } from "@/lib/sere-setup";
+import { parseModeChoice, promoteShopAfterProcessor, stripeKeyEnv, writeShopMode } from "@/lib/shop-mode";
 import { requireWritableContext, trialEndsISO } from "@/lib/trial";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
@@ -98,6 +99,9 @@ export async function signupAction(form: FormData) {
     redirect("/signup?error=Shop+name,+your+name,+email,+and+password+are+required.");
   }
   if (password.length < 8) redirect("/signup?error=Use+at+least+8+characters.");
+  if (str(form, "agree") !== "1") {
+    redirect("/signup?error=Agree+to+the+Terms+and+Privacy+Policy+to+create+a+shop.");
+  }
   const existing = await db().select().from(users).where(eq(users.email, email));
   if (existing.length) redirect("/signup?error=An+account+with+that+email+already+exists.");
   const created = nowISO();
@@ -113,6 +117,7 @@ export async function signupAction(form: FormData) {
       email,
       plan: "trial",
       trialEndsAt: trialEndsISO(new Date(created)),
+      operatingMode: "sandbox",
       createdAt: created,
     })
     .returning();
@@ -148,6 +153,26 @@ export async function chooseTradeAction(form: FormData) {
     }
   }
   redirect("/overview");
+}
+
+export async function chooseShopModeAction(form: FormData) {
+  const { org, user } = await requireWritableContext("/mode");
+  if (user.email === DEMO_EMAIL) redirect("/overview");
+  const choice = parseModeChoice(str(form, "mode"));
+  if (!choice) redirect("/mode?error=Pick+Live+or+Desk+mode.");
+  await writeShopMode(org.id, choice);
+  if (choice === "live") {
+    redirect(
+      "/settings?tab=integrations&ok=" +
+        encodeURIComponent("Live mode. Connect Stripe or Square so Overview can show cash that actually landed."),
+    );
+  }
+  redirect(
+    "/overview?ok=" +
+      encodeURIComponent(
+        "Desk mode is on. The shop is live. No Stripe or Square, so Overview will not show cash that actually landed. Connect later when you want that.",
+      ),
+  );
 }
 
 export async function logoutAction() {
@@ -804,6 +829,8 @@ export async function connectStripeAction(form: FormData) {
     webhookSecret,
     connectedVia: "keys",
   }, label);
+  const env = stripeKeyEnv(secretKey) || "test";
+  await promoteShopAfterProcessor(org.id, org.operatingMode, env);
   connectRedirect(form, "ok", `Stripe connected to ${label}.`);
 }
 
@@ -853,6 +880,7 @@ export async function connectSquareAction(form: FormData) {
     { accessToken, locationId, webhookSignatureKey, sandbox },
     label,
   );
+  await promoteShopAfterProcessor(org.id, org.operatingMode, sandbox ? "test" : "live");
   connectRedirect(form, "ok", `Square connected to ${label}.`);
 }
 

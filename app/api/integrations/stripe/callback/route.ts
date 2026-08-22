@@ -3,6 +3,7 @@ import { boot } from "@/lib/boot";
 import { currentContext } from "@/lib/auth";
 import { saveIntegration } from "@/lib/integrations";
 import { DEMO_EMAIL } from "@/lib/seed";
+import { promoteShopAfterProcessor } from "@/lib/shop-mode";
 import { accountLabel, exchangeStripeConnectCode, readConnectState, retrieveAccount } from "@/lib/stripe";
 
 export const runtime = "nodejs";
@@ -69,5 +70,6 @@ export async function GET(request: Request) {
     },
     label || accountId,
   );
+  await promoteShopAfterProcessor(ctx.org.id, ctx.org.operatingMode, "live");
   redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`Stripe connected to ${label || accountId}.`)}`);
 }

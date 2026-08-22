@@ -1,17 +1,19 @@
 /**
  * Sere setup is a Stripe Setup Guide: a live checklist on the dashboard.
- * Completing real work (a customer, a job, an invoice, a key) checks items
- * off. Progress is the shop's data, so it is still there when you come back.
+ * Completing real work (a customer, a job, an invoice, leaving Sandbox)
+ * checks items off. Progress is the shop's data, so it is still there
+ * when you come back.
  */
 
 import type { TradeField, TradeProfile } from "./business";
+import { DESK_MODE_NAME, leftSandbox, parseShopMode, type ShopMode } from "./shop-mode";
 
 export type SereVoice = Pick<
   TradeProfile,
   "customer" | "customers" | "job" | "jobs" | "newCustomer" | "newJob" | "jobTitleLabel" | "jobPlaceholder"
 >;
 
-export const SETUP_MILESTONES = ["shop", "customer", "job", "invoice", "cash"] as const;
+export const SETUP_MILESTONES = ["shop", "customer", "job", "invoice", "mode"] as const;
 
 export type SetupMilestoneId = (typeof SETUP_MILESTONES)[number];
 
@@ -43,6 +45,7 @@ export type SetupSnapshot = {
   jobs: number;
   invoices: number;
   stripe: boolean;
+  shopMode?: ShopMode | string;
   latestCustomerId?: number;
   latestCustomerName?: string;
   latestJobId?: number;
@@ -82,6 +85,8 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
   const hasJob = state.jobs > 0;
   const hasInvoice = state.invoices > 0;
   const hasCash = state.stripe;
+  const shopMode = parseShopMode(state.shopMode, "sandbox");
+  const modeReady = leftSandbox(shopMode);
   const customer = voice.customer.toLowerCase();
   const job = voice.job.toLowerCase();
 
@@ -156,17 +161,19 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
       ],
     },
     {
-      id: "cash",
-      title: "Connect live cash",
-      body: "Paste a Stripe restricted key. Overview then shows money that actually landed.",
-      href: "/settings?tab=integrations#stripe",
-      state: hasCash ? "done" : "open",
+      id: "mode",
+      title: "Leave Sandbox",
+      body: `Go live with Stripe or Square, or continue in ${DESK_MODE_NAME} without a processor.`,
+      href: "/mode",
+      state: modeReady ? "done" : "open",
       requirements: [
         {
-          id: "key",
-          label: "Stripe restricted key",
-          done: hasCash,
-          tip: "rk_test_ or rk_live_ only. The full sk_ key can move money. Never paste that.",
+          id: "choice",
+          label: "Picked Live or Desk mode",
+          done: modeReady,
+          tip: hasCash
+            ? "A processor is already connected. Confirm Live on the mode screen."
+            : `${DESK_MODE_NAME} is live with no integrations. Overview will not show cash that actually landed.`,
         },
       ],
     },
@@ -188,13 +195,16 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
   };
 }
 
-export function shopNeedsSetupGuide(state: Pick<SetupSnapshot, "customers" | "jobs" | "invoices" | "stripe">): boolean {
+export function shopNeedsSetupGuide(
+  state: Pick<SetupSnapshot, "customers" | "jobs" | "invoices" | "stripe" | "shopMode">,
+): boolean {
   return !buildSetupGuide(
     {
       shopName: "shop",
       shopPhone: "",
       shopEmail: "",
       trade: "general",
+      shopMode: "sandbox",
       ...state,
     },
     {

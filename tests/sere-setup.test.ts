@@ -21,6 +21,7 @@ const empty = {
   jobs: 0,
   invoices: 0,
   stripe: false,
+  shopMode: "sandbox",
 };
 
 test("the setup guide is a live checklist of missing shop requirements", () => {
@@ -51,23 +52,37 @@ test("later milestones unlock only after the work they depend on exists", () => 
   assert.equal(afterJob.nextId, "invoice");
 });
 
-test("finishing the book and connecting Stripe completes the guide", () => {
+test("finishing the book and leaving Sandbox completes the guide", () => {
   const voice = tradeCopy("hvac");
   const done = buildSetupGuide(
-    { ...empty, customers: 1, jobs: 1, invoices: 1, stripe: true },
+    { ...empty, customers: 1, jobs: 1, invoices: 1, stripe: true, shopMode: "live" },
     voice,
   );
   assert.equal(done.complete, true);
   assert.equal(done.percent, 100);
   assert.equal(done.nextId, null);
-  assert.equal(shopNeedsSetupGuide({ customers: 1, jobs: 1, invoices: 1, stripe: true }), false);
+  assert.equal(
+    shopNeedsSetupGuide({ customers: 1, jobs: 1, invoices: 1, stripe: true, shopMode: "desk" }),
+    false,
+  );
   assert.equal(shopNeedsSetupGuide({ customers: 0, jobs: 0, invoices: 0, stripe: false }), true);
 });
 
-test("cash stays available even when the book is empty", () => {
+test("Desk mode without a processor still closes the last step", () => {
+  const guide = buildSetupGuide(
+    { ...empty, customers: 1, jobs: 1, invoices: 1, stripe: false, shopMode: "desk" },
+    tradeCopy("hvac"),
+  );
+  assert.equal(guide.complete, true);
+  const mode = guide.milestones.find((item) => item.id === "mode");
+  assert.equal(mode?.state, "done");
+});
+
+test("leaving Sandbox stays available even when the book is empty", () => {
   const guide = buildSetupGuide(empty, tradeCopy("hvac"));
-  const cash = guide.milestones.find((item) => item.id === "cash");
-  assert.equal(cash?.state, "open");
+  const mode = guide.milestones.find((item) => item.id === "mode");
+  assert.equal(mode?.state, "open");
+  assert.equal(mode?.href, "/mode");
 });
 
 test("instant field checks catch empty names, bad emails, and secret keys", () => {

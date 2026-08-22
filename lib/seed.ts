@@ -49,7 +49,7 @@ export async function seedHarborAir() {
   if (existingOrg) {
     await db()
       .update(organizations)
-      .set({ businessType: "hvac", plan: "shop", trialEndsAt: "" })
+      .set({ businessType: "hvac", plan: "shop", trialEndsAt: "", operatingMode: "live" })
       .where(eq(organizations.id, existingOrg.id));
     const [owner] = await db()
       .insert(users)
@@ -89,6 +89,7 @@ export async function seedHarborAir() {
       businessType: "hvac",
       plan: "shop",
       trialEndsAt: "",
+      operatingMode: "live",
       createdAt: created,
     })
     .returning();

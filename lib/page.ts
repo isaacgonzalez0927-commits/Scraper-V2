@@ -8,6 +8,7 @@ import { unreadCount } from "./queries";
 import { customers, invoices, jobs } from "./schema";
 import { DEMO_EMAIL } from "./seed";
 import { buildSetupGuide, type SetupSnapshot } from "./sere-setup";
+import { parseShopMode } from "./shop-mode";
 import { ensureTrialClock, shopAccess } from "./trial";
 
 export async function loadApp() {
@@ -42,12 +43,20 @@ export async function loadApp() {
       searchHint: voice.searchHint,
       brief,
       setup,
+      shopMode: parseShopMode(org.operatingMode),
     },
   };
 }
 
 async function loadSetupForShell(
-  org: { id: number; name: string; phone: string; email: string; businessType: string },
+  org: {
+    id: number;
+    name: string;
+    phone: string;
+    email: string;
+    businessType: string;
+    operatingMode?: string;
+  },
   voice: ReturnType<typeof tradeCopy>,
 ) {
   const [customerRows, jobRows, invoiceRows, integrations] = await Promise.all([
@@ -79,6 +88,7 @@ async function loadSetupForShell(
     jobs: jobRows.length,
     invoices: invoiceRows.length,
     stripe: integrations.stripe.connected,
+    shopMode: org.operatingMode,
     latestCustomerId: customerRows[0]?.id,
     latestCustomerName: customerRows[0]?.name,
     latestJobId: jobRows[0]?.id,

@@ -22,6 +22,8 @@ export const organizations = sqliteTable("organizations", {
   /** trial until trialEndsAt; shop/crew means billed (or Harbor Air). */
   plan: text("plan").notNull().default("trial"),
   trialEndsAt: text("trial_ends_at").notNull().default(""),
+  /** sandbox | desk | live. Blank on old rows means live. */
+  operatingMode: text("operating_mode").notNull().default("live"),
   createdAt: text("created_at").notNull(),
 });
 
