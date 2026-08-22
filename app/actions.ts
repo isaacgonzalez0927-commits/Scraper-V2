@@ -34,7 +34,7 @@ import { paypalAccountLabel } from "@/lib/paypal";
 import { quickBooksCompanyName } from "@/lib/quickbooks";
 import { listSquareLocations, squareAccountLabel } from "@/lib/square";
 import { signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
-import { validateStripeKeyForSere } from "@/lib/stripe-keys";
+import { validateStripeKeyForSere, stripeKeyDeniedMessage } from "@/lib/stripe-keys";
 import {
   describeCustomerSync,
   pushCustomerToStripe,
@@ -771,7 +771,7 @@ export async function connectStripeAction(form: FormData) {
   }
   const keyCheck = await validateStripeKeyForSere(secretKey);
   if (!keyCheck.ok) {
-    connectRedirect(form, "error", keyCheck.problems.join(" "));
+    connectRedirect(form, "error", stripeKeyDeniedMessage(keyCheck.problems));
   }
   const label = keyCheck.label;
 

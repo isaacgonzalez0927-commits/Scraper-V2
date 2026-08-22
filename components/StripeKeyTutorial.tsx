@@ -7,7 +7,7 @@ export function StripeKeyTutorial({ defaultOpen = true }: { defaultOpen?: boolea
   return (
     <div className={`key-guide${defaultOpen ? "" : " key-guide-collapsed"}`}>
       <p className="key-guide-lede">
-        One link in Stripe. The Sere boxes are already checked. Paste the{" "}
+        One link in Stripe. The Sere boxes should already be checked. Paste the{" "}
         <code>rk_</code> key here. Never the secret <code>sk_</code> key. That
         one can move money.
       </p>
@@ -25,10 +25,14 @@ export function StripeKeyTutorial({ defaultOpen = true }: { defaultOpen?: boolea
           </span>
         </li>
         <li>
-          Confirm the name is <em>Sere</em>, create the key, copy it (
-          <code>rk_live_</code> or <code>rk_test_</code>).
+          Glance at the list before you create it.{" "}
+          <strong>Read</strong> on Balance, Charges, Payouts, and Connect → Accounts.{" "}
+          <strong>Write</strong> on Customers, Invoices, Invoice Items, and Checkout Sessions.
         </li>
-        <li>Paste below and tap Connect.</li>
+        <li>
+          Name it <em>Sere</em>, create, copy the <code>rk_live_</code> or{" "}
+          <code>rk_test_</code> key, paste below.
+        </li>
       </ol>
     </div>
   );

@@ -25,9 +25,10 @@ accurate than invoices typed in by hand.
 
 ### What the shop owner does
 
-1. Open [Create the Sere key in Stripe](https://dashboard.stripe.com/apikeys/create?name=Sere). That page
-   already has Sere's permissions selected. (Test mode:
-   [create a test key](https://dashboard.stripe.com/test/apikeys/create?name=Sere).)
+1. Open [Create the Sere key in Stripe](https://dashboard.stripe.com/apikeys/create?name=Sere). Glance at
+   the list before you create it. **Read** on Balance, Charges, Payouts, and Connect → Accounts.
+   **Write** on Customers, Invoices, Invoice Items, and Checkout Sessions.
+   (Test mode: [create a test key](https://dashboard.stripe.com/test/apikeys/create?name=Sere).)
 2. Create the key. Copy the restricted key (`rk_test_...` while trying it, `rk_live_...` for real cash).
 3. Paste it in Sere under **Settings → Integrations → Stripe** and tap **Connect**.
 
@@ -36,7 +37,8 @@ accounts. Restricted keys can only do what you grant.
 
 The pre-checked permissions are:
 
-- **Read** on Account, Balance, Charges, Payouts (cash on Overview)
+- **Read** on Balance, Charges, Payouts (cash on Overview)
+- **Read** on Connect → Accounts (shop name; Stripe calls this `rak_connected_account_read`)
 - **Write** on Customers, Invoices, Invoice Items (two-way customer and invoice sync)
 - **Write** on Checkout Sessions (pay links on invoices, optional)
 
