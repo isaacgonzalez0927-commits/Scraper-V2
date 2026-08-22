@@ -5,9 +5,11 @@ Sere reads live payments and payouts so Overview is accurate. Email goes out fro
 the shop's own domain.
 
 Shop owners paste the secret on **Overview** (or Reports, Payments, Settings) and tap
-**Connect Stripe**. That is the connect action. **Create the Sere key in Stripe**
-opens Stripe's create-key page with Sere's permissions already selected. That link
-is not the button that connects.
+**Connect Stripe**. That is the connect action. **Open Stripe Developers (sandbox)**
+opens Stripe's test-mode Developers → API keys page. That link is not the button
+that connects, and it does not pre-check permission boxes. Stripe's current wizard
+ignores those query params and applies a default third-party set unless you tick
+**Customize permissions for this key**.
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
 key derived from `SERE_SECRET_KEY`. Nothing shows a saved secret back on screen. If you
@@ -25,18 +27,26 @@ accurate than invoices typed in by hand.
 
 ### What the shop owner does
 
-1. Open [Create the Sere key in Stripe](https://dashboard.stripe.com/apikeys/create?name=Sere). That page
-   already has Sere's permissions selected. (Test mode:
-   [create a test key](https://dashboard.stripe.com/test/apikeys/create?name=Sere).)
-2. Create the key. Copy the restricted key (`rk_test_...` while trying it, `rk_live_...` for real cash).
-3. Paste it in Sere under **Settings → Integrations → Stripe** and tap **Connect**.
+1. Open [Stripe Developers in the sandbox](https://dashboard.stripe.com/test/apikeys)
+   (Test mode → Developers → API keys). Start here, not the live create-key page.
+2. Create restricted key. When Stripe asks how you will use it, pick **Providing this
+   key to another website**.
+3. Name it **Sere**. Website URL: `https://www.sere.cash`. Tick **Customize
+   permissions for this key**. If you skip that, Stripe names the key Sere and
+   applies its own default set. That key will fail in Sere.
+4. Set **Read** on Balance, Charges, Payouts, and Connect → Accounts. Set **Write**
+   on Customers, Invoices, Invoice Items, and Checkout Sessions.
+5. Create the key. Copy the restricted key (`rk_test_...` in the sandbox,
+   `rk_live_...` for real cash from [live API keys](https://dashboard.stripe.com/apikeys)).
+6. Paste it in Sere under **Settings → Integrations → Stripe** and tap **Connect**.
 
 Sere **rejects full secret keys** (`sk_live_...`). They can move money and change payout
 accounts. Restricted keys can only do what you grant.
 
-The pre-checked permissions are:
+The permissions to set by hand are:
 
-- **Read** on Account, Balance, Charges, Payouts (cash on Overview)
+- **Read** on Balance, Charges, Payouts (cash on Overview)
+- **Read** on Connect → Accounts (shop name; Stripe calls this `rak_connected_account_read`)
 - **Write** on Customers, Invoices, Invoice Items (two-way customer and invoice sync)
 - **Write** on Checkout Sessions (pay links on invoices, optional)
 
@@ -112,7 +122,7 @@ Each shop uses their own Stripe account.
 
 | Stripe resource | Permission | Why |
 | ---------------- | ---------- | --- |
-| Account | Read | Confirm the key belongs to the shop |
+| Connect → Accounts | Read | Shop name on Overview |
 | Balance | Read | Available and pending cash on Overview |
 | Charges | Read | This month's card revenue |
 | Payouts | Read | Recent bank transfers |
@@ -121,9 +131,10 @@ Each shop uses their own Stripe account.
 
 ### Trying it without real money
 
-Use a test restricted key (`rk_test_...`) and Stripe's test card `4242 4242 4242 4242` with any
-future expiry and any CVC. Stripe's test mode has its own webhook endpoints and its own
-signing secret, so add the endpoint in test mode too if you want to exercise invoice checkout.
+Use Stripe's **sandbox** (Developers, test mode) and a test restricted key (`rk_test_...`).
+Stripe's test card is `4242 4242 4242 4242` with any future expiry and any CVC. The
+sandbox has its own webhook endpoints and its own signing secret, so add the endpoint
+there too if you want to exercise invoice checkout.
 
 ### Optional: invoice card checkout
 

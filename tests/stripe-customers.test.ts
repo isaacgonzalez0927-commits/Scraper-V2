@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   SERE_STRIPE_RAK_PERMISSIONS,
   stripeCreateRestrictedKeyUrl,
+  stripeKeyDeniedMessage,
 } from "../lib/stripe-keys";
 import {
   customerWriteHint,
@@ -12,18 +13,16 @@ import {
   stripeDashboardCustomerUrl,
 } from "../lib/stripe-customers";
 
-test("create-key URL preselects Sere permissions and names the key", () => {
-  const live = stripeCreateRestrictedKeyUrl();
-  const testMode = stripeCreateRestrictedKeyUrl({ test: true });
-  assert.equal(live.startsWith("https://dashboard.stripe.com/apikeys/create?"), true);
-  assert.equal(testMode.startsWith("https://dashboard.stripe.com/test/apikeys/create?"), true);
-  assert.ok(live.includes("name=Sere"));
-  for (const permission of SERE_STRIPE_RAK_PERMISSIONS) {
-    assert.ok(live.includes(encodeURIComponent(permission)) || live.includes(permission));
-  }
-  assert.ok(live.includes("rak_customer_write"));
-  assert.ok(live.includes("rak_invoice_write"));
-  assert.ok(live.includes("rak_charge_read"));
+test("connect link opens Stripe sandbox Developers, not a named create-key wizard", () => {
+  const sandbox = stripeCreateRestrictedKeyUrl();
+  const live = stripeCreateRestrictedKeyUrl({ test: false });
+  assert.equal(sandbox, "https://dashboard.stripe.com/test/apikeys");
+  assert.equal(live, "https://dashboard.stripe.com/apikeys");
+  assert.equal(sandbox.includes("create"), false);
+  assert.equal(sandbox.includes("name="), false);
+  assert.equal(sandbox.includes("permissions"), false);
+  assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_customer_write"));
+  assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_connected_account_read"));
 });
 
 test("customer webhooks cover create, update, and delete", () => {
@@ -73,7 +72,18 @@ test("missing Customers Write gets a create-key hint", () => {
   const hint = customerWriteHint(
     "The provided key does not have the required permissions. Having the 'rak_customer_write' permission would allow this request to continue.",
   );
-  assert.match(hint, /Create the Sere key/);
+  assert.match(hint, /Customize permissions/);
+});
+
+test("a rejected key names the missing rows instead of dumping Stripe's error", () => {
+  const message = stripeKeyDeniedMessage([
+    "Balance (needs Read): Having the 'rak_balance_read' permission would allow this request to continue.",
+    "Charges (needs Read): Having the 'rak_charge_read' permission would allow this request to continue.",
+  ]);
+  assert.match(message, /Balance \(needs Read\)/);
+  assert.match(message, /Charges \(needs Read\)/);
+  assert.match(message, /Customize permissions/);
+  assert.equal(message.includes("rk_live_"), false);
 });
 
 test("Stripe customer dashboard URL follows test vs live keys", () => {

@@ -1,34 +1,54 @@
 import {
-  STRIPE_CREATE_KEY_URL,
-  STRIPE_CREATE_TEST_KEY_URL,
+  SERE_SITE_URL,
+  STRIPE_LIVE_API_KEYS_URL,
+  STRIPE_SANDBOX_API_KEYS_URL,
 } from "@/lib/stripe-keys";
 
 export function StripeKeyTutorial({ defaultOpen = true }: { defaultOpen?: boolean }) {
   return (
     <div className={`key-guide${defaultOpen ? "" : " key-guide-collapsed"}`}>
       <p className="key-guide-lede">
-        One link in Stripe. The Sere boxes are already checked. Paste the{" "}
-        <code>rk_</code> key here. Never the secret <code>sk_</code> key. That
-        one can move money.
+        Use Stripe&apos;s <strong>sandbox</strong> (Developers, test mode). A
+        link that only names the key <em>Sere</em> still gets Stripe&apos;s
+        default third-party permissions. Those are the wrong boxes. Never paste
+        the secret <code>sk_</code> key. That one can move money.
       </p>
       <ol className="key-steps">
         <li>
-          <a className="btn btn-sm btn-stripe" href={STRIPE_CREATE_KEY_URL} target="_blank" rel="noreferrer">
-            Create the Sere key in Stripe
+          <a
+            className="btn btn-sm btn-stripe"
+            href={STRIPE_SANDBOX_API_KEYS_URL}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open Stripe Developers (sandbox)
           </a>
           <span className="tiny" style={{ display: "block", marginTop: 6 }}>
-            Live mode.{" "}
-            <a href={STRIPE_CREATE_TEST_KEY_URL} target="_blank" rel="noreferrer">
-              Test mode instead
+            Test mode → Developers → API keys.{" "}
+            <a href={STRIPE_LIVE_API_KEYS_URL} target="_blank" rel="noreferrer">
+              Live keys when you are ready
             </a>
             .
           </span>
         </li>
         <li>
-          Confirm the name is <em>Sere</em>, create the key, copy it (
-          <code>rk_live_</code> or <code>rk_test_</code>).
+          Create restricted key. When Stripe asks how you will use it, pick{" "}
+          <strong>Providing this key to another website</strong>.
         </li>
-        <li>Paste below and tap Connect.</li>
+        <li>
+          Name it <em>Sere</em>. Website URL: <code>{SERE_SITE_URL}</code>. Then
+          tick <strong>Customize permissions for this key</strong>. Skip that
+          box and Stripe keeps its own default set.
+        </li>
+        <li>
+          Set <strong>Read</strong> on Balance, Charges, Payouts, and Connect →
+          Accounts. Set <strong>Write</strong> on Customers, Invoices, Invoice
+          Items, and Checkout Sessions. Leave everything else None.
+        </li>
+        <li>
+          Create it, copy the <code>rk_test_</code> key, paste below. Make a
+          new key. The old one named Sere still has the wrong permissions.
+        </li>
       </ol>
     </div>
   );

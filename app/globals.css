@@ -1106,7 +1106,7 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   font-size: 13px;
   line-height: 1.45;
 }
-.key-steps li + li { margin-top: 4px; }
+.key-steps li + li { margin-top: 8px; }
 .key-steps a { font-weight: 600; }
 
 .connect-cta-compact { padding: 12px 14px; }

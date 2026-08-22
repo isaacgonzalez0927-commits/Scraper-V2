@@ -65,8 +65,9 @@ export function customerWriteHint(message: string): string {
     /required permissions/i.test(message)
   ) {
     return (
-      "The Stripe key needs Customers set to Write. Use Create the Sere key " +
-      "in Settings so those boxes are already checked, then paste the new key."
+      "The Stripe key needs Customers set to Write. Open Stripe Developers " +
+      "(sandbox), create a new restricted key, tick Customize permissions, " +
+      "set Customers to Write, then paste the new rk_test_ key."
     );
   }
   return message;

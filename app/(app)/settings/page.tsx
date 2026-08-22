@@ -248,7 +248,7 @@ export default async function SettingsPage({
                     className="input"
                     name="stripe_secret_key"
                     type="password"
-                    placeholder="rk_live_... or rk_test_..."
+                    placeholder="rk_test_..."
                     autoComplete="off"
                     required
                   />
@@ -311,7 +311,7 @@ export default async function SettingsPage({
                     <input
                       name="stripe_secret_key"
                       type="password"
-                      placeholder="rk_live_..."
+                      placeholder="rk_test_... or rk_live_..."
                       autoComplete="off"
                     />
                     <p className="help">Stored encrypted. Sere shows it back to nobody, including us.</p>

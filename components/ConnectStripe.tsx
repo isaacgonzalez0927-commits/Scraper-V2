@@ -1,6 +1,6 @@
 import { connectOpenAIAction, connectSquareAction, connectStripeAction } from "@/app/actions";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
-import { STRIPE_API_KEYS_URL, STRIPE_CREATE_KEY_URL } from "@/lib/stripe-keys";
+import { STRIPE_API_KEYS_URL, STRIPE_SANDBOX_API_KEYS_URL } from "@/lib/stripe-keys";
 
 export { STRIPE_API_KEYS_URL as STRIPE_KEYS_URL };
 export const SQUARE_KEYS_URL = "https://developer.squareup.com/apps";
@@ -38,8 +38,8 @@ export function ConnectSquareButton({
 
 export function StripeKeyLink() {
   return (
-    <a href={STRIPE_CREATE_KEY_URL} target="_blank" rel="noreferrer">
-      Create the Sere key in Stripe
+    <a href={STRIPE_SANDBOX_API_KEYS_URL} target="_blank" rel="noreferrer">
+      Open Stripe Developers (sandbox)
     </a>
   );
 }
@@ -79,7 +79,7 @@ function ConnectStripePaste({ next }: { next: string }) {
         autoComplete="off"
         required
         spellCheck={false}
-        placeholder="rk_live_... or rk_test_..."
+        placeholder="rk_test_..."
         aria-label="Stripe restricted key"
       />
       <button className="btn btn-sm btn-stripe" type="submit">
