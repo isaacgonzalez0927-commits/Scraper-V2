@@ -238,6 +238,7 @@ export const customers = sqliteTable(
     customerSince: text("customer_since").notNull(),
     archivedAt: text("archived_at"),
     createdAt: text("created_at").notNull(),
+    stripeCustomerId: text("stripe_customer_id").notNull().default(""),
   },
   (t) => [index("customers_org").on(t.organizationId)],
 );
@@ -317,10 +318,13 @@ export const invoices = sqliteTable(
     viewedAt: text("viewed_at"),
     voidedAt: text("voided_at"),
     createdAt: text("created_at").notNull(),
+    stripeInvoiceId: text("stripe_invoice_id").notNull().default(""),
+    stripeHostedUrl: text("stripe_hosted_url").notNull().default(""),
   },
   (t) => [
     uniqueIndex("invoices_org_number").on(t.organizationId, t.number),
     index("invoices_org").on(t.organizationId),
+    index("invoices_stripe").on(t.stripeInvoiceId),
   ],
 );
 

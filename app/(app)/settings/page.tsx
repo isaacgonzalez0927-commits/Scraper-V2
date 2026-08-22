@@ -17,7 +17,7 @@ import {
   sendTestEmailAction,
   startStripeConnectAction,
 } from "@/app/actions";
-import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, StripeKeyLink } from "@/components/ConnectStripe";
+import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink } from "@/components/ConnectStripe";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { ThemeChooser } from "@/components/ThemeToggle";
 import { Banner, Card } from "@/components/ui";
@@ -229,10 +229,12 @@ export default async function SettingsPage({
                 ) : (
                   <Banner>
                     <div>
-                      <strong>Cash view does not need a webhook.</strong>
+                      <strong>Cash, invoices, and payouts.</strong>
                       <p className="mt-1">
-                        Overview already reads the live Stripe balance with this key. A webhook is
-                        only if you also want invoice card checkout recorded when a tab is closed.
+                        Overview reads the live Stripe balance. Invoices you send in Sere
+                        also appear in Stripe when the restricted key has Customers and
+                        Invoices set to Write. Add a webhook below so invoices created in
+                        Stripe come back into Sere.
                       </p>
                     </div>
                   </Banner>
@@ -240,71 +242,55 @@ export default async function SettingsPage({
               </>
             ) : !demoShop ? (
               <>
-                <Banner>
-                  <div>
-                    <strong>Sere uses restricted keys only.</strong>
-                    <p className="mt-1">
-                      Paste an <code>rk_live_...</code> key, not a secret <code>sk_</code> key.
-                      Restricted keys can read cash data but cannot move money or change payout
-                      accounts if something goes wrong.
-                    </p>
-                  </div>
-                </Banner>
                 <StripeKeyTutorial />
-                <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
-                  <div className="field full">
-                    <label>Restricted key</label>
-                    <input
-                      name="stripe_secret_key"
-                      type="password"
-                      placeholder="rk_test_... or rk_live_..."
-                      autoComplete="off"
-                      required
-                    />
-                    <p className="help">
-                      Stored encrypted. Sere never shows it again. Used to read balance, charges,
-                      and payouts. Need it? <StripeKeyLink />.
-                    </p>
-                  </div>
-                  <details className="disclosure">
-                    <summary>Optional: webhook, so a closed tab still records the payment</summary>
-                    <p className="help mt-1">
-                      Requires <strong>Checkout Sessions → Write</strong> on the restricted key.
-                      In Stripe, Developers → Webhooks → Add endpoint. Event{" "}
-                      <code>checkout.session.completed</code>. Paste the <code>whsec_...</code> it
-                      gives you.
-                    </p>
-                    <div className="copy-row mt-1">
-                      <span className="copy-value">{webhookUrl}</span>
-                      <button className="btn btn-secondary btn-sm" type="button" data-copy={webhookUrl}>
-                        Copy
-                      </button>
-                    </div>
-                    <div className="field full mt-2">
-                      <label>Webhook signing secret</label>
-                      <input
-                        name="stripe_webhook_secret"
-                        type="password"
-                        placeholder="whsec_..."
-                        autoComplete="off"
-                      />
-                    </div>
-                  </details>
-                  <div className="form-actions">
-                    <button className="btn btn-stripe btn-connect-lg" type="submit">
-                      Connect Stripe
+                <form id="stripe-keys-form" action={connectStripeAction} className="connect-paste mt-2">
+                  <input
+                    className="input"
+                    name="stripe_secret_key"
+                    type="password"
+                    placeholder="rk_live_... or rk_test_..."
+                    autoComplete="off"
+                    required
+                  />
+                  <button className="btn btn-sm btn-stripe" type="submit">
+                    Connect
+                  </button>
+                </form>
+                <details className="disclosure">
+                  <summary>Webhook — so Stripe invoices and payments come back into Sere</summary>
+                  <p className="help mt-1">
+                    In Stripe, Developers → Webhooks → Add endpoint. Events:{" "}
+                    <code>invoice.created</code>, <code>invoice.paid</code>,{" "}
+                    <code>invoice.voided</code>, <code>checkout.session.completed</code>.
+                    Paste the <code>whsec_...</code> it gives you, then reconnect the key above
+                    with this field filled in.
+                  </p>
+                  <div className="copy-row mt-1">
+                    <span className="copy-value">{webhookUrl}</span>
+                    <button className="btn btn-secondary btn-sm" type="button" data-copy={webhookUrl}>
+                      Copy
                     </button>
                   </div>
-                </form>
+                  <div className="field full mt-2">
+                    <label>Webhook signing secret</label>
+                    <input
+                      name="stripe_webhook_secret"
+                      type="password"
+                      placeholder="whsec_..."
+                      autoComplete="off"
+                      form="stripe-keys-form"
+                    />
+                  </div>
+                </details>
                 {oneClick ? (
                   <details className="disclosure mt-2">
-                    <summary>One-click Connect (optional — needs a verified Stripe platform account)</summary>
+                    <summary>One-click Connect (optional)</summary>
                     <p className="help mt-1">
-                      Stripe Connect asks for business identity verification. If you cannot complete
-                      that, use a restricted key above — it works the same for cash on Overview.
+                      Needs a verified Stripe platform account. Restricted keys above work
+                      without that.
                     </p>
                     <form action={startStripeConnectAction} className="mt-2">
-                      <button className="btn btn-secondary" type="submit">
+                      <button className="btn btn-sm btn-secondary" type="submit">
                         Connect with Stripe OAuth
                       </button>
                     </form>
@@ -337,10 +323,9 @@ export default async function SettingsPage({
                     <input name="stripe_webhook_secret" type="password" placeholder="whsec_..." autoComplete="off" />
                   </div>
                   <div className="form-actions">
-                    <button className="btn" type="submit">
+                    <button className="btn btn-sm" type="submit">
                       Update Stripe key
                     </button>
-                    <p className="help">Sere calls Stripe once to confirm permissions before saving.</p>
                   </div>
                 </form>
               </details>
@@ -456,7 +441,7 @@ export default async function SettingsPage({
                       </div>
                     </details>
                     <div className="form-actions">
-                      <button className="btn btn-square btn-connect-lg" type="submit">
+                      <button className="btn btn-sm btn-square" type="submit">
                         Connect Square
                       </button>
                     </div>
@@ -570,7 +555,7 @@ export default async function SettingsPage({
                     </div>
                   </details>
                   <div className="form-actions">
-                    <button className="btn btn-openai btn-connect-lg" type="submit">
+                    <button className="btn btn-sm btn-openai" type="submit">
                       Connect OpenAI
                     </button>
                   </div>

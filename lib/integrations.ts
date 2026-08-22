@@ -196,6 +196,25 @@ function fromStoredStripe(saved: StoredStripe): StripeConfig | null {
   return null;
 }
 
+export async function connectedStripeShops(): Promise<Array<{ organizationId: number; webhookSecret: string }>> {
+  const rows = await db()
+    .select({ organizationId: integrations.organizationId, secretCipher: integrations.secretCipher })
+    .from(integrations)
+    .where(and(eq(integrations.provider, "stripe"), eq(integrations.status, "connected")));
+  const shops: Array<{ organizationId: number; webhookSecret: string }> = [];
+  for (const row of rows) {
+    const plain = decryptSecret(row.secretCipher);
+    if (!plain) continue;
+    try {
+      const saved = JSON.parse(plain) as StoredStripe;
+      shops.push({ organizationId: row.organizationId, webhookSecret: saved.webhookSecret || "" });
+    } catch {
+      // Skip unreadable rows.
+    }
+  }
+  return shops;
+}
+
 export async function stripeConfig(organizationId: number): Promise<StripeConfig | null> {
   const saved = await readConfig<StoredStripe>(organizationId, "stripe");
   if (saved) {

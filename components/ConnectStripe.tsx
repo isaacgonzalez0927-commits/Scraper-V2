@@ -7,21 +7,15 @@ export const SQUARE_KEYS_URL = "https://developer.squareup.com/apps";
 export const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
 export const OPENAI_LIMITS_URL = "https://platform.openai.com/settings/organization/limits";
 
-/** Stripe Connect OAuth — optional; needs a verified platform account. */
 export function ConnectStripeButton({
   label = "Connect Stripe",
   secondary,
-  large,
 }: {
   label?: string;
   secondary?: boolean;
   large?: boolean;
 }) {
-  const className = [
-    "btn",
-    secondary ? "btn-secondary" : "btn-stripe",
-    large ? "btn-connect-lg" : "",
-  ].filter(Boolean).join(" ");
+  const className = ["btn", "btn-sm", secondary ? "btn-secondary" : "btn-stripe"].filter(Boolean).join(" ");
   return (
     <a className={className} href="/settings?tab=integrations#stripe">
       {label}
@@ -31,14 +25,12 @@ export function ConnectStripeButton({
 
 export function ConnectSquareButton({
   label = "Connect Square",
-  large,
 }: {
   label?: string;
   large?: boolean;
 }) {
-  const className = ["btn", "btn-square", large ? "btn-connect-lg" : ""].filter(Boolean).join(" ");
   return (
-    <a className={className} href="/settings?tab=integrations#square">
+    <a className="btn btn-sm btn-square" href="/settings?tab=integrations#square">
       {label}
     </a>
   );
@@ -55,7 +47,7 @@ export function StripeKeyLink() {
 export function SquareKeyLink() {
   return (
     <a href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
-      Get the key from Square
+      Square credentials
     </a>
   );
 }
@@ -63,7 +55,7 @@ export function SquareKeyLink() {
 export function OpenAIKeyLink() {
   return (
     <a href={OPENAI_KEYS_URL} target="_blank" rel="noreferrer">
-      Get an API key from OpenAI
+      OpenAI API keys
     </a>
   );
 }
@@ -71,32 +63,29 @@ export function OpenAIKeyLink() {
 export function OpenAILimitsLink() {
   return (
     <a href={OPENAI_LIMITS_URL} target="_blank" rel="noreferrer">
-      Set a monthly budget in OpenAI
+      Set a monthly budget
     </a>
   );
 }
 
 function ConnectStripePaste({ next }: { next: string }) {
   return (
-    <>
-      <StripeKeyTutorial defaultOpen={false} />
-      <form action={connectStripeAction} className="connect-paste">
-        <input type="hidden" name="next" value={next} />
-        <input
-          className="input"
-          name="stripe_secret_key"
-          type="password"
-          autoComplete="off"
-          required
-          spellCheck={false}
-          placeholder="Paste rk_live_... or rk_test_..."
-          aria-label="Stripe restricted key"
-        />
-        <button className="btn btn-stripe btn-connect-lg" type="submit">
-          Connect Stripe
-        </button>
-      </form>
-    </>
+    <form action={connectStripeAction} className="connect-paste">
+      <input type="hidden" name="next" value={next} />
+      <input
+        className="input"
+        name="stripe_secret_key"
+        type="password"
+        autoComplete="off"
+        required
+        spellCheck={false}
+        placeholder="rk_live_... or rk_test_..."
+        aria-label="Stripe restricted key"
+      />
+      <button className="btn btn-sm btn-stripe" type="submit">
+        Connect
+      </button>
+    </form>
   );
 }
 
@@ -111,11 +100,11 @@ function ConnectSquarePaste({ next }: { next: string }) {
         autoComplete="off"
         required
         spellCheck={false}
-        placeholder="Paste the Square access token"
+        placeholder="Square access token"
         aria-label="Square access token"
       />
-      <button className="btn btn-square btn-connect-lg" type="submit">
-        Connect Square
+      <button className="btn btn-sm btn-square" type="submit">
+        Connect
       </button>
     </form>
   );
@@ -137,22 +126,17 @@ export function ConnectCashCallout({
     <div className="connect-cta connect-cta-stack">
       {needStripe ? (
         <div className="connect-cta-block">
-          <strong>Connect Stripe</strong>
-          <p>
-            Create a <strong>restricted key</strong> in Stripe (<code>rk_live_...</code>),
-            paste it here, and Overview shows cash that actually landed.{" "}
-            <StripeKeyLink /> — Create restricted key, not the secret key.
-          </p>
+          <strong>See live Stripe cash</strong>
+          <StripeKeyTutorial />
           <ConnectStripePaste next={next} />
         </div>
       ) : null}
       {needSquare ? (
         <div className="connect-cta-block">
-          <strong>Connect Square</strong>
+          <strong>See live Square cash</strong>
           <p>
-            Paste the shop&apos;s access token here. Same idea: live Square cash
-            next to invoices you typed. Need the token? <SquareKeyLink /> —
-            Credentials, Production, copy, paste.
+            From <SquareKeyLink />, open Credentials → Production, copy the access
+            token, paste it here.
           </p>
           <ConnectSquarePaste next={next} />
         </div>
@@ -172,11 +156,11 @@ function ConnectOpenAIPaste({ next }: { next: string }) {
         autoComplete="off"
         required
         spellCheck={false}
-        placeholder="Paste sk-... or sk-proj-..."
+        placeholder="sk-... or sk-proj-..."
         aria-label="OpenAI API key"
       />
-      <button className="btn btn-openai btn-connect-lg" type="submit">
-        Connect OpenAI
+      <button className="btn btn-sm btn-openai" type="submit">
+        Connect
       </button>
     </form>
   );
@@ -191,14 +175,12 @@ export function ConnectAssistantCallout({
 }) {
   if (connected) return null;
   return (
-    <div className="connect-cta connect-cta-stack" id="openai">
+    <div className="connect-cta connect-cta-compact" id="openai">
       <div className="connect-cta-block">
-        <strong>Connect OpenAI</strong>
+        <strong>Shop assistant</strong>
         <p>
-          Paste an API key if you want this shop billed on its own OpenAI
-          account. Completing or moving a job still goes through Sere, not the
-          model. Need a key? <OpenAIKeyLink />. Cap spend with{" "}
-          <OpenAILimitsLink /> — $5 a month is enough for gpt-4o-mini.
+          Optional. Paste an OpenAI key if this shop should be billed on its own
+          account. <OpenAIKeyLink /> · <OpenAILimitsLink /> ($5/mo is enough).
         </p>
         <ConnectOpenAIPaste next={next} />
       </div>

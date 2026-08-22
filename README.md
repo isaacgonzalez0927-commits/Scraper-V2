@@ -102,11 +102,8 @@ Stripe** is for the shop's books: Overview and Reports then show the live Stripe
 balance, pending funds, and payouts. Credentials are stored encrypted and never
 displayed again.
 
-- **Stripe.** Paste a secret key (or one-click Connect when `STRIPE_CONNECT_CLIENT_ID`
-  is set). Sere reads `/balance`, `/charges`, and `/payouts` so the owner can see
-  real cash next to invoices typed in Sere. Invoice **Pay with Stripe** is optional
-  leftover checkout, not the product. Webhook
-  `https://yourdomain.com/api/webhooks/stripe` is only needed for that checkout path.
+- **Stripe.** Paste a **restricted key** (`rk_live_...`) — Settings has a step-by-step
+  tutorial. One-click Connect is optional and needs a verified platform account.
 - **Square.** Same cash view as Stripe. Tap **Connect Square**, copy the
   production access token from [developer.squareup.com/apps](https://developer.squareup.com/apps),
   paste it. Overview then shows Square payments and payouts. Webhook
