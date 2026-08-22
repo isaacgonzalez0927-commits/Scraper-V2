@@ -1092,6 +1092,12 @@ a.btn-square, a.btn-square:hover { color: #fff; }
 }
 a.btn-openai, a.btn-openai:hover { color: #fff; }
 
+.connect-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
 .connect-cta-stack {
   flex-direction: column;
   align-items: stretch;
@@ -1119,11 +1125,16 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 
 .key-guide {
   margin: 8px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
 }
 .key-guide-lede {
   margin: 0 0 8px;
-  color: var(--ink-2);
+  color: var(--ink);
   font-size: 13px;
+  font-weight: 600;
   line-height: 1.45;
   max-width: 36rem;
 }
@@ -1136,6 +1147,18 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 }
 .key-steps li + li { margin-top: 8px; }
 .key-steps a { font-weight: 600; }
+.key-perms {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.key-perms li + li { margin-top: 4px; }
+.card[id] {
+  scroll-margin-top: calc(var(--topbar) + 16px);
+}
+.card.is-hash-target {
+  box-shadow: 0 0 0 2px var(--accent-line);
+}
 
 .connect-cta-compact { padding: 12px 14px; }
 

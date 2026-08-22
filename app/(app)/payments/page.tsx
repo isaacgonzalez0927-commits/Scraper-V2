@@ -52,7 +52,6 @@ export default async function PaymentsPage({
       <Banner error={error} ok={ok} />
       {!shell.isDemo ? (
         <ConnectCashCallout
-          next="/payments"
           stripe={integrations.stripe.connected}
           square={integrations.square.connected}
         />

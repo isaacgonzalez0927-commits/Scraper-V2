@@ -1,37 +1,24 @@
-import { connectSquareAction, connectStripeAction } from "@/app/actions";
-import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { STRIPE_API_KEYS_URL, STRIPE_SANDBOX_API_KEYS_URL } from "@/lib/stripe-keys";
 
 export { STRIPE_API_KEYS_URL as STRIPE_KEYS_URL };
+export const CONNECT_STRIPE_HREF = "/settings?tab=integrations#stripe";
+export const CONNECT_SQUARE_HREF = "/settings?tab=integrations#square";
 export const SQUARE_KEYS_URL = "https://developer.squareup.com/apps";
 export const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
 export const OPENAI_LIMITS_URL = "https://platform.openai.com/settings/organization/limits";
 
-export function ConnectStripeButton({
-  label = "Connect Stripe",
-  secondary,
-}: {
-  label?: string;
-  secondary?: boolean;
-  large?: boolean;
-}) {
-  const className = ["btn", "btn-connect", secondary ? "btn-secondary" : "btn-stripe"].filter(Boolean).join(" ");
+export function ConnectStripeButton() {
   return (
-    <a className={className} href="/settings?tab=integrations#stripe">
-      {label}
+    <a className="btn btn-connect btn-stripe" href={CONNECT_STRIPE_HREF}>
+      Connect Stripe
     </a>
   );
 }
 
-export function ConnectSquareButton({
-  label = "Connect Square",
-}: {
-  label?: string;
-  large?: boolean;
-}) {
+export function ConnectSquareButton() {
   return (
-    <a className="btn btn-connect btn-square" href="/settings?tab=integrations#square">
-      {label}
+    <a className="btn btn-connect btn-square" href={CONNECT_SQUARE_HREF}>
+      Connect Square
     </a>
   );
 }
@@ -47,7 +34,7 @@ export function StripeKeyLink() {
 export function SquareKeyLink() {
   return (
     <a href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
-      Square credentials
+      Square Developers
     </a>
   );
 }
@@ -55,23 +42,20 @@ export function SquareKeyLink() {
 export function SquareKeyTutorial() {
   return (
     <div className="key-guide">
-      <p className="key-guide-lede">
-        Same idea as Stripe. Open Square Developers, copy the Production
-        access token, paste it here.
-      </p>
+      <p className="key-guide-lede">Three steps. Same idea as Stripe.</p>
       <ol className="key-steps">
         <li>
-          <a
-            className="btn btn-connect btn-square"
-            href={SQUARE_KEYS_URL}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open Square Developers
+          Open{" "}
+          <a href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
+            Square Developers
           </a>
+          . Pick your app, or create one.
         </li>
-        <li>Credentials → Production. Copy the access token.</li>
-        <li>Paste below and tap Connect.</li>
+        <li>
+          Credentials → Production. Copy the access token. Use Sandbox only if
+          that is a test app.
+        </li>
+        <li>Paste it below. Tap Connect Square.</li>
       </ol>
     </div>
   );
@@ -93,77 +77,26 @@ export function OpenAILimitsLink() {
   );
 }
 
-function ConnectStripePaste({ next }: { next: string }) {
-  return (
-    <form action={connectStripeAction} className="connect-paste">
-      <input type="hidden" name="next" value={next} />
-      <input
-        className="input"
-        name="stripe_secret_key"
-        type="password"
-        autoComplete="off"
-        required
-        spellCheck={false}
-        placeholder="rk_test_..."
-        aria-label="Stripe restricted key"
-      />
-      <button className="btn btn-connect btn-stripe" type="submit">
-        Connect
-      </button>
-    </form>
-  );
-}
-
-function ConnectSquarePaste({ next }: { next: string }) {
-  return (
-    <form action={connectSquareAction} className="connect-paste">
-      <input type="hidden" name="next" value={next} />
-      <input
-        className="input"
-        name="square_access_token"
-        type="password"
-        autoComplete="off"
-        required
-        spellCheck={false}
-        placeholder="Square access token"
-        aria-label="Square access token"
-      />
-      <button className="btn btn-connect btn-square" type="submit">
-        Connect
-      </button>
-    </form>
-  );
-}
-
 export function ConnectCashCallout({
   stripe,
   square,
-  next = "/overview",
 }: {
   stripe: boolean;
   square: boolean;
-  next?: string;
 }) {
   const needStripe = !stripe;
   const needSquare = !square;
   if (!needStripe && !needSquare) return null;
   return (
-    <div className="connect-cta connect-cta-stack">
-      {needStripe ? (
-        <div className="connect-cta-block">
-          <strong>See live Stripe cash</strong>
-          <StripeKeyTutorial />
-          <ConnectStripePaste next={next} />
+    <div className="connect-cta connect-cta-compact">
+      <div className="connect-cta-block">
+        <strong>See cash that actually landed</strong>
+        <p>Connect the account you already take cards with. The walkthrough is on Integrations.</p>
+        <div className="connect-cta-actions">
+          {needStripe ? <ConnectStripeButton /> : null}
+          {needSquare ? <ConnectSquareButton /> : null}
         </div>
-      ) : null}
-      {needSquare ? (
-        <div className="connect-cta-block">
-          <strong>See live Square cash</strong>
-          <SquareKeyTutorial />
-          <ConnectSquarePaste next={next} />
-        </div>
-      ) : null}
+      </div>
     </div>
   );
 }
-
