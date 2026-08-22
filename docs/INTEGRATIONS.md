@@ -25,24 +25,35 @@ accurate than invoices typed in by hand.
 
 ### What the shop owner does
 
-1. Tap **Connect Stripe**, or open [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) and sign in as the shop.
-2. Copy the Secret key (`sk_test_...` while trying it, `sk_live_...` for real cash).
-3. Paste it in Sere and tap **Connect Stripe**.
+1. Open [Stripe API keys](https://dashboard.stripe.com/apikeys) and sign in as the shop.
+2. Click **Create restricted key** (not the secret key). Name it `Sere cash view`.
+3. Set **Read** on: Account, Balance, Charges, Payouts. Leave everything else **None**.
+4. Copy the restricted key (`rk_test_...` while trying it, `rk_live_...` for real cash).
+5. Paste it in Sere under **Settings → Integrations → Stripe** and tap **Connect Stripe**.
+
+Sere **rejects full secret keys** (`sk_live_...`). They can move money and change payout
+accounts. Restricted keys can only read what Sere needs for Overview.
+
+The in-app tutorial under Stripe settings walks through each step.
 
 Overview then shows **In Stripe**. Reports shows Stripe charges next to money logged
 in Sere. The two will not always match, and that is the point.
 
-Invoice links can still offer card checkout if a secret key is connected. That is
-optional. The reason to connect Stripe is the shop's own cash view.
+Invoice links can still offer card checkout if the restricted key also has **Checkout
+Sessions → Write**. That is optional. The reason to connect Stripe is the shop's own
+cash view.
 
 Cash, check, Zelle, Venmo, and bank transfers are still recorded by hand under
 **Payments**. That logged ledger is next to the live Stripe numbers so the shop
 can see the gap.
 
-### One-click Connect (Sere operator)
+### One-click Connect (optional — Sere operator)
 
-Skip this if you cannot verify an identity for a Stripe platform account. Shops do
-not need it. They paste a secret key instead.
+**You do not need this.** Shops connect with a restricted key in about two minutes.
+
+Stripe Connect requires identity verification on a platform Stripe account. If you
+cannot complete that (for example, age verification), skip Connect entirely — restricted
+keys work the same for cash on Overview.
 
 This is what turns the button into a real Stripe redirect instead of a paste-keys form.
 It is configured once for the whole product, in Vercel:
@@ -65,16 +76,25 @@ It is configured once for the whole product, in Vercel:
    - Events: `checkout.session.completed` and `checkout.session.async_payment_succeeded`
    - Listen to events on **Connected accounts**
 
-Until those are set, shops connect in about a minute: open
-[Stripe API keys](https://dashboard.stripe.com/apikeys), copy the secret key
-(`sk_test_...` or `sk_live_...`), paste it in **Settings → Integrations**, tap
-**Connect Stripe**. Each shop uses their own Stripe account.
+Until those are set, shops connect with a **restricted key** as described above.
+Each shop uses their own Stripe account.
+
+### Restricted key permissions
+
+| Stripe resource | Permission | Why |
+| ---------------- | ---------- | --- |
+| Account | Read | Confirm the key belongs to the shop |
+| Balance | Read | Available and pending cash on Overview |
+| Charges | Read | This month's card revenue |
+| Payouts | Read | Recent bank transfers |
+| Checkout Sessions | Write | Optional — **Pay with Stripe** on invoice links |
+| Everything else | None | Sere does not need it |
 
 ### Trying it without real money
 
-Use a test key (`sk_test_...`) and Stripe's test card `4242 4242 4242 4242` with any
+Use a test restricted key (`rk_test_...`) and Stripe's test card `4242 4242 4242 4242` with any
 future expiry and any CVC. Stripe's test mode has its own webhook endpoints and its own
-signing secret, so add the endpoint in test mode too if you want to exercise pasted keys.
+signing secret, so add the endpoint in test mode too if you want to exercise invoice checkout.
 
 ### Optional: invoice card checkout
 

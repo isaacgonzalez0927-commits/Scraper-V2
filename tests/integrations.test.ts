@@ -120,12 +120,27 @@ test("Stripe cash sums the USD balance and net charges", () => {
   assert.equal(chargeNetCents({ amount: 10000, status: "failed" }), 0);
 });
 
-test("Stripe secret keys are recognised before they are saved", () => {
-  assert.equal(looksLikeStripeSecret("sk_live_abc"), true);
-  assert.equal(looksLikeStripeSecret("sk_test_abc"), true);
+test("Stripe restricted keys are recognised; full secret keys are not accepted for connect", () => {
   assert.equal(looksLikeStripeSecret("rk_live_abc"), true);
+  assert.equal(looksLikeStripeSecret("rk_test_abc"), true);
+  assert.equal(looksLikeStripeSecret("sk_live_abc"), true);
   assert.equal(looksLikeStripeSecret(" pk_live_abc"), false);
   assert.equal(looksLikeStripeSecret(""), false);
+});
+
+test("Sere connect flow requires restricted keys, not secret keys", async () => {
+  const { looksLikeStripeRestrictedKey, isStripeFullSecretKey, restrictedKeyRequiredMessage } =
+    await import("../lib/stripe-keys");
+  assert.equal(looksLikeStripeRestrictedKey("rk_live_abc"), true);
+  assert.equal(looksLikeStripeRestrictedKey("sk_live_abc"), false);
+  assert.equal(isStripeFullSecretKey("sk_test_abc"), true);
+  assert.match(restrictedKeyRequiredMessage(), /restricted keys/i);
+
+  const rejected = await (
+    await import("../lib/stripe-keys")
+  ).validateStripeKeyForSere("sk_live_51NotARealKeyAtAll0000");
+  assert.equal(rejected.ok, false);
+  assert.match(rejected.problems[0], /restricted keys/i);
 });
 
 test("Square cash nets completed payments minus refunds", () => {

@@ -15,8 +15,10 @@ import {
   logoutAction,
   saveSettingsAction,
   sendTestEmailAction,
+  startStripeConnectAction,
 } from "@/app/actions";
-import { ConnectStripeButton, OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, StripeKeyLink } from "@/components/ConnectStripe";
+import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, StripeKeyLink } from "@/components/ConnectStripe";
+import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { ThemeChooser } from "@/components/ThemeToggle";
 import { Banner, Card } from "@/components/ui";
 import { Shell } from "@/components/Shell";
@@ -210,7 +212,7 @@ export default async function SettingsPage({
                         ? "Deployment environment variables"
                         : integrations.stripe.viaOAuth
                           ? "Connect Stripe"
-                          : "API keys"}
+                          : "Restricted key"}
                     </span>
                   </div>
                 </div>
@@ -236,43 +238,41 @@ export default async function SettingsPage({
                   </Banner>
                 )}
               </>
-            ) : !demoShop && oneClick ? (
-              <div className="connect-cta connect-cta-flush">
-                <div>
-                  <strong>Connect the shop&apos;s Stripe.</strong>
-                  <p>
-                    One click. Stripe asks the shop to approve Sere, then Overview
-                    shows the live Stripe balance and payouts.
-                  </p>
-                </div>
-                <ConnectStripeButton large />
-              </div>
             ) : !demoShop ? (
               <>
-                <p className="help">
-                  Reveal <strong>Secret key</strong>, copy it, paste it below, tap
-                  Connect Stripe. Test keys start with <code>sk_test_</code>. Live
-                  keys start with <code>sk_live_</code>. Need it? <StripeKeyLink />.
-                </p>
+                <Banner>
+                  <div>
+                    <strong>Sere uses restricted keys only.</strong>
+                    <p className="mt-1">
+                      Paste an <code>rk_live_...</code> key, not a secret <code>sk_</code> key.
+                      Restricted keys can read cash data but cannot move money or change payout
+                      accounts if something goes wrong.
+                    </p>
+                  </div>
+                </Banner>
+                <StripeKeyTutorial />
                 <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
                   <div className="field full">
-                    <label>Secret key</label>
+                    <label>Restricted key</label>
                     <input
                       name="stripe_secret_key"
                       type="password"
-                      placeholder="sk_test_... or sk_live_..."
+                      placeholder="rk_test_... or rk_live_..."
                       autoComplete="off"
                       required
                     />
                     <p className="help">
-                      Stored encrypted. Sere never shows it again. Used to read balance and payouts.
+                      Stored encrypted. Sere never shows it again. Used to read balance, charges,
+                      and payouts. Need it? <StripeKeyLink />.
                     </p>
                   </div>
                   <details className="disclosure">
                     <summary>Optional: webhook, so a closed tab still records the payment</summary>
                     <p className="help mt-1">
+                      Requires <strong>Checkout Sessions → Write</strong> on the restricted key.
                       In Stripe, Developers → Webhooks → Add endpoint. Event{" "}
-                      <code>checkout.session.completed</code>. Paste the <code>whsec_...</code> it gives you.
+                      <code>checkout.session.completed</code>. Paste the <code>whsec_...</code> it
+                      gives you.
                     </p>
                     <div className="copy-row mt-1">
                       <span className="copy-value">{webhookUrl}</span>
@@ -296,16 +296,36 @@ export default async function SettingsPage({
                     </button>
                   </div>
                 </form>
+                {oneClick ? (
+                  <details className="disclosure mt-2">
+                    <summary>One-click Connect (optional — needs a verified Stripe platform account)</summary>
+                    <p className="help mt-1">
+                      Stripe Connect asks for business identity verification. If you cannot complete
+                      that, use a restricted key above — it works the same for cash on Overview.
+                    </p>
+                    <form action={startStripeConnectAction} className="mt-2">
+                      <button className="btn btn-secondary" type="submit">
+                        Connect with Stripe OAuth
+                      </button>
+                    </form>
+                  </details>
+                ) : null}
               </>
             ) : null}
 
-            {!demoShop && (oneClick || integrations.stripe.connected) ? (
+            {!demoShop && integrations.stripe.connected ? (
               <details className="disclosure" open={false}>
-                <summary>{integrations.stripe.connected ? "Update with API keys" : "Or paste API keys"}</summary>
-                <form id="stripe-keys-form" action={connectStripeAction} className="form-grid mt-2">
+                <summary>Update restricted key</summary>
+                <StripeKeyTutorial defaultOpen={false} />
+                <form id="stripe-keys-update-form" action={connectStripeAction} className="form-grid mt-2">
                   <div className="field full">
-                    <label>Secret key</label>
-                    <input name="stripe_secret_key" type="password" placeholder="sk_live_..." autoComplete="off" />
+                    <label>Restricted key</label>
+                    <input
+                      name="stripe_secret_key"
+                      type="password"
+                      placeholder="rk_live_..."
+                      autoComplete="off"
+                    />
                     <p className="help">Stored encrypted. Sere shows it back to nobody, including us.</p>
                   </div>
                   <div className="field">
@@ -318,9 +338,9 @@ export default async function SettingsPage({
                   </div>
                   <div className="form-actions">
                     <button className="btn" type="submit">
-                      {integrations.stripe.connected ? "Update Stripe keys" : "Connect Stripe"}
+                      Update Stripe key
                     </button>
-                    <p className="help">Sere calls Stripe once to confirm the key before saving it.</p>
+                    <p className="help">Sere calls Stripe once to confirm permissions before saving.</p>
                   </div>
                 </form>
               </details>
