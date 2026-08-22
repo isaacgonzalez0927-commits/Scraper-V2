@@ -39,9 +39,8 @@ export default async function WelcomePage() {
         </button>
       </form>
       <p className="auth-fine">
-        Next the shop opens with a Setup guide on the book: a live checklist,
-        the same idea as Stripe&apos;s. You can change the trade later in
-        Settings.
+        Next the book opens. A corner list shows what is still open. You can
+        change the trade later in Settings.
       </p>
     </AuthShell>
   );

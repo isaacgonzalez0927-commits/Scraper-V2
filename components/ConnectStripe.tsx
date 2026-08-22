@@ -1,4 +1,4 @@
-import { connectOpenAIAction, connectSquareAction, connectStripeAction } from "@/app/actions";
+import { connectSquareAction, connectStripeAction } from "@/app/actions";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { STRIPE_API_KEYS_URL, STRIPE_SANDBOX_API_KEYS_URL } from "@/lib/stripe-keys";
 
@@ -167,45 +167,3 @@ export function ConnectCashCallout({
   );
 }
 
-function ConnectOpenAIPaste({ next }: { next: string }) {
-  return (
-    <form action={connectOpenAIAction} className="connect-paste">
-      <input type="hidden" name="next" value={next} />
-      <input
-        className="input"
-        name="openai_api_key"
-        type="password"
-        autoComplete="off"
-        required
-        spellCheck={false}
-        placeholder="sk-... or sk-proj-..."
-        aria-label="OpenAI API key"
-      />
-      <button className="btn btn-connect btn-openai" type="submit">
-        Connect
-      </button>
-    </form>
-  );
-}
-
-export function ConnectAssistantCallout({
-  connected,
-  next = "/overview",
-}: {
-  connected: boolean;
-  next?: string;
-}) {
-  if (connected) return null;
-  return (
-    <div className="connect-cta connect-cta-compact" id="openai">
-      <div className="connect-cta-block">
-        <strong>Shop assistant</strong>
-        <p>
-          Optional. Paste an OpenAI key if this shop should be billed on its own
-          account. <OpenAIKeyLink /> · <OpenAILimitsLink /> ($5/mo is enough).
-        </p>
-        <ConnectOpenAIPaste next={next} />
-      </div>
-    </div>
-  );
-}

@@ -30,6 +30,7 @@ test("the setup guide is a live checklist of missing shop requirements", () => {
   assert.equal(guide.total, 5);
   assert.equal(guide.done, 1);
   assert.equal(guide.nextId, "customer");
+  assert.equal(guide.nextHref, "/customers/new");
   assert.match(guide.nextLabel || "", /customer/i);
   assert.equal(guide.milestones[0].state, "done");
   assert.equal(guide.milestones[1].state, "open");

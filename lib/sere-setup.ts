@@ -28,6 +28,7 @@ export type SetupMilestone = {
   id: SetupMilestoneId;
   title: string;
   body: string;
+  href: string;
   state: SetupItemState;
   lockReason?: string;
   requirements: SetupRequirement[];
@@ -55,6 +56,7 @@ export type SetupGuideView = {
   total: number;
   nextId: SetupMilestoneId | null;
   nextLabel: string | null;
+  nextHref: string | null;
   milestones: SetupMilestone[];
 };
 
@@ -87,7 +89,8 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
     {
       id: "shop",
       title: "Tell us about the shop",
-      body: "Name, trade, and how to reach you. Same first mile as Stripe's profile step.",
+      body: "Name, trade, and how to reach you.",
+      href: "/settings?tab=company",
       state: shopReady ? "done" : "open",
       requirements: [
         { id: "name", label: "Shop name", done: shopReady, tip: "This is what prints on invoices." },
@@ -109,6 +112,7 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
       id: "customer",
       title: `Add a ${customer}`,
       body: `A ${customer} is who you work for. ${voice.jobs} and invoices hang off this person.`,
+      href: "/customers/new",
       state: hasCustomer ? "done" : "open",
       requirements: [
         {
@@ -123,6 +127,7 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
       id: "job",
       title: `Add a ${job}`,
       body: `A ${job} is the work. When it is done you invoice it.`,
+      href: state.latestCustomerId ? `/jobs/new?customerId=${state.latestCustomerId}` : "/jobs/new",
       state: hasJob ? "done" : hasCustomer ? "open" : "locked",
       lockReason: `Add a ${customer} first.`,
       requirements: [
@@ -138,6 +143,7 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
       id: "invoice",
       title: "Create an invoice",
       body: "An invoice is what you billed. It stays open until payments add up to the total.",
+      href: "/invoices/new",
       state: hasInvoice ? "done" : hasJob ? "open" : "locked",
       lockReason: `Add a ${job} first.`,
       requirements: [
@@ -153,6 +159,7 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
       id: "cash",
       title: "Connect live cash",
       body: "Paste a Stripe restricted key. Overview then shows money that actually landed.",
+      href: "/settings?tab=integrations#stripe",
       state: hasCash ? "done" : "open",
       requirements: [
         {
@@ -176,6 +183,7 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
     total,
     nextId: next?.id || null,
     nextLabel: next ? next.title : null,
+    nextHref: next?.href || null,
     milestones,
   };
 }

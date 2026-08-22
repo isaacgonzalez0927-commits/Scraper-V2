@@ -5,7 +5,7 @@ import { SetupGuide } from "@/components/SetupGuide";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchIcon } from "@/components/ui";
 import type { AssistantBrief } from "@/lib/assistant";
-import type { SetupField, SetupGuideView, SetupSnapshot } from "@/lib/sere-setup";
+import type { SetupGuideView } from "@/lib/sere-setup";
 
 const PATHS: Record<string, React.ReactNode> = {
   grid: <><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" /></>,
@@ -89,14 +89,7 @@ export function Shell({
   customersLabel?: string;
   searchHint?: string;
   brief?: AssistantBrief;
-  setup?: {
-    guide: SetupGuideView;
-    snapshot: SetupSnapshot;
-    customerFields: SetupField[];
-    jobFields: SetupField[];
-    jobTitleLabel: string;
-    jobPlaceholder: string;
-  } | null;
+  setup?: { guide: SetupGuideView } | null;
   path: string;
   title: string;
   sub?: React.ReactNode;
@@ -149,7 +142,7 @@ export function Shell({
           </a>
           {isDemo || setup?.guide.complete ? null : (
             <a className="sidebar-setup" href={`${path}?guide=open`}>
-              Setup guide
+              Still open
             </a>
           )}
           <form action={logoutAction}>
@@ -219,18 +212,7 @@ export function Shell({
         </main>
       </div>
 
-      {setup && !isDemo ? (
-        <SetupGuide
-          guide={setup.guide}
-          snapshot={setup.snapshot}
-          customerFields={setup.customerFields}
-          jobFields={setup.jobFields}
-          returnTo={path}
-          frozen={frozen}
-          jobTitleLabel={setup.jobTitleLabel}
-          jobPlaceholder={setup.jobPlaceholder}
-        />
-      ) : null}
+      {setup && !isDemo ? <SetupGuide guide={setup.guide} /> : null}
 
       <div className="scrim" data-close-nav />
 

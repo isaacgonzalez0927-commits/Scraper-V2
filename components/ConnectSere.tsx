@@ -1,6 +1,6 @@
 import { BrandLogo } from "@/components/BrandLogo";
 
-/** Official Sere connect control — same idea as Stripe's Connect button. */
+/** Official Sere connect control. Small on purpose. */
 export const CONNECT_SERE_HREF = "/signup";
 
 export function connectButtonClass(extra?: string): string {

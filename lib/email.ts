@@ -79,7 +79,7 @@ export function invoiceEmail(opts: {
       <p style="margin:0 0 18px"><strong>Due date:</strong> ${escapeHtml(opts.dueDate)}</p>
       <p style="margin:0 0 22px">
         <a href="${escapeHtml(opts.payUrl)}"
-           style="background:#5b38d6;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block">
+           style="background:#9a4a1a;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block">
           View and pay invoice
         </a>
       </p>
