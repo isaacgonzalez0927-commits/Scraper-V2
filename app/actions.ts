@@ -46,14 +46,7 @@ import {
   voidStripeIfLinked,
 } from "@/lib/stripe-invoices";
 import { DEMO_EMAIL } from "@/lib/seed";
-import {
-  isSetupConnectReturn,
-  nextSetupStep,
-  parseSetupIntent,
-  parseSetupStep,
-  setupErrorHref,
-  setupHref,
-} from "@/lib/sere-setup";
+import { isSafeAppPath, withQuery } from "@/lib/sere-setup";
 import { requireWritableContext, trialEndsISO } from "@/lib/trial";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
@@ -154,15 +147,7 @@ export async function chooseTradeAction(form: FormData) {
       });
     }
   }
-  redirect("/setup");
-}
-
-/** Move to the next /setup screen. No writes. Same Continue control Stripe uses. */
-export async function advanceSetupAction(form: FormData) {
-  await requireContext();
-  const from = parseSetupStep(str(form, "from")) || "purpose";
-  const intent = parseSetupIntent(str(form, "intent"));
-  redirect(setupHref(nextSetupStep(from, intent), intent));
+  redirect("/overview?guide=open");
 }
 
 export async function logoutAction() {
@@ -227,11 +212,11 @@ export async function saveCustomerAction(form: FormData) {
     customerSince: str(form, "customer_since") || new Date().toISOString().slice(0, 10),
   };
   const fromSetup = str(form, "setup") === "1";
-  const setupIntent = parseSetupIntent(str(form, "intent"));
+  const back = isSafeAppPath(str(form, "next")) ? str(form, "next") : "/overview";
   if (!row.name) {
     redirect(
       fromSetup
-        ? setupErrorHref("customer", setupIntent, "A name is required.")
+        ? withQuery(back, "error", "A name is required.")
         : "/customers/new?error=A+customer+name+is+required.",
     );
   }
@@ -248,11 +233,8 @@ export async function saveCustomerAction(form: FormData) {
   }
   const sync = await pushCustomerToStripe(org.id, customerId);
   if (fromSetup) {
-    const next = setupHref("job", setupIntent);
-    if (sync.error) {
-      redirect(`${next}&error=${encodeURIComponent(sync.error)}`);
-    }
-    redirect(next);
+    if (sync.error) redirect(withQuery(back, "error", sync.error));
+    redirect(back);
   }
   if (str(form, "next") === "job") {
     redirect(`/jobs/new?customerId=${customerId}`);
@@ -330,11 +312,11 @@ export async function saveJobAction(form: FormData) {
     completedAt: status === "completed" ? nowISO() : null,
   };
   const fromSetup = str(form, "setup") === "1";
-  const setupIntent = parseSetupIntent(str(form, "intent"));
+  const back = isSafeAppPath(str(form, "next")) ? str(form, "next") : "/overview";
   if (!row.customerId || !row.title) {
     redirect(
       fromSetup
-        ? setupErrorHref("job", setupIntent, "A title is required.")
+        ? withQuery(back, "error", "A title is required.")
         : "/jobs/new?error=Customer+and+title+are+required.",
     );
   }
@@ -344,9 +326,7 @@ export async function saveJobAction(form: FormData) {
   }
   const [job] = await db().insert(jobs).values({ ...row, organizationId: org.id, createdAt: nowISO() }).returning();
   await logActivity(org.id, "job_created", `New job: ${job.title}`, job.estimatedRevenueCents, `/jobs/${job.id}`);
-  if (fromSetup) {
-    redirect(setupHref(nextSetupStep("job", setupIntent), setupIntent));
-  }
+  if (fromSetup) redirect(back);
   redirect(`/jobs/${job.id}`);
 }
 
@@ -476,6 +456,48 @@ export async function invoiceFromJobAction(form: FormData) {
   if (!job) redirect("/jobs");
   const result = await invoiceForJob(org, job);
   redirect(`/invoices/${result.invoice.id}`);
+}
+
+export async function setupInvoiceAction(form: FormData) {
+  const { org } = await requireWritableContext("/overview");
+  const back = isSafeAppPath(str(form, "next")) ? str(form, "next") : "/overview";
+  const jobId = Number(str(form, "job_id"));
+  let amount = 0;
+  try {
+    amount = dollarsToCents(str(form, "amount"));
+  } catch {
+    redirect(withQuery(back, "error", "Enter an amount greater than zero."));
+  }
+  if (!jobId || amount <= 0) {
+    redirect(withQuery(back, "error", "Enter an amount greater than zero."));
+  }
+  const [job] = await db()
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
+  if (!job) redirect(withQuery(back, "error", "Add a job first."));
+  await db()
+    .update(jobs)
+    .set({ estimatedRevenueCents: amount })
+    .where(eq(jobs.id, job.id));
+  await invoiceForJob(org, { ...job, estimatedRevenueCents: amount });
+  redirect(back);
+}
+
+export async function saveShopSetupAction(form: FormData) {
+  const { org } = await requireWritableContext("/overview");
+  const back = isSafeAppPath(str(form, "next")) ? str(form, "next") : "/overview";
+  const name = str(form, "name") || org.name;
+  if (!name) redirect(withQuery(back, "error", "A shop name is required."));
+  await db()
+    .update(organizations)
+    .set({
+      name,
+      phone: str(form, "phone"),
+      email: str(form, "email") || org.email,
+    })
+    .where(eq(organizations.id, org.id));
+  redirect(back);
 }
 
 export async function finishJobAction(form: FormData) {
@@ -769,7 +791,7 @@ const CONNECT_RETURNS = new Set(["/overview", "/reports", "/payments", INTEGRATI
 
 function connectReturn(form: FormData, kind: "ok" | "error" = "ok"): string {
   const next = (kind === "error" && str(form, "error_next")) || str(form, "next");
-  if (CONNECT_RETURNS.has(next) || isSetupConnectReturn(next)) return next;
+  if (CONNECT_RETURNS.has(next) || isSafeAppPath(next)) return next;
   return INTEGRATIONS_TAB;
 }
 
