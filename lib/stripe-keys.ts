@@ -12,16 +12,26 @@ import {
   retrieveBalance,
 } from "./stripe";
 
-export const STRIPE_API_KEYS_URL = "https://dashboard.stripe.com/apikeys";
+export const SERE_SITE_URL = "https://www.sere.cash";
+
+/** Stripe Developers → API keys in the sandbox (test) environment. */
+export const STRIPE_SANDBOX_DEVELOPERS_URL =
+  "https://dashboard.stripe.com/test/developers";
+export const STRIPE_SANDBOX_API_KEYS_URL =
+  "https://dashboard.stripe.com/test/apikeys";
+export const STRIPE_LIVE_API_KEYS_URL = "https://dashboard.stripe.com/apikeys";
+
+/** Default connect link: sandbox Developers, not the live create-key wizard. */
+export const STRIPE_API_KEYS_URL = STRIPE_SANDBOX_API_KEYS_URL;
+export const STRIPE_CREATE_KEY_URL = STRIPE_SANDBOX_API_KEYS_URL;
+export const STRIPE_CREATE_TEST_KEY_URL = STRIPE_SANDBOX_API_KEYS_URL;
 
 /**
- * Dashboard slugs for Create restricted key. Stripe's form reads `permissions[]`
- * the same way ChargebackStop and Stripe's own docs do. `permissions[0]` is
- * ignored, which is why an earlier Sere link created a key with no boxes checked.
- *
- * GET /v1/account needs Connect → Accounts Read (`rak_connected_account_read`),
- * not a slug named rak_account_read.
- * Write implies Read on the same resource.
+ * Stripe slugs for the permissions Sere needs. Kept as a reference for
+ * error hints. Do not stuff these into a create-key URL. Stripe's current
+ * "another website" wizard ignores query-string slugs, names the key from
+ * `name=`, and applies a default third-party set unless Customize
+ * permissions is ticked by hand.
  */
 export const SERE_STRIPE_RAK_PERMISSIONS = [
   "rak_connected_account_read",
@@ -35,19 +45,15 @@ export const SERE_STRIPE_RAK_PERMISSIONS = [
   "rak_checkout_session_write",
 ] as const;
 
-/** Opens Stripe's create-key screen with Sere's permissions already selected. */
-export function stripeCreateRestrictedKeyUrl(opts: { test?: boolean } = {}): string {
-  const path = opts.test ? "/test/apikeys/create" : "/apikeys/create";
-  const params = new URLSearchParams();
-  params.set("name", "Sere");
-  for (const permission of SERE_STRIPE_RAK_PERMISSIONS) {
-    params.append("permissions[]", permission);
-  }
-  return `https://dashboard.stripe.com${path}?${params.toString()}`;
+/** Opens Stripe Developers → API keys. Defaults to the sandbox. */
+export function stripeDevelopersApiKeysUrl(opts: { test?: boolean } = {}): string {
+  return opts.test === false ? STRIPE_LIVE_API_KEYS_URL : STRIPE_SANDBOX_API_KEYS_URL;
 }
 
-export const STRIPE_CREATE_KEY_URL = stripeCreateRestrictedKeyUrl();
-export const STRIPE_CREATE_TEST_KEY_URL = stripeCreateRestrictedKeyUrl({ test: true });
+/** @deprecated Use stripeDevelopersApiKeysUrl. Permission query params do nothing. */
+export function stripeCreateRestrictedKeyUrl(opts: { test?: boolean } = {}): string {
+  return stripeDevelopersApiKeysUrl(opts);
+}
 
 export function looksLikeStripeRestrictedKey(key: string): boolean {
   return /^rk_(test|live)_/.test(key.trim());
@@ -61,7 +67,8 @@ export function restrictedKeyRequiredMessage(): string {
   return (
     "Sere only accepts restricted keys (rk_live_ or rk_test_). Full secret keys " +
     "can move money and change payout accounts. Too risky to paste into any app. " +
-    "Create a restricted key in Stripe (Settings → Integrations has the steps)."
+    "Create a restricted key in Stripe Developers (sandbox). Settings → Integrations " +
+    "has the steps."
   );
 }
 
@@ -127,9 +134,10 @@ export function stripeKeyDeniedMessage(problems: string[]): string {
     .filter(Boolean);
   const list = missing.join(", ") || "the permissions Sere needs";
   return (
-    `That key is missing ${list}. Tap Create the Sere key again and glance at ` +
-    `the list: Balance, Charges, and Payouts should be Read; Customers, Invoices, ` +
-    `and Invoice Items should be Write. Then paste the new rk_ key.`
+    `That key is missing ${list}. The key Stripe named Sere with its default ` +
+    `set will keep failing. Open Stripe Developers (sandbox), create a new ` +
+    `restricted key, tick Customize permissions, set those rows, and paste ` +
+    `the new rk_test_ key.`
   );
 }
 
