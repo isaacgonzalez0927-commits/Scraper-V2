@@ -1152,36 +1152,129 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 }
 .disclosure > summary:hover { color: var(--ink); }
 
-.setup-steps {
-  margin: 0 0 16px;
-  padding: 0 0 0 1.25rem;
+.setup-wizard { min-width: 0; }
+.setup-wizard .auth-title { margin-top: 4px; }
+.setup-wizard .auth-sub { margin-bottom: 18px; }
+.setup-count {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+.setup-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.setup-progress li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+.setup-progress-index {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 11px;
+}
+.setup-progress .current { color: var(--ink); }
+.setup-progress .current .setup-progress-index {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.setup-progress .done { color: var(--ink-2); }
+.setup-progress .done .setup-progress-index {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+.setup-choices {
+  display: grid;
+  gap: 8px;
+}
+.setup-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.setup-choice:hover { border-color: var(--accent-line); }
+.setup-choice:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.setup-choice input { margin-top: 3px; accent-color: var(--accent); }
+.setup-choice strong { display: block; font-size: 14px; font-weight: 600; }
+.setup-choice span span {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.setup-context {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.setup-key-field {
+  display: grid;
+  gap: 7px;
+  margin: 16px 0 0;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink-2);
+}
+.setup-key-field .input {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.setup-recap {
+  margin: 0;
+  padding: 0 0 0 1.15rem;
   color: var(--ink-2);
   font-size: 14px;
   line-height: 1.5;
 }
-.setup-steps li + li { margin-top: 8px; }
-.setup-steps a { font-weight: 600; }
-
-.how-sere-card {
-  margin-bottom: 16px;
+.setup-recap li + li { margin-top: 6px; }
+.setup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
-.how-sere-card > summary {
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
+.setup-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.how-sere-card > summary:hover { color: var(--ink); }
-.how-sere-card .how-sere { margin-top: 10px; }
-.how-sere-label {
-  margin: 14px 0 6px;
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.how-sere > .how-sere-label:first-of-type { margin-top: 0; }
-.how-sere-done { margin: 16px 0 0; }
+.setup-skip { color: var(--ink-3); }
+.setup-resume { margin-bottom: 16px; }
+.setup-resume .setup-count { margin-bottom: 6px; }
+.setup-resume strong { display: block; font-size: 16px; }
+.setup-resume p { margin: 6px 0 12px; color: var(--ink-2); font-size: 14px; }
 .sidebar-setup {
   display: block;
   margin-top: 8px;
@@ -2425,6 +2518,11 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .auth-hint { font-size: 13px; }
   .auth-fine { font-size: 14px; }
   .auth-foot { font-size: 15px; justify-content: space-between; }
+  .setup-progress-label { display: none; }
+  .setup-choice { padding: 16px; border-radius: 14px; }
+  .setup-actions { margin-top: 28px; }
+  .setup-actions .btn { min-height: 48px; font-size: 16px; border-radius: 12px; }
+  .setup-key-field .input { min-height: 48px; font-size: 16px; border-radius: 12px; }
 
   .nova { gap: 14px; }
   .nova-orb { flex-basis: 72px; width: 72px; height: 72px; }

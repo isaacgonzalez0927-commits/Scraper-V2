@@ -46,6 +46,14 @@ import {
   voidStripeIfLinked,
 } from "@/lib/stripe-invoices";
 import { DEMO_EMAIL } from "@/lib/seed";
+import {
+  isSetupConnectReturn,
+  nextSetupStep,
+  parseSetupIntent,
+  parseSetupStep,
+  setupErrorHref,
+  setupHref,
+} from "@/lib/sere-setup";
 import { requireWritableContext, trialEndsISO } from "@/lib/trial";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
@@ -149,6 +157,14 @@ export async function chooseTradeAction(form: FormData) {
   redirect("/setup");
 }
 
+/** Move to the next /setup screen. No writes. Same Continue control Stripe uses. */
+export async function advanceSetupAction(form: FormData) {
+  await requireContext();
+  const from = parseSetupStep(str(form, "from")) || "purpose";
+  const intent = parseSetupIntent(str(form, "intent"));
+  redirect(setupHref(nextSetupStep(from, intent), intent));
+}
+
 export async function logoutAction() {
   await clearSession();
   redirect("/");
@@ -210,7 +226,15 @@ export async function saveCustomerAction(form: FormData) {
     details,
     customerSince: str(form, "customer_since") || new Date().toISOString().slice(0, 10),
   };
-  if (!row.name) redirect("/customers/new?error=A+customer+name+is+required.");
+  const fromSetup = str(form, "setup") === "1";
+  const setupIntent = parseSetupIntent(str(form, "intent"));
+  if (!row.name) {
+    redirect(
+      fromSetup
+        ? setupErrorHref("customer", setupIntent, "A name is required.")
+        : "/customers/new?error=A+customer+name+is+required.",
+    );
+  }
   let customerId = id;
   if (id) {
     await db().update(customers).set(row).where(and(eq(customers.id, id), eq(customers.organizationId, org.id)));
@@ -223,6 +247,13 @@ export async function saveCustomerAction(form: FormData) {
     await logActivity(org.id, "customer_created", `New customer: ${created.name}`, null, `/customers/${created.id}`);
   }
   const sync = await pushCustomerToStripe(org.id, customerId);
+  if (fromSetup) {
+    const next = setupHref("job", setupIntent);
+    if (sync.error) {
+      redirect(`${next}&error=${encodeURIComponent(sync.error)}`);
+    }
+    redirect(next);
+  }
   if (str(form, "next") === "job") {
     redirect(`/jobs/new?customerId=${customerId}`);
   }
@@ -298,13 +329,24 @@ export async function saveJobAction(form: FormData) {
     details,
     completedAt: status === "completed" ? nowISO() : null,
   };
-  if (!row.customerId || !row.title) redirect("/jobs/new?error=Customer+and+title+are+required.");
+  const fromSetup = str(form, "setup") === "1";
+  const setupIntent = parseSetupIntent(str(form, "intent"));
+  if (!row.customerId || !row.title) {
+    redirect(
+      fromSetup
+        ? setupErrorHref("job", setupIntent, "A title is required.")
+        : "/jobs/new?error=Customer+and+title+are+required.",
+    );
+  }
   if (id) {
     await db().update(jobs).set(row).where(and(eq(jobs.id, id), eq(jobs.organizationId, org.id)));
     redirect(`/jobs/${id}`);
   }
   const [job] = await db().insert(jobs).values({ ...row, organizationId: org.id, createdAt: nowISO() }).returning();
   await logActivity(org.id, "job_created", `New job: ${job.title}`, job.estimatedRevenueCents, `/jobs/${job.id}`);
+  if (fromSetup) {
+    redirect(setupHref(nextSetupStep("job", setupIntent), setupIntent));
+  }
   redirect(`/jobs/${job.id}`);
 }
 
@@ -725,13 +767,14 @@ const INTEGRATIONS_TAB = "/settings?tab=integrations";
 
 const CONNECT_RETURNS = new Set(["/overview", "/reports", "/payments", INTEGRATIONS_TAB]);
 
-function connectReturn(form: FormData): string {
-  const next = str(form, "next");
-  return CONNECT_RETURNS.has(next) ? next : INTEGRATIONS_TAB;
+function connectReturn(form: FormData, kind: "ok" | "error" = "ok"): string {
+  const next = (kind === "error" && str(form, "error_next")) || str(form, "next");
+  if (CONNECT_RETURNS.has(next) || isSetupConnectReturn(next)) return next;
+  return INTEGRATIONS_TAB;
 }
 
 function connectRedirect(form: FormData, kind: "ok" | "error", message: string): never {
-  const base = connectReturn(form);
+  const base = connectReturn(form, kind);
   const join = base.includes("?") ? "&" : "?";
   redirect(`${base}${join}${kind}=${encodeURIComponent(message)}`);
 }
