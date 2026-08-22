@@ -2,7 +2,7 @@
  * Nova's memory: what was said, and what was learned.
  *
  * Ported from RideBy's Nova, with Supabase swapped for Sere's libSQL/Drizzle.
- * Everything is scoped to one organization — Sere is multi-tenant and one
+ * Everything is scoped to one organization. Sere is multi-tenant and one
  * shop's lessons must never leak into another shop's context.
  *
  * Two stores, on purpose:

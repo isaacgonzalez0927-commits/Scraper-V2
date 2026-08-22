@@ -38,7 +38,7 @@ function prospect(over: Partial<Prospect> = {}): Prospect {
     contact: "Elena Vasquez",
     trade: "hvac",
     city: "Fort Myers",
-    fact: "your site takes work by phone only — no request form on it",
+    fact: "your site takes work by phone only, no request form on it",
     ...over,
   };
 }
@@ -112,7 +112,7 @@ test("the draft prompt speaks the prospect's trade and forbids inventing", () =>
   const user = draftUserPrompt(prospect(), [
     { subject: "that worked", body: "short and true", trade: "hvac", fact: "phone only" },
   ]);
-  assert.ok(user.includes("phone only — no request form"));
+  assert.ok(user.includes("phone only, no request form"));
   assert.ok(user.includes("that worked"));
   assert.ok(user.includes("Elena"));
   assert.ok(!draftUserPrompt(prospect(), []).includes("got replies"));
@@ -122,7 +122,7 @@ test("the validator rejects the slop a model reaches for", () => {
   const good = {
     subject: "phone-only service calls",
     body:
-      "Elena — your site only takes work by phone, no form. Sere keeps the jobs " +
+      "Elena, your site only takes work by phone, no form. Sere keeps the jobs " +
       "and invoices in one book so the number on screen matches the bank. Want a " +
       "look at a real shop with work already in it?",
   };

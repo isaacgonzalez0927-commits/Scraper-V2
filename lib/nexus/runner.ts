@@ -6,7 +6,7 @@
  * long run doing everything, and it means a crash loses one job rather than a
  * whole batch.
  *
- * Sending is the exception — it is not driven off the queue's own pace but
+ * Sending is the exception. It is not driven off the queue's own pace but
  * gated by the policy, so pacing, the daily cap, the window, and the breakers
  * all apply no matter how the job got queued.
  */

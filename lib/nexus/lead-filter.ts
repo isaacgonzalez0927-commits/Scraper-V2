@@ -8,7 +8,7 @@
  * Size signal is Google review count. A shop with 600 reviews is a regional
  * operation that already runs ServiceTitan; one with 20 is the owner answering
  * his own phone, which is exactly who needs a book. Missing review counts do
- * NOT pass — Places omits the field sometimes, and letting that through is how
+ * NOT pass. Places omits the field sometimes, and letting that through is how
  * you end up emailing a national franchise.
  *
  * Nothing is deleted. A rejected company is stored as disqualified with the
@@ -181,7 +181,7 @@ export function filterLead(candidate: LeadCandidate, cityHint?: string): LeadFil
   }
   const ceiling = maxReviewCount();
   if (reviews > ceiling) {
-    return { ok: false, reason: `${reviews} Google reviews is over the ${ceiling} ceiling — too big.` };
+    return { ok: false, reason: `${reviews} Google reviews is over the ${ceiling} ceiling. Too big.` };
   }
 
   if (cityHint) {

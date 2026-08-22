@@ -2,7 +2,7 @@
  * The Research hand: crawl a shop's own site for a contact and a real fact.
  *
  * Ported from RideBy's hands/research.ts. This is the step that makes the
- * outreach worth sending — without a researched fact Nova has nothing true to
+ * outreach worth sending. Without a researched fact Nova has nothing true to
  * open with, and the draft hand will refuse the company outright.
  *
  * Politeness is not optional here. robots.txt is honoured, page count is
@@ -100,7 +100,7 @@ function confidenceFor(email: string, host: string): number {
 
 /**
  * The fact is the whole point of this crawl. These are checkable observations
- * about how the shop takes work — the kind of thing an owner recognises as true
+ * about how the shop takes work, the kind of thing an owner recognises as true
  * about his own website.
  */
 export function deriveFact(pages: Array<{ path: string; html: string }>): string {
@@ -116,7 +116,7 @@ export function deriveFact(pages: Array<{ path: string; html: string }>): string
   const emergency = /24\/?7|emergency service|same[- ]day/i.test(text);
   const financing = /financing available|payment plans/i.test(text);
 
-  if (phoneOnly) return "your site takes work by phone only — no request form on it";
+  if (phoneOnly) return "your site takes work by phone only, no request form on it";
   if (hasForm && !hasBooking) return "your site has a contact form but no way to actually book a time";
   if (hasBooking && !hasPortal) {
     return "customers can book on your site but there is nowhere for them to see or pay an invoice";

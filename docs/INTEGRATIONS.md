@@ -6,7 +6,7 @@ the shop's own domain.
 
 Shop owners paste the secret on **Overview** (or Reports, Payments, Settings) and tap
 **Connect Stripe**. That is the connect action. A small **Get the key from Stripe**
-link opens Stripe in a new tab so they can copy it — that link is not the button
+link opens Stripe in a new tab so they can copy it. That link is not the button
 that connects.
 
 Secrets are encrypted with AES-256-GCM before they are written to the database, using a
@@ -45,7 +45,7 @@ When the restricted key also has **Write** on Customers, Invoices, and Invoice I
 - Invoices created in the Stripe dashboard come into Sere when the shop webhook
   includes `invoice.created`, `invoice.paid`, and `invoice.voided`.
 
-Sere stays the book. Stripe is the payment rail and a mirror — not a second set of
+Sere stays the book. Stripe is the payment rail and a mirror, not a second set of
 books fighting the first.
 
 Overview then shows **In Stripe**. Reports shows Stripe charges next to money logged
@@ -59,12 +59,12 @@ Cash, check, Zelle, Venmo, and bank transfers are still recorded by hand under
 **Payments**. That logged ledger is next to the live Stripe numbers so the shop
 can see the gap.
 
-### One-click Connect (optional — Sere operator)
+### One-click Connect (optional, Sere operator)
 
 **You do not need this.** Shops connect with a restricted key in about two minutes.
 
 Stripe Connect requires identity verification on a platform Stripe account. If you
-cannot complete that (for example, age verification), skip Connect entirely — restricted
+cannot complete that (for example, age verification), skip Connect entirely. Restricted
 keys work the same for cash on Overview.
 
 This is what turns the button into a real Stripe redirect instead of a paste-keys form.
@@ -99,7 +99,7 @@ Each shop uses their own Stripe account.
 | Balance | Read | Available and pending cash on Overview |
 | Charges | Read | This month's card revenue |
 | Payouts | Read | Recent bank transfers |
-| Checkout Sessions | Write | Optional — **Pay with Stripe** on invoice links |
+| Checkout Sessions | Write | Optional. **Pay with Stripe** on invoice links |
 | Everything else | None | Sere does not need it |
 
 ### Trying it without real money

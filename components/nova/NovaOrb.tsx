@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 /**
  * Nova's face: an animated wireframe sphere that reacts to what she is doing.
  *
- * Ported from RideBy's NovaMeshOrb — the maths is the original, retinted from
+ * Ported from RideBy's NovaMeshOrb. The maths is the original, retinted from
  * cyan/pink to Sere's violet. It is canvas rather than a GIF so the motion can
  * carry state: it turns faster while thinking and pulses while speaking, which
  * is the only feedback you get during a voice turn with no text on screen.

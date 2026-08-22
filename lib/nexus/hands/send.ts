@@ -58,7 +58,7 @@ export function senderProblems(
   if (!sender) {
     return [
       "Outreach sending is not configured. Set NEXUS_RESEND_API_KEY and NEXUS_EMAIL_FROM " +
-        "to a domain used only for cold mail — never the domain that sends invoices.",
+        "to a domain used only for cold mail, never the domain that sends invoices.",
     ];
   }
   const problems: string[] = [];
@@ -108,7 +108,7 @@ export async function sentHistory(): Promise<SentOutcome[]> {
 export type SendResult = { sent: boolean; error?: string; providerId?: string };
 
 /**
- * One email. No loop on purpose — pacing belongs to the runner, so nothing in
+ * One email. No loop on purpose. Pacing belongs to the runner, so nothing in
  * the codebase is able to blast a list in a single call.
  */
 export async function runOutreachSend(draftId: number): Promise<SendResult> {

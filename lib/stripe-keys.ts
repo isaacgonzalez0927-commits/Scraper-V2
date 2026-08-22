@@ -1,7 +1,7 @@
 /**
  * Restricted API keys (rk_...) are the only keys shops should paste into Sere.
  * They can read balance and charges but cannot drain the account or issue refunds
- * unless you explicitly grant that — unlike sk_ secret keys.
+ * unless you explicitly grant that, unlike sk_ secret keys.
  */
 
 import {
@@ -25,7 +25,7 @@ export function isStripeFullSecretKey(key: string): boolean {
 export function restrictedKeyRequiredMessage(): string {
   return (
     "Sere only accepts restricted keys (rk_live_ or rk_test_). Full secret keys " +
-    "can move money and change payout accounts — too risky to paste into any app. " +
+    "can move money and change payout accounts. Too risky to paste into any app. " +
     "Create a restricted key in Stripe (Settings → Integrations has the steps)."
   );
 }
@@ -38,7 +38,7 @@ export type StripeKeyCheck = {
 
 /**
  * Confirms the key is restricted and has the permissions Sere needs for cash view.
- * Checkout on invoice links additionally needs Checkout Sessions: Write — optional.
+ * Checkout on invoice links additionally needs Checkout Sessions: Write (optional).
  */
 export async function validateStripeKeyForSere(key: string): Promise<StripeKeyCheck> {
   const trimmed = key.trim();

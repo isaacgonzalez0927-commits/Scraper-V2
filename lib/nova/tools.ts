@@ -109,7 +109,7 @@ export const NOVA_TOOLS: NovaToolDef[] = [
     function: {
       name: "complete_job",
       description:
-        "Mark one job complete. This does not invoice it — say that the owner " +
+        "Mark one job complete. This does not invoice it. Say that the owner " +
         "still needs to finish and bill it, and point at /jobs/<id>/finish.",
       parameters: {
         type: "object",
@@ -276,7 +276,7 @@ export async function runNovaTool(
         sendEnabled: isSendEnabled(),
         note: isSendEnabled()
           ? "Sending is armed."
-          : "NEXUS_SEND_ENABLED is not true, so nothing transmits. Drafting and queueing only — do not claim mail went out.",
+          : "NEXUS_SEND_ENABLED is not true, so nothing transmits. Drafting and queueing only. Do not claim mail went out.",
       });
     }
 

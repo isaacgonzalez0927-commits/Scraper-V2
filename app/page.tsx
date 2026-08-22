@@ -126,7 +126,7 @@ export default function LandingPage() {
             <h2>What it costs</h2>
             <p>
               Housecall Pro starts around $65 a person. Jobber Core is $49 for
-              one login. Sere is the book for the office — priced like that, not
+              one login. Sere is the book for the office, priced like that, not
               like a full dispatch OS we have not built. 14 days on us, then
               Shop or Crew.
             </p>

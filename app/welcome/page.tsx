@@ -16,7 +16,7 @@ export default async function WelcomePage() {
   return (
     <AuthShell
       title={`One question, ${firstName}`}
-      sub="What kind of shop is this? Sere then uses your words — calls, work orders, appointments — and starts you with that trade's prices."
+      sub="What kind of shop is this? Sere then uses your words (calls, work orders, appointments) and starts you with that trade's prices."
       wide
     >
       <form action={chooseTradeAction} className="trade-grid">
@@ -35,7 +35,7 @@ export default async function WelcomePage() {
       </form>
       <form action={chooseTradeAction} className="trade-skip">
         <button className="btn btn-ghost btn-block" type="submit" name="business_type" value="other">
-          Skip — keep it generic
+          Skip. Keep it generic
         </button>
       </form>
       <p className="auth-fine">You can change this any time in Settings.</p>

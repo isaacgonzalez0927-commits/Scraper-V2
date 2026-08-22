@@ -9,7 +9,7 @@
  * asked to be interesting about a business she knows nothing about, because
  * that is exactly when a language model produces "I hope this finds you well."
  *
- * Pure — no network, no database.
+ * Pure. No network, no database.
  */
 
 import { tradeCopy } from "../business";
@@ -102,7 +102,7 @@ export function draftSystemPrompt(prospect: Prospect): string {
     "You write one short cold email selling Sere to the owner of a local shop.",
     `Sere is the office book for a ${voice.name.toLowerCase()} shop: ${work} and invoices in one place,`,
     "and what actually landed in the bank next to what was invoiced, on the owner's phone.",
-    `The only ask: open a real working shop with sample ${work} already in it — one tap, no account.`,
+    `The only ask: open a real working shop with sample ${work} already in it. One tap, no account.`,
     "",
     "Rules, all hard:",
     `- Under ${MAX_WORDS} words in the body. Shorter is better.`,
@@ -119,7 +119,7 @@ export function draftSystemPrompt(prospect: Prospect): string {
     "- If the fact is thin, write a shorter email. Do not pad.",
     "",
     'Reply with JSON only: {"subject": "...", "body": "..."}',
-    "No signature, no address, no unsubscribe line — those are appended after you.",
+    "No signature, no address, no unsubscribe line. Those are appended after you.",
   ].join("\n");
 }
 
@@ -228,7 +228,7 @@ function usesFact(body: string, fact: string): boolean {
  * compliance is not something to leave to a language model's discretion.
  */
 export function assembleBody(draft: Draft): string {
-  const lines = [draft.body.trim(), "", `— ${senderName()}`, "", `Try it: ${ctaUrl()}`, "", UNSUBSCRIBE_LINE];
+  const lines = [draft.body.trim(), "", senderName(), "", `Try it: ${ctaUrl()}`, "", UNSUBSCRIBE_LINE];
   const address = postalAddress();
   if (address) lines.push(address);
   return lines.join("\n");

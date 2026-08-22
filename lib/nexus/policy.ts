@@ -1,5 +1,5 @@
 /**
- * Send rails. These are current settings, not laws of nature — Nova is told to
+ * Send rails. These are current settings, not laws of nature. Nova is told to
  * describe them that way and may argue for changing them.
  *
  * Ported from RideBy's outreach-policy.ts (window, jitter, daily cap, kill
@@ -20,7 +20,7 @@ export const WINDOW_END_HOUR = 15;
 export const INTERVAL_MIN_MINUTES = 5;
 export const INTERVAL_MAX_MINUTES = 15;
 
-/** Master switch. Must be exactly "true" — nothing transmits otherwise. */
+/** Master switch. Must be exactly "true". Nothing transmits otherwise. */
 export function isSendEnabled(): boolean {
   return (process.env.NEXUS_SEND_ENABLED ?? "").trim().toLowerCase() === "true";
 }
@@ -194,7 +194,7 @@ export function planSends(
   const notes: string[] = [];
 
   if (!isSendEnabled()) {
-    blocked.push("NEXUS_SEND_ENABLED is not true. Nothing transmits — drafting and queueing only.");
+    blocked.push("NEXUS_SEND_ENABLED is not true. Nothing transmits. Drafting and queueing only.");
   }
   if (breaker.tripped) blocked.push(...breaker.reasons);
   if (!options.ignoreWindow && !isWithinWindow(now)) {

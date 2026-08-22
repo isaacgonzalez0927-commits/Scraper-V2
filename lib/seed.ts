@@ -304,7 +304,7 @@ export async function seedHarborAir() {
       details: JSON.stringify({
         refrigerant: "R-410A",
         filter_changed: "Clogged 20x25x2, replaced",
-        charge_lbs: "None — capacitor first",
+        charge_lbs: "None. Capacitor first",
       }),
       createdAt: created,
     })

@@ -62,7 +62,7 @@ export default async function LoginPage({
         </button>
       </form>
       <p className="auth-fine">
-        Just looking? <a href="/demo">Open the Harbor Air demo</a> — no account.
+        Just looking? <a href="/demo">Open the Harbor Air demo</a>. No account.
       </p>
     </AuthShell>
   );

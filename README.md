@@ -102,7 +102,7 @@ Stripe** is for the shop's books: Overview and Reports then show the live Stripe
 balance, pending funds, and payouts. Credentials are stored encrypted and never
 displayed again.
 
-- **Stripe.** Paste a **restricted key** (`rk_live_...`) — Settings has a step-by-step
+- **Stripe.** Paste a **restricted key** (`rk_live_...`). Settings has a step-by-step
   tutorial. One-click Connect is optional and needs a verified platform account.
 - **Square.** Same cash view as Stripe. Tap **Connect Square**, copy the
   production access token from [developer.squareup.com/apps](https://developer.squareup.com/apps),

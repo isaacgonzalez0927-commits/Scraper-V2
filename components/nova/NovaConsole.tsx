@@ -214,11 +214,11 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
 
   const label =
     phase === "listening"
-      ? "Listening — tap to stop"
+      ? "Listening. Tap to stop"
       : phase === "thinking"
         ? "Working"
         : phase === "speaking"
-          ? "Speaking — tap to stop"
+          ? "Speaking. Tap to stop"
           : "Tap to talk to Nova";
 
   return (
@@ -246,7 +246,7 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
           <p className="nova-meta">
             {status?.online
               ? `${status.model}${status.writable ? "" : " · read only"}`
-              : "No model key on the server — Nova cannot answer yet."}
+              : "No model key on the server. Nova cannot answer yet."}
             {status ? ` · ${status.clock.timeWithZone}` : ""}
           </p>
         </div>

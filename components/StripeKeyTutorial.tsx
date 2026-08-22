@@ -5,7 +5,7 @@ export function StripeKeyTutorial({ defaultOpen = true }: { defaultOpen?: boolea
     <div className={`key-guide${defaultOpen ? "" : " key-guide-collapsed"}`}>
       <p className="key-guide-lede">
         Three taps in Stripe. Paste the <code>rk_</code> key here. Never the secret{" "}
-        <code>sk_</code> key — that one can move money.
+        <code>sk_</code> key. That one can move money.
       </p>
       <ol className="key-steps">
         <li>

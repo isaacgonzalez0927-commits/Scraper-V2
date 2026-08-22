@@ -278,7 +278,7 @@ export async function runOutreachReview(draftId: number): Promise<ReviewResult> 
     action: approved ? "outreach.review.approved" : "outreach.review.rejected",
     entityType: "draft",
     entityId: draftId,
-    detail: `${row.company.name}: ${score}/100 — ${reason}`,
+    detail: `${row.company.name}: ${score}/100. ${reason}`,
   });
 
   if (!approved) {

@@ -61,7 +61,7 @@ export function getNovaClock(now: Date = new Date()): NovaClock {
 export function novaClockBlock(now: Date = new Date()): string {
   const c = getNovaClock(now);
   return [
-    "Current date and time (authoritative — answer time questions from this, not memory):",
+    "Current date and time (authoritative. Answer time questions from this, not memory):",
     `- timezone: ${c.timeZone}`,
     `- local: ${c.weekday}, ${c.date}, ${c.timeWithZone}`,
     `- localISO: ${c.isoLocal}`,

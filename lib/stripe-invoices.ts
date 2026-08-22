@@ -87,7 +87,7 @@ async function ensureStripeCustomer(
       });
       return customer.stripeCustomerId;
     } catch {
-      // Stale id — create a new one below.
+      // Stale id. Create a new one below.
     }
   }
   const created = await createStripeCustomer(secretKey, {
@@ -447,7 +447,7 @@ export async function ingestStripeInvoice(
         dueDate: remote.due_date ? dueDate : invoice.dueDate,
       })
       .where(eq(invoices.id, invoice.id));
-    // Don't rewrite lines on a Sere-originated invoice — Sere is the book.
+    // Don't rewrite lines on a Sere-originated invoice. Sere is the book.
   }
 
   await refreshInvoice(invoice.id, organizationId);

@@ -4,7 +4,7 @@
  * Ported from RideBy's hands/lead.ts. Places costs money per call, so one city
  * and one trade per job, results are deduped on place id, and anything the ICP
  * filter rejects is still written down as disqualified with the reason. Nothing
- * is silently dropped — a re-run must not resurrect a national franchise.
+ * is silently dropped. A re-run must not resurrect a national franchise.
  */
 
 import { and, eq, sql } from "drizzle-orm";

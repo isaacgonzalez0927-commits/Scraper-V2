@@ -1,6 +1,6 @@
 /**
  * What a local shop would actually pay, and what that money should buy.
- * Checkout is not live — these are the prices we will charge, not a paywall.
+ * Checkout is not live. These are the prices we will charge, not a paywall.
  * Signup is a 14-day trial of the book. Free is not a plan.
  */
 
@@ -70,7 +70,7 @@ export const PLANS: readonly Plan[] = [
 
 export const PRICING_NOTE =
   "14 days of the book. Then the shop freezes until you pick Shop or Crew. " +
-  "We are not taking cards yet — when billing opens, you pay and the shop opens again. " +
+  "We are not taking cards yet. When billing opens, you pay and the shop opens again. " +
   "Card fees stay with Stripe or Square. Sere does not take a cut. No annual lock.";
 
 export function isPlanKey(value: string | null | undefined): value is PlanKey {

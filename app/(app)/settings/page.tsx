@@ -101,7 +101,7 @@ export default async function SettingsPage({
             <p className="help">
               {voice.signupHint} {voice.jobs} use {voice.worker.toLowerCase()}{" "}
               language, and {voice.customers.toLowerCase()} get {voice.short}{" "}
-              fields. Starter services were added at signup — this only changes
+              fields. Starter services were added at signup. This only changes
               words and fields.
             </p>
           </div>
@@ -257,7 +257,7 @@ export default async function SettingsPage({
                   </button>
                 </form>
                 <details className="disclosure">
-                  <summary>Webhook — so Stripe invoices and payments come back into Sere</summary>
+                  <summary>Webhook, so Stripe invoices and payments come back into Sere</summary>
                   <p className="help mt-1">
                     In Stripe, Developers → Webhooks → Add endpoint. Events:{" "}
                     <code>invoice.created</code>, <code>invoice.paid</code>,{" "}
@@ -521,7 +521,7 @@ export default async function SettingsPage({
               <>
                 <p className="help">
                   Put <code>OPENAI_API_KEY</code> on the server, or paste a key
-                  below. Use gpt-4o-mini and <OpenAILimitsLink /> — $5 a month
+                  below. Use gpt-4o-mini and <OpenAILimitsLink />. $5 a month
                   is plenty. Starts with <code>sk-</code> or <code>sk-proj-</code>.{" "}
                   <OpenAIKeyLink />.
                 </p>
