@@ -96,7 +96,6 @@ export default async function ReportsPage({
       <Banner error={q.error} ok={q.ok} />
       {!shell.isDemo ? (
         <ConnectCashCallout
-          next="/reports"
           stripe={stripeCash.connected}
           square={squareCash.connected}
         />

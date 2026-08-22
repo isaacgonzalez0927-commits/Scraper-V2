@@ -97,7 +97,6 @@ export default async function OverviewPage({
       {!shell.isDemo ? (
         <>
           <ConnectCashCallout
-            next="/overview"
             stripe={integrations.stripe.connected}
             square={integrations.square.connected}
           />

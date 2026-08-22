@@ -19,6 +19,7 @@ import {
 } from "@/app/actions";
 import { ConnectSereButton } from "@/components/ConnectSere";
 import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, SquareKeyTutorial } from "@/components/ConnectStripe";
+import { HashScroll } from "@/components/HashScroll";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { ThemeChooser } from "@/components/ThemeToggle";
 import { Banner, Card } from "@/components/ui";
@@ -73,6 +74,7 @@ export default async function SettingsPage({
         ))}
       </nav>
 
+      <HashScroll />
       <Banner error={q.error} ok={q.ok} />
 
       {tab === "integrations" &&
@@ -256,7 +258,7 @@ export default async function SettingsPage({
                     required
                   />
                   <button className="btn btn-connect btn-stripe" type="submit">
-                    Connect
+                    Connect Stripe
                   </button>
                 </form>
                 <details className="disclosure">
@@ -660,6 +662,7 @@ export default async function SettingsPage({
           </Card>
 
           <Card
+            id="quickbooks"
             title="QuickBooks"
               note="Books link only. Invoices and card checkout still live in Sere."
               action={
