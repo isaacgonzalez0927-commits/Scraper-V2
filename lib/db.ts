@@ -3,51 +3,28 @@ import { dirname } from "node:path";
 import { createClient, type Client } from "@libsql/client";
 import { createClient as createWebClient } from "@libsql/client/web";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
+import {
+  configuredRemoteUrl,
+  databaseAuthToken,
+  envDatabaseUrl,
+  envTursoDatabaseUrl,
+  envVercel,
+} from "./db-env";
 import * as schema from "./schema";
+
+export { cleanEnv } from "./db-clean";
+export { configuredRemoteUrl, databaseAuthToken } from "./db-env";
 
 let cached: LibSQLDatabase<typeof schema> | null = null;
 let raw: Client | null = null;
 
-/** Vercel and dashboards often wrap values in quotes. Those quotes break the client. */
-export function cleanEnv(value: string | undefined | null): string {
-  let text = String(value || "").trim();
-  if (
-    (text.startsWith('"') && text.endsWith('"')) ||
-    (text.startsWith("'") && text.endsWith("'"))
-  ) {
-    text = text.slice(1, -1).trim();
-  }
-  return text;
-}
-
-function envOf(...keys: string[]): string {
-  for (const key of keys) {
-    const value = cleanEnv(process.env[key]);
-    if (value) return value;
-  }
-  return "";
-}
-
-export function databaseAuthToken(): string {
-  return envOf("TURSO_AUTH_TOKEN", "TURSO_DATABASE_AUTH_TOKEN", "LIBSQL_AUTH_TOKEN");
-}
-
-/** Remote libSQL URL if one is set. File URLs do not count. */
-export function configuredRemoteUrl(): string {
-  for (const key of ["TURSO_DATABASE_URL", "LIBSQL_URL", "DATABASE_URL"]) {
-    const value = cleanEnv(process.env[key]);
-    if (value && !value.startsWith("file:")) return value.replace(/\/+$/, "");
-  }
-  return "";
-}
-
 export function databaseUrl(): string {
   const remote = configuredRemoteUrl();
   if (remote) return remote;
-  const local = envOf("TURSO_DATABASE_URL", "DATABASE_URL");
-  if (local.startsWith("file:") && !process.env.VERCEL) return local;
+  const local = envTursoDatabaseUrl() || envDatabaseUrl();
+  if (local.startsWith("file:") && !envVercel()) return local;
   // Vercel's app filesystem is read-only. /tmp is the only writable place.
-  if (process.env.VERCEL) return "file:/tmp/sere.db";
+  if (envVercel()) return "file:/tmp/sere.db";
   return "file:./data/sere.db";
 }
 
@@ -59,7 +36,7 @@ export function databaseUrl(): string {
 export function isDurableDatabase(): boolean {
   const remote = configuredRemoteUrl();
   if (remote) return Boolean(databaseAuthToken());
-  return !process.env.VERCEL;
+  return !envVercel();
 }
 
 export type DataStoreSummary = {
@@ -132,7 +109,7 @@ export const TURSO_CONNECT_FAILED =
 export function databaseRefusalMessage(connectFailed = false): string {
   const url = configuredRemoteUrl();
   const token = databaseAuthToken();
-  if (!url) return process.env.VERCEL ? EPHEMERAL_DB_MESSAGE : "";
+  if (!url) return envVercel() ? EPHEMERAL_DB_MESSAGE : "";
   if (!token) return TURSO_TOKEN_MISSING;
   if (connectFailed) return TURSO_CONNECT_FAILED;
   return "";
