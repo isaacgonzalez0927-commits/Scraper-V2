@@ -3,7 +3,7 @@ import { loginAction } from "../actions";
 import { AuthShell } from "@/components/AuthShell";
 import { Banner } from "@/components/ui";
 import { boot } from "@/lib/boot";
-import { EPHEMERAL_DB_MESSAGE, isDurableDatabase } from "@/lib/db";
+import { databaseRefusalMessage } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function LoginPage({
     await boot();
   } catch (error) {
     console.error(error);
-    bootError = EPHEMERAL_DB_MESSAGE;
+    bootError = databaseRefusalMessage(true);
   }
   return (
     <AuthShell
@@ -36,7 +36,7 @@ export default async function LoginPage({
       <Banner
         error={bootError || q.error}
         ok={q.ok}
-        warn={!bootError && !isDurableDatabase() ? EPHEMERAL_DB_MESSAGE : ""}
+        warn={!bootError ? databaseRefusalMessage(false) : ""}
       />
       <form action={loginAction} className="stack">
         <input type="hidden" name="next" value={q.next || "/overview"} />

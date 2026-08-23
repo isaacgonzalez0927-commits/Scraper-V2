@@ -3,7 +3,7 @@ import { signupAction } from "../actions";
 import { AuthShell } from "@/components/AuthShell";
 import { Banner } from "@/components/ui";
 import { boot } from "@/lib/boot";
-import { EPHEMERAL_DB_MESSAGE, isDurableDatabase } from "@/lib/db";
+import { databaseRefusalMessage, isDurableDatabase } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,10 +20,11 @@ export default async function SignupPage({
     await boot();
   } catch (error) {
     console.error(error);
-    bootError = EPHEMERAL_DB_MESSAGE;
+    bootError = databaseRefusalMessage(true);
   }
-  const blocked = Boolean(bootError) || !isDurableDatabase();
-  const storeError = bootError || (!isDurableDatabase() ? EPHEMERAL_DB_MESSAGE : "");
+  const setupError = databaseRefusalMessage(false);
+  const blocked = Boolean(bootError) || Boolean(setupError) || !isDurableDatabase();
+  const storeError = bootError || setupError;
   return (
     <AuthShell
       title="Create your shop"
