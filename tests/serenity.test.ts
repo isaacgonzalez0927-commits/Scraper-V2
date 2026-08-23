@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { NOVA_NAME, NOVA_PATH } from "../lib/nova/operator";
 import { isSereIosUserAgent, SERENITY_NAME, SERENITY_PATH } from "../lib/serenity";
 
 test("the shop intelligence is named Serenity", () => {
   assert.equal(SERENITY_NAME, "Serenity");
   assert.equal(SERENITY_PATH, "/serenity");
+  assert.equal(NOVA_NAME, "Nova");
+  assert.equal(NOVA_PATH, "/nova");
+  assert.notEqual(SERENITY_PATH, NOVA_PATH);
 });
 
 test("the iOS app identifies itself in the user agent", () => {

@@ -1,40 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NOVA_NAME } from "@/lib/nova/identity";
 import { SERENITY_NAME } from "@/lib/serenity";
 import { NovaOrb, type OrbPhase } from "./NovaOrb";
 
 /**
- * Nova's console.
+ * Shared console chrome for two different people.
  *
- * Ported from RideBy's NovaConsole: the same phase model (idle, listening,
- * thinking, speaking), the same streamed reply, the same tap-the-orb-to-talk
- * interaction. Rebuilt in Sere's CSS rather than copied class for class, and
- * voice uses the browser's own speech APIs so there is no third service to pay
- * for or key to hold.
+ * Serenity: shop owners, /api/serenity/*, board and books.
+ * Nova: operator only, /api/nova/*, cold outreach. Same orb, different brain.
  */
 
-type Line = { role: "you" | "nova"; text: string; tools?: string[] };
+export type ConsoleKind = "serenity" | "nova";
+
+type Line = { role: "you" | "bot"; text: string; tools?: string[] };
 
 type Status = {
-  shop: string;
-  trade: string;
+  shop?: string;
+  trade?: string;
   headline: string;
   clock: { timeWithZone: string; weekday: string; date: string };
   online: boolean;
   model: string;
-  writable: boolean;
-  plan: string;
-  money: { collectedThisWeek: string; overdue: string; profitThisMonth: string };
-  counts: {
-    today: number;
-    tomorrow: number;
-    unscheduled: number;
-    finishedNotInvoiced: number;
-    overdue: number;
-    drafts: number;
-  };
-  followUps: string[];
+  writable?: boolean;
+  credit?: { remaining: string; exhausted: boolean };
+  counts?: { finishedNotInvoiced?: number };
+  followUps?: string[];
 };
 
 type SpeechRecognitionLike = {
@@ -58,14 +50,32 @@ function recognizer(): SpeechRecognitionLike | null {
   return Ctor ? new Ctor() : null;
 }
 
-const PROMPTS = [
+const SERENITY_PROMPTS = [
   "What's on today",
   "Who owes me money",
   "What did I actually make this month",
   "Anything finished I never billed",
 ];
 
-export function NovaConsole({ ownerName }: { ownerName: string }) {
+const NOVA_PROMPTS = [
+  "What's the pipeline",
+  "Find HVAC shops in Fort Myers",
+  "Run a tick",
+  "Can we send",
+];
+
+export function NovaConsole({
+  kind,
+  ownerName,
+}: {
+  kind: ConsoleKind;
+  ownerName: string;
+}) {
+  const name = kind === "nova" ? NOVA_NAME : SERENITY_NAME;
+  const statusUrl = kind === "nova" ? "/api/nova/status" : "/api/serenity/status";
+  const chatUrl = kind === "nova" ? "/api/nova/chat" : "/api/serenity/chat";
+  const prompts = kind === "nova" ? NOVA_PROMPTS : SERENITY_PROMPTS;
+
   const [lines, setLines] = useState<Line[]>([]);
   const [draft, setDraft] = useState("");
   const [phase, setPhase] = useState<OrbPhase>("idle");
@@ -80,7 +90,7 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
     let alive = true;
     const load = async () => {
       try {
-        const response = await fetch("/api/nova/status", { cache: "no-store" });
+        const response = await fetch(statusUrl, { cache: "no-store" });
         if (!response.ok) return;
         const payload = (await response.json()) as Status;
         if (alive) setStatus(payload);
@@ -94,7 +104,7 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
       alive = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [statusUrl]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -119,18 +129,18 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
       if (!text || busy) return;
       setError("");
       setDraft("");
-      setLines((prev) => [...prev, { role: "you", text }, { role: "nova", text: "" }]);
+      setLines((prev) => [...prev, { role: "you", text }, { role: "bot", text: "" }]);
       setPhase("thinking");
 
       try {
-        const response = await fetch("/api/nova/chat", {
+        const response = await fetch(chatUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text }),
         });
         if (!response.ok || !response.body) {
           const payload = (await response.json().catch(() => ({}))) as { error?: string };
-          throw new Error(payload.error || `${SERENITY_NAME} is not answering.`);
+          throw new Error(payload.error || `${name} is not answering.`);
         }
 
         const reader = response.body.getReader();
@@ -146,31 +156,31 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
           const events = buffer.split("\n\n");
           buffer = events.pop() || "";
           for (const block of events) {
-            const kind = /^event:\s*(\w+)/m.exec(block)?.[1];
+            const kindEvent = /^event:\s*(\w+)/m.exec(block)?.[1];
             const raw = /^data:\s*(.*)$/m.exec(block)?.[1];
-            if (!kind || !raw) continue;
+            if (!kindEvent || !raw) continue;
             let data: { delta?: string; reply?: string; tools?: string[]; error?: string };
             try {
               data = JSON.parse(raw);
             } catch {
               continue;
             }
-            if (kind === "delta" && data.delta) {
+            if (kindEvent === "delta" && data.delta) {
               streamed += data.delta;
               setLines((prev) => {
                 const next = [...prev];
-                next[next.length - 1] = { role: "nova", text: streamed };
+                next[next.length - 1] = { role: "bot", text: streamed };
                 return next;
               });
-            } else if (kind === "done") {
+            } else if (kindEvent === "done") {
               finalText = data.reply || streamed;
               setLines((prev) => {
                 const next = [...prev];
-                next[next.length - 1] = { role: "nova", text: finalText, tools: data.tools };
+                next[next.length - 1] = { role: "bot", text: finalText, tools: data.tools };
                 return next;
               });
-            } else if (kind === "error") {
-              throw new Error(data.error || `${SERENITY_NAME} hit a problem.`);
+            } else if (kindEvent === "error") {
+              throw new Error(data.error || `${name} hit a problem.`);
             }
           }
         }
@@ -183,7 +193,7 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
         setPhase("idle");
       }
     },
-    [busy, speak, voice],
+    [busy, chatUrl, name, speak, voice],
   );
 
   const listen = useCallback(() => {
@@ -220,7 +230,16 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
         ? "Working"
         : phase === "speaking"
           ? "Speaking. Tap to stop"
-          : `Tap to talk to ${SERENITY_NAME}`;
+          : `Tap to talk to ${name}`;
+
+  const finished = status?.counts?.finishedNotInvoiced || 0;
+  const subtitle = status
+    ? kind === "nova"
+      ? status.headline
+      : `${status.shop} · ${status.headline}`
+    : kind === "nova"
+      ? "Reading the pipeline\u2026"
+      : "Reading the shop\u2026";
 
   return (
     <div className="nova">
@@ -238,25 +257,24 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
           }}
         />
         <div className="nova-head-copy">
-          <h1 className="nova-title">{SERENITY_NAME}</h1>
-          <p className="nova-sub">
-            {status
-              ? `${status.shop} · ${status.headline}`
-              : "Reading the shop\u2026"}
-          </p>
+          <h1 className="nova-title">{name}</h1>
+          <p className="nova-sub">{subtitle}</p>
           <p className="nova-meta">
             {status?.online
-              ? `${status.model}${status.writable ? "" : " · read only"}`
-              : `No model key on the server. ${SERENITY_NAME} cannot answer yet.`}
+              ? `${status.model}${status.writable === false ? " · read only" : ""}`
+              : `No model key on the server. ${name} cannot answer yet.`}
+            {kind === "serenity" && status?.credit
+              ? ` · ${status.credit.remaining} left`
+              : ""}
             {status ? ` · ${status.clock.timeWithZone}` : ""}
           </p>
         </div>
       </header>
 
-      {status && status.counts.finishedNotInvoiced > 0 ? (
+      {kind === "serenity" && finished > 0 ? (
         <a className="nova-flag" href="/jobs?status=completed">
           <strong>
-            {status.counts.finishedNotInvoiced} finished, never invoiced
+            {finished} finished, never invoiced
           </strong>
           <span>Work you already did. Bill it.</span>
         </a>
@@ -267,11 +285,20 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
       <div className="nova-thread">
         {lines.length === 0 ? (
           <div className="nova-empty">
-            <p>
-              Ask me anything about {status?.shop || "the shop"}, {ownerName}. I read the
-              board and the books before I answer, and I will tell you when I do not know.
-            </p>
-            {status?.followUps.length ? (
+            {kind === "nova" ? (
+              <p>
+                The pipeline is yours, {ownerName}. I find shops, research them,
+                draft, review, and send. I will not talk about a shop&apos;s jobs
+                or books. That is {SERENITY_NAME}.
+              </p>
+            ) : (
+              <p>
+                Ask me anything about {status?.shop || "the shop"}, {ownerName}. I
+                read the board and the books before I answer, and I will tell you
+                when I do not know. I do not do cold outreach. That is {NOVA_NAME}.
+              </p>
+            )}
+            {status?.followUps?.length ? (
               <ul className="nova-followups">
                 {status.followUps.map((item) => (
                   <li key={item}>{item}</li>
@@ -281,8 +308,8 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
           </div>
         ) : (
           lines.map((line, i) => (
-            <div key={`${line.role}-${i}`} className={`nova-line nova-line-${line.role}`}>
-              <p>{line.text || (line.role === "nova" ? "…" : "")}</p>
+            <div key={`${line.role}-${i}`} className={`nova-line nova-line-${line.role === "you" ? "you" : "nova"}`}>
+              <p>{line.text || (line.role === "bot" ? "…" : "")}</p>
               {line.tools?.length ? (
                 <span className="nova-tools">read: {line.tools.join(", ")}</span>
               ) : null}
@@ -293,7 +320,7 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
       </div>
 
       <div className="nova-prompts">
-        {PROMPTS.map((prompt) => (
+        {prompts.map((prompt) => (
           <button
             key={prompt}
             type="button"
@@ -316,8 +343,8 @@ export function NovaConsole({ ownerName }: { ownerName: string }) {
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder={busy ? "Working\u2026" : `Ask ${SERENITY_NAME}`}
-          aria-label={`Ask ${SERENITY_NAME}`}
+          placeholder={busy ? "Working\u2026" : `Ask ${name}`}
+          aria-label={`Ask ${name}`}
           enterKeyHint="send"
           disabled={busy}
         />

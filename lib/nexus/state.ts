@@ -131,6 +131,12 @@ export async function loadOutreachState(): Promise<OutreachState> {
   };
 }
 
+export function outreachHeadline(state: OutreachState): string {
+  const pending = state.drafts.pendingReview;
+  const send = state.send.enabled && state.send.clearToSend ? "send on" : "send off";
+  return `${state.pipeline.total} in the pipeline · ${pending} waiting review · ${send}`;
+}
+
 /** Recording a reply or a signup is what teaches Nova anything. */
 export async function recordDraftOutcome(
   email: string,

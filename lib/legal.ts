@@ -80,6 +80,7 @@ export const TERMS_SECTIONS: { id: string; title: string; body: string[] }[] = [
     title: "Serenity and the assistant",
     body: [
       "Serenity and the shop assistant run on our OpenAI account. You do not paste your own OpenAI key.",
+      "Serenity helps you run this shop: the board, the books, jobs, and invoices. She does not do cold outreach or sell Sere to other businesses. That operator tool is separate and is not part of your shop.",
       "Each shop gets a monthly credit of $3.00 of model use. When the credit is used up, those features pause until the next month. We may change the credit amount.",
       "Questions you ask and the shop facts needed to answer them go to OpenAI under our contract with them. Do not paste secrets you would not send to a model.",
     ],

@@ -260,7 +260,7 @@ fallback, so money cannot land in the wrong account.
 The Integrations screen labels Stripe and email fallbacks as coming from the
 deployment environment and does not let you disconnect them from inside the app.
 Serenity is included: each shop gets $3.00 of model use per month on the operator
-key. Set a hard monthly limit in
+key. Serenity runs the shop book. She does not do cold outreach. Set a hard monthly limit in
 [Usage limits](https://platform.openai.com/settings/organization/limits) as a
 backstop for the whole OpenAI account.
 

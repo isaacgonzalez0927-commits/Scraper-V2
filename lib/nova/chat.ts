@@ -1,13 +1,12 @@
 /**
- * Nova's chat loop, ported from RideBy.
+ * Two chat loops, one engine.
  *
- * Same architecture as the original: a personality prompt, durable memory, a
- * fresh clock every request, streamed tokens, and up to four rounds of tool
- * calls before answering. Two things are different.
+ * Serenity talks to a shop owner about that shop's board and books.
+ * Nova talks to the Sere operator about cold outreach. They do not share
+ * a prompt, a tool list, a memory thread, or a billing bucket.
  *
- * First, no SDK. Sere talks to every API over plain fetch, so the OpenAI stream
- * is parsed here rather than imported. Second, everything is scoped to one
- * organization, because Sere is multi-tenant and RideBy is not.
+ * Same architecture as RideBy: personality, durable memory, a fresh clock,
+ * streamed tokens, and up to four rounds of tool calls. No SDK. Plain fetch.
  */
 
 import {
@@ -27,7 +26,16 @@ import {
   rememberNova,
   saveNovaMessage,
 } from "./memory";
-import { NOVA_TOOLS, runNovaTool, tradeWords, type ToolContext } from "./tools";
+import { NOVA_MEMORY_ORG, NOVA_NAME } from "./identity";
+import {
+  NOVA_TOOLS,
+  SERENITY_TOOLS,
+  runNovaTool,
+  tradeWords,
+  type ChatPersona,
+  type NovaToolDef,
+  type ToolContext,
+} from "./tools";
 
 const API = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
 
@@ -53,15 +61,24 @@ export function novaKey(): string | null {
 
 type Words = Awaited<ReturnType<typeof tradeWords>>;
 
+export type ChatRunContext = ToolContext & {
+  ownerName: string;
+  shopName: string;
+};
+
 /**
- * The personality, carried over from RideBy and pointed at a shop instead of a
- * lead pipeline. The refusals matter as much as the tone: an assistant that
- * agrees with everything is worth nothing to someone running a business.
+ * Shop intelligence. Board, books, jobs, cash. Not outreach. Not Nova.
  */
-export function novaSystemPrompt(words: Words, ownerName: string, shopName: string): string {
+export function serenitySystemPrompt(
+  words: Words,
+  ownerName: string,
+  shopName: string,
+): string {
   const unit = words.job.toLowerCase();
   const work = words.jobs.toLowerCase();
   return `You are ${SERENITY_NAME}, the operating intelligence for ${shopName}, a ${words.trade.toLowerCase()} shop. Think Jarvis for ${ownerName}: shop co-pilot and the person who watches the money. Peer, not assistant.
+
+You are not Nova. Nova is a different bot. She does cold outreach for the Sere operator. You never run that pipeline, you never find leads, and you never talk about sending cold email as if it were your job. If ${ownerName} asks about cold outreach, selling Sere to other shops, or the lead pipeline, say that is Nova, not you, and get back to this shop.
 
 Personality and voice:
 - First person. Warm, direct, conversational. Short sentences beat paragraphs.
@@ -74,7 +91,7 @@ Personality and voice:
 Numbers (this is the important rule):
 - Never invent a figure, a name, an invoice number, or a date. Call the shop tool.
 - If a tool did not give you something, say you do not have it. Do not estimate.
-- Sere's numbers are what the shop typed in. Processor numbers are what the bank saw. When they disagree, that gap is real information — say so rather than smoothing it over.
+- Sere's numbers are what the shop typed in. Processor numbers are what the bank saw. When they disagree, that gap is real information. Say so rather than smoothing it over.
 
 What you watch, unprompted:
 - Work finished but never invoiced. That is money already earned and sitting there. Lead with it when it exists.
@@ -82,22 +99,11 @@ What you watch, unprompted:
 - ${words.jobs} with no date on them.
 - Profit, not just revenue. Revenue with the costs ignored is a story, not a number.
 
-Outreach — this is your other job, and you run it:
-- Sere sells to shops like this one. You command that pipeline: find shops in a city, research their site, write the email, review it, send it, learn from what comes back.
-- Call outreach before saying anything about the pipeline, the send cap, or whether mail went out. Never estimate those numbers.
-- find_leads costs Google Places quota. One city and one trade at a time, and rotate cities instead of re-scraping one.
-- work runs the pipeline forward and returns straight away. Acknowledge it and report what it did; do not pretend to be stuck in a long silent run.
-- A shop with no researched fact never gets emailed. That is deliberate: without a true, specific opening line the copy is filler, and filler is what gets a domain blocked. If nothing is draftable, say the research is thin rather than lowering the bar.
-- Every draft is scored before it can send. A rejected draft is a lesson, not a failure — read the reason.
-- If sending is not armed, or a circuit breaker is open, say so in plain English. Never claim mail reached an inbox unless the tool confirmed a send.
-- You have opinions about volume, cities, and copy angles. Argue for them from the reply data, not from received wisdom. The daily cap and send window are current settings, not laws — you may recommend changing them with a reason.
-- outcome is how you learn. Push the owner to record replies and signups, because without them you are drafting blind forever.
-- Cold outreach that annoys people costs more than it earns. Refuse to scale a batch that has no reply signal yet, and say why.
-
 What you do not do:
 - You do not email this shop's ${words.customers.toLowerCase()} and you do not take payments. You can draft what to say and tell the owner where to send it.
-- You do not invoice a ${unit}. Completing one is not billing it — say the owner still needs to finish and bill it.
+- You do not invoice a ${unit}. Completing one is not billing it. Say the owner still needs to finish and bill it.
 - You never claim you did something a tool did not confirm.
+- You do not find leads, draft cold email, or report on Sere's outreach pipeline.
 
 When you act:
 - Moving or completing a ${unit} is a real change to the board. Find it first, confirm exactly one match, then do it and say plainly what changed.
@@ -106,6 +112,40 @@ When you act:
 Voice replies are usually 1 to 3 short sentences. Lead with the answer. No recap, no options menu, no "let me know if you need anything else" closer.
 
 Talk to ${ownerName} like a sharp friend who happens to run the systems with him.`;
+}
+
+/**
+ * Operator outreach commander. Pipeline only. Not Serenity. Not a shop book.
+ */
+export function novaSystemPrompt(operatorName: string): string {
+  return `You are ${NOVA_NAME}, the operator's cold outreach commander for Sere. You help ${operatorName} find shops, research them, draft email, review it, send it, and learn from what comes back.
+
+You are not Serenity. Serenity helps shop owners run their board and books inside Sere. You never look at a shop's jobs, invoices, or cash. If ${operatorName} asks about a shop's board or books, say that is Serenity, not you, and get back to the pipeline.
+
+Personality and voice:
+- First person. Warm, direct, conversational. Short sentences beat paragraphs.
+- You have opinions. Lead with the recommendation, then the evidence.
+- Push back when the idea is weak. Say no clearly, then say what you would do instead.
+- Never sycophantic. No "How can I help?", no "Great question!", no filler praise.
+
+Outreach is your only job:
+- Call outreach before saying anything about the pipeline, the send cap, or whether mail went out. Never invent those numbers.
+- find_leads costs Google Places quota. One city and one trade at a time, and rotate cities instead of re-scraping one.
+- work runs the pipeline forward and returns straight away. Acknowledge it and report what it did. Do not pretend to be stuck in a long silent run.
+- A shop with no researched fact never gets emailed. Without a true, specific opening line the copy is filler, and filler is what gets a domain blocked. If nothing is draftable, say the research is thin rather than lowering the bar.
+- Every draft is scored before it can send. A rejected draft is a lesson, not a failure. Read the reason.
+- If sending is not armed, or a circuit breaker is open, say so in plain English. Never claim mail reached an inbox unless the tool confirmed a send.
+- You have opinions about volume, cities, and copy angles. Argue for them from the reply data, not from received wisdom. The daily cap and send window are current settings, not laws. You may recommend changing them with a reason.
+- outcome is how you learn. Push ${operatorName} to record replies and signups, because without them you are drafting blind forever.
+- Cold outreach that annoys people costs more than it earns. Refuse to scale a batch that has no reply signal yet, and say why.
+
+What you do not do:
+- You do not run a shop book. No jobs, invoices, payments, or cash.
+- You never claim you did something a tool did not confirm.
+
+Voice replies are usually 1 to 3 short sentences. Lead with the answer. No recap, no options menu, no "let me know if you need anything else" closer.
+
+Talk to ${operatorName} like the person who runs this pipeline with him.`;
 }
 
 export type NovaChatResult = {
@@ -120,14 +160,27 @@ type ApiMessage =
   | { role: "assistant"; content: string | null; tool_calls?: unknown[] }
   | { role: "tool"; tool_call_id: string; content: string };
 
+function personaOf(ctx: ToolContext): ChatPersona {
+  return ctx.persona === "nova" ? "nova" : "serenity";
+}
+
+function toolsFor(persona: ChatPersona): NovaToolDef[] {
+  return persona === "nova" ? NOVA_TOOLS : SERENITY_TOOLS;
+}
+
+function memoryOrgOf(ctx: ToolContext, persona: ChatPersona): number {
+  return persona === "nova" ? NOVA_MEMORY_ORG : ctx.organizationId;
+}
+
 /**
  * One streamed round. Tokens are only forwarded when the round is going to end
- * as text — a round that turns into tool calls should not leak half a sentence
- * to the screen before Nova has the data.
+ * as text. A round that turns into tool calls should not leak half a sentence
+ * to the screen before the model has the data.
  */
 async function streamRound(
   apiKey: string,
   messages: ApiMessage[],
+  tools: NovaToolDef[],
   onDelta?: (delta: string) => void,
 ): Promise<{ content: string; toolCalls: ToolCall[]; usage: OpenAIUsage }> {
   let response: Response;
@@ -139,7 +192,7 @@ async function streamRound(
         model: NOVA_MODEL,
         temperature: 0.65,
         messages,
-        tools: NOVA_TOOLS,
+        tools,
         tool_choice: "auto",
         stream: true,
         stream_options: { include_usage: true },
@@ -221,52 +274,76 @@ async function streamRound(
     .sort(([a], [b]) => a - b)
     .map(([, call]) => call)
     .filter((call) => call.id && call.name);
-  if (!usage.promptTokens && !usage.completionTokens) {
-    usage = estimatedUsage("serenity");
-  }
   return { content: content.trim(), toolCalls, usage };
 }
 
-export async function runNova(
-  ctx: ToolContext & { ownerName: string; shopName: string },
+export async function runChat(
+  ctx: ChatRunContext,
   userMessage: string,
   opts: { onDelta?: (delta: string) => void } = {},
 ): Promise<NovaChatResult> {
+  const persona = personaOf(ctx);
+  const name = persona === "nova" ? NOVA_NAME : SERENITY_NAME;
   const apiKey = novaKey();
-  if (!apiKey) throw new NovaError(`${SERENITY_NAME} needs OPENAI_API_KEY on the server.`);
+  if (!apiKey) throw new NovaError(`${name} needs OPENAI_API_KEY on the server.`);
   const trimmed = userMessage.trim();
   if (!trimmed) throw new NovaError("Empty message.");
-  try {
-    await assertShopCredit(ctx.organizationId, ctx.now);
-  } catch (error) {
-    if (error instanceof OpenAIBudgetError) throw new NovaError(error.message);
-    throw error;
+
+  const billShop = persona === "serenity";
+  if (billShop) {
+    try {
+      await assertShopCredit(ctx.organizationId, ctx.now);
+    } catch (error) {
+      if (error instanceof OpenAIBudgetError) throw new NovaError(error.message);
+      throw error;
+    }
   }
 
-  // The demo is a shared shop, so its chat is not persisted into anyone's
-  // history and never teaches Nova anything.
-  const persist = !ctx.isDemo;
-  if (persist) await saveNovaMessage(ctx.organizationId, { role: "user", content: trimmed });
+  const memoryOrg = memoryOrgOf(ctx, persona);
+  const tools = toolsFor(persona);
+  const persist = persona === "nova" ? true : !ctx.isDemo;
+  const toolCtx: ToolContext = {
+    ...ctx,
+    persona,
+    organizationId: persona === "nova" ? NOVA_MEMORY_ORG : ctx.organizationId,
+  };
+
+  if (persist) await saveNovaMessage(memoryOrg, { role: "user", content: trimmed });
 
   const [words, memories, history] = await Promise.all([
-    tradeWords(ctx.organizationId),
-    persist ? loadNovaMemories(ctx.organizationId, 25) : Promise.resolve([]),
-    persist ? recentNovaMessages(ctx.organizationId, 30) : Promise.resolve([]),
+    persona === "serenity" ? tradeWords(ctx.organizationId) : Promise.resolve(null),
+    persist ? loadNovaMemories(memoryOrg, 25) : Promise.resolve([]),
+    persist ? recentNovaMessages(memoryOrg, 30) : Promise.resolve([]),
   ]);
+
+  const system =
+    persona === "nova"
+      ? novaSystemPrompt(ctx.ownerName)
+      : serenitySystemPrompt(words!, ctx.ownerName, ctx.shopName);
+
+  const writableLine =
+    persona === "nova"
+      ? "You may run the outreach pipeline."
+      : ctx.writable
+        ? "You may move and complete work on this board."
+        : "This shop is read-only right now (demo, or the trial ended). You can look and advise, but any change will be refused. Say so plainly instead of pretending.";
+
+  const memoryLabel =
+    persona === "nova"
+      ? "What you have learned about outreach:"
+      : "What you have learned about this shop:";
 
   const messages: ApiMessage[] = [
     {
       role: "system",
       content: [
-        novaSystemPrompt(words, ctx.ownerName, ctx.shopName),
+        system,
         "",
         novaClockBlock(ctx.now),
         "",
-        ctx.writable
-          ? "You may move and complete work on this board."
-          : "This shop is read-only right now (demo, or the trial ended). You can look and advise, but any change will be refused — say so plainly instead of pretending.",
+        writableLine,
         "",
-        "What you have learned about this shop:",
+        memoryLabel,
         memoryBlock(memories),
       ].join("\n"),
     },
@@ -282,7 +359,7 @@ export async function runNova(
   let reply = "";
 
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
-    if (round > 0) {
+    if (billShop && round > 0) {
       try {
         await assertShopCredit(ctx.organizationId, ctx.now);
       } catch (error) {
@@ -290,14 +367,23 @@ export async function runNova(
         throw error;
       }
     }
-    const { content, toolCalls, usage } = await streamRound(apiKey, messages, opts.onDelta);
-    await recordShopUsage(ctx.organizationId, {
-      source: "serenity",
-      model: NOVA_MODEL,
-      promptTokens: usage.promptTokens,
-      completionTokens: usage.completionTokens,
-      at: ctx.now,
-    });
+    const { content, toolCalls, usage } = await streamRound(
+      apiKey,
+      messages,
+      tools,
+      opts.onDelta,
+    );
+    if (billShop) {
+      const billed =
+        usage.promptTokens || usage.completionTokens ? usage : estimatedUsage("serenity");
+      await recordShopUsage(ctx.organizationId, {
+        source: "serenity",
+        model: NOVA_MODEL,
+        promptTokens: billed.promptTokens,
+        completionTokens: billed.completionTokens,
+        at: ctx.now,
+      });
+    }
     if (!toolCalls.length) {
       reply = content;
       break;
@@ -312,11 +398,11 @@ export async function runNova(
       })),
     });
     for (const call of toolCalls) {
-      const result = await runNovaTool(ctx, call.name, call.arguments || "{}");
+      const result = await runNovaTool(toolCtx, call.name, call.arguments || "{}");
       toolTrace.push({ name: call.name, result });
       messages.push({ role: "tool", tool_call_id: call.id, content: result.slice(0, 12_000) });
       if (persist) {
-        await saveNovaMessage(ctx.organizationId, {
+        await saveNovaMessage(memoryOrg, {
           role: "tool",
           content: result.slice(0, 4000),
           toolName: call.name,
@@ -331,11 +417,27 @@ export async function runNova(
       : "Didn't catch that. Say it again?";
     opts.onDelta?.(reply);
   }
-  if (persist) await saveNovaMessage(ctx.organizationId, { role: "assistant", content: reply });
+  if (persist) await saveNovaMessage(memoryOrg, { role: "assistant", content: reply });
   return { reply, toolCalls: toolTrace };
 }
 
-/** Used by the console's first paint so Nova opens with something real. */
+export async function runSerenity(
+  ctx: ChatRunContext,
+  userMessage: string,
+  opts: { onDelta?: (delta: string) => void } = {},
+): Promise<NovaChatResult> {
+  return runChat({ ...ctx, persona: "serenity" }, userMessage, opts);
+}
+
+export async function runNova(
+  ctx: ChatRunContext,
+  userMessage: string,
+  opts: { onDelta?: (delta: string) => void } = {},
+): Promise<NovaChatResult> {
+  return runChat({ ...ctx, persona: "nova" }, userMessage, opts);
+}
+
+/** Used by the console's first paint so a fact can land before anyone talks. */
 export async function seedNovaFact(
   organizationId: number,
   content: string,

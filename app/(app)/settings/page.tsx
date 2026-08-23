@@ -507,7 +507,7 @@ export default async function SettingsPage({
           <Card
             id="openai"
             title="Serenity"
-            note="Ask about the board and the books. Completing or moving a job still goes through Sere."
+            note="Ask about this shop's board and books. Not cold outreach. Completing or moving a job still goes through Sere."
             action={
               <span
                 className={`badge badge-${

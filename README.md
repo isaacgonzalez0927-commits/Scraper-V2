@@ -50,6 +50,7 @@ npm run build
 | Calendar | Day, week, or month of scheduled jobs, with drag to reschedule |
 | Search | Names, phones, emails, addresses, invoice numbers, on `⌘K` |
 | Settings | Company details, trade type, invoice defaults, integrations, account |
+| Serenity | Shop intelligence. Board, books, jobs, cash. Not outreach. |
 | Assistant | Star in the top bar. Surfaces overdue cash and today's jobs, and can move a date or mark a job complete |
 
 Two rules the code keeps:
@@ -81,7 +82,8 @@ Two rules the code keeps:
 | `STRIPE_CONNECT_CLIENT_ID` | Optional | Enables the one-click **Connect Stripe** button (`ca_...`) |
 | `STRIPE_WEBHOOK_SECRET` | Optional | Platform webhook signing secret for Connect shops |
 | `RESEND_API_KEY` and `SERE_EMAIL_FROM` | Optional | Deployment-wide email fallback |
-| `OPENAI_API_KEY` | Optional | Operator key for Serenity and the star assistant. Shops never paste a key. Each shop gets $3/month |
+| `OPENAI_API_KEY` | Optional | Operator key for Serenity, the star assistant, and Nova. Shops never paste a key. Each shop gets $3/month for Serenity |
+| `NOVA_OPERATOR_EMAIL` | Optional | Login emails allowed to use `/nova`. Comma-separated. Shop owners are refused |
 | `OPENAI_MODEL` | Optional | Defaults to `gpt-4o-mini` |
 | `OPENAI_SHOP_BUDGET_DOLLARS` | Optional | Per-shop monthly credit. Defaults to `3` |
 
@@ -120,6 +122,10 @@ displayed again.
   shop, including the demo, gets GPT answers on a **$3/month credit**. Shops do
   not paste an OpenAI key. When a shop hits the cap, Serenity pauses until the
   1st. Set a hard limit in OpenAI as a backstop for the whole account.
+  Serenity runs the shop. She does not do cold outreach.
+- **Nova.** Separate operator console at `/nova`. She finds shops, drafts
+  outreach, and learns from replies. Shop owners never see her. Set
+  `NOVA_OPERATOR_EMAIL` to your login. Do not put Nova in the shop sidebar.
 
 Without an online processor, payments are recorded by hand as card, bank transfer, cash,
 check, Zelle, or Venmo.
