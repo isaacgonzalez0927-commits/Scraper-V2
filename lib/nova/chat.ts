@@ -10,6 +10,15 @@
  * organization, because Sere is multi-tenant and RideBy is not.
  */
 
+import {
+  assertShopCredit,
+  estimatedUsage,
+  OpenAIBudgetError,
+  recordShopUsage,
+  type OpenAIUsage,
+} from "../openai-budget";
+import { looksLikeOpenAIKey } from "../openai";
+import { SERENITY_NAME } from "../serenity";
 import { novaClockBlock } from "./clock";
 import {
   loadNovaMemories,
@@ -18,7 +27,6 @@ import {
   rememberNova,
   saveNovaMessage,
 } from "./memory";
-import { SERENITY_NAME } from "../serenity";
 import { NOVA_TOOLS, runNovaTool, tradeWords, type ToolContext } from "./tools";
 
 const API = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
@@ -40,7 +48,7 @@ export class NovaError extends Error {
 
 export function novaKey(): string | null {
   const key = (process.env.NOVA_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "").trim();
-  return key.startsWith("sk-") ? key : null;
+  return looksLikeOpenAIKey(key) ? key : null;
 }
 
 type Words = Awaited<ReturnType<typeof tradeWords>>;
@@ -121,7 +129,7 @@ async function streamRound(
   apiKey: string,
   messages: ApiMessage[],
   onDelta?: (delta: string) => void,
-): Promise<{ content: string; toolCalls: ToolCall[] }> {
+): Promise<{ content: string; toolCalls: ToolCall[]; usage: OpenAIUsage }> {
   let response: Response;
   try {
     response = await fetch(`${API}/chat/completions`, {
@@ -134,6 +142,7 @@ async function streamRound(
         tools: NOVA_TOOLS,
         tool_choice: "auto",
         stream: true,
+        stream_options: { include_usage: true },
       }),
       signal: AbortSignal.timeout(60_000),
     });
@@ -151,6 +160,7 @@ async function streamRound(
   let content = "";
   let sawTool = false;
   let buffer = "";
+  let usage: OpenAIUsage = { promptTokens: 0, completionTokens: 0 };
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -174,11 +184,18 @@ async function streamRound(
             }>;
           };
         }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
       try {
         chunk = JSON.parse(data);
       } catch {
         continue;
+      }
+      if (chunk.usage) {
+        usage = {
+          promptTokens: Math.max(0, Math.trunc(chunk.usage.prompt_tokens || 0)),
+          completionTokens: Math.max(0, Math.trunc(chunk.usage.completion_tokens || 0)),
+        };
       }
       const delta = chunk.choices?.[0]?.delta;
       if (!delta) continue;
@@ -204,7 +221,10 @@ async function streamRound(
     .sort(([a], [b]) => a - b)
     .map(([, call]) => call)
     .filter((call) => call.id && call.name);
-  return { content: content.trim(), toolCalls };
+  if (!usage.promptTokens && !usage.completionTokens) {
+    usage = estimatedUsage("serenity");
+  }
+  return { content: content.trim(), toolCalls, usage };
 }
 
 export async function runNova(
@@ -216,6 +236,12 @@ export async function runNova(
   if (!apiKey) throw new NovaError(`${SERENITY_NAME} needs OPENAI_API_KEY on the server.`);
   const trimmed = userMessage.trim();
   if (!trimmed) throw new NovaError("Empty message.");
+  try {
+    await assertShopCredit(ctx.organizationId, ctx.now);
+  } catch (error) {
+    if (error instanceof OpenAIBudgetError) throw new NovaError(error.message);
+    throw error;
+  }
 
   // The demo is a shared shop, so its chat is not persisted into anyone's
   // history and never teaches Nova anything.
@@ -256,7 +282,22 @@ export async function runNova(
   let reply = "";
 
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
-    const { content, toolCalls } = await streamRound(apiKey, messages, opts.onDelta);
+    if (round > 0) {
+      try {
+        await assertShopCredit(ctx.organizationId, ctx.now);
+      } catch (error) {
+        if (error instanceof OpenAIBudgetError) throw new NovaError(error.message);
+        throw error;
+      }
+    }
+    const { content, toolCalls, usage } = await streamRound(apiKey, messages, opts.onDelta);
+    await recordShopUsage(ctx.organizationId, {
+      source: "serenity",
+      model: NOVA_MODEL,
+      promptTokens: usage.promptTokens,
+      completionTokens: usage.completionTokens,
+      at: ctx.now,
+    });
     if (!toolCalls.length) {
       reply = content;
       break;

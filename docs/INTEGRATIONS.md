@@ -253,13 +253,16 @@ fallback, so money cannot land in the wrong account.
 | `RESEND_API_KEY` | Resend API key |
 | `SERE_EMAIL_FROM` | From address for outgoing email |
 | `SERE_EMAIL_FROM_NAME` | From name for outgoing email |
-| `OPENAI_API_KEY` | Turns on GPT for the Sere assistant on every shop |
+| `OPENAI_API_KEY` | Operator key for Serenity and the star assistant. Shops never paste a key |
 | `OPENAI_MODEL` | Optional. Defaults to `gpt-4o-mini` |
+| `OPENAI_SHOP_BUDGET_DOLLARS` | Optional. Per-shop monthly credit. Defaults to `3` |
 
-The Integrations screen labels these as coming from the deployment environment and does
-not let you disconnect them from inside the app. For OpenAI, set a monthly budget in
-[Usage limits](https://platform.openai.com/settings/organization/limits). $5 is enough
-for gpt-4o-mini on a shop this size.
+The Integrations screen labels Stripe and email fallbacks as coming from the
+deployment environment and does not let you disconnect them from inside the app.
+Serenity is included: each shop gets $3.00 of model use per month on the operator
+key. Set a hard monthly limit in
+[Usage limits](https://platform.openai.com/settings/organization/limits) as a
+backstop for the whole OpenAI account.
 
 ---
 

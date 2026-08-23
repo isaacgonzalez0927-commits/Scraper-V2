@@ -202,12 +202,13 @@ export function Shell({
           {modeNote ? (
             <a className={`mode-banner mode-banner-${modeNote.tone}`} href={modeNote.href}>
               <strong>{modeNote.title}</strong>
-              <span>{modeNote.body}</span>
+              {modeNote.body ? <span>{modeNote.body}</span> : null}
             </a>
           ) : null}
+          {title || sub || actions || frozen ? (
           <div className="page-head">
             <div>
-              <h1 className="page-title">{title}</h1>
+              {title ? <h1 className="page-title">{title}</h1> : null}
               {sub}
             </div>
             {frozen ? (
@@ -220,6 +221,7 @@ export function Shell({
               <div className="page-actions">{actions}</div>
             ) : null}
           </div>
+          ) : null}
           {children}
         </main>
       </div>

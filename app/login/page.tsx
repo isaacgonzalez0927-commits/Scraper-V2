@@ -3,6 +3,7 @@ import { loginAction } from "../actions";
 import { AuthShell } from "@/components/AuthShell";
 import { Banner } from "@/components/ui";
 import { boot } from "@/lib/boot";
+import { EPHEMERAL_DB_MESSAGE, isDurableDatabase } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +20,7 @@ export default async function LoginPage({
     await boot();
   } catch (error) {
     console.error(error);
-    bootError =
-      "Sere could not open a database on this host. On Vercel, set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN, then redeploy.";
+    bootError = EPHEMERAL_DB_MESSAGE;
   }
   return (
     <AuthShell
@@ -33,7 +33,11 @@ export default async function LoginPage({
         </>
       }
     >
-      <Banner error={bootError || q.error} ok={q.ok} />
+      <Banner
+        error={bootError || q.error}
+        ok={q.ok}
+        warn={!bootError && !isDurableDatabase() ? EPHEMERAL_DB_MESSAGE : ""}
+      />
       <form action={loginAction} className="stack">
         <input type="hidden" name="next" value={q.next || "/overview"} />
         <label>

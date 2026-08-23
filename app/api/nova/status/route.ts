@@ -5,6 +5,7 @@
 
 import { currentContext } from "@/lib/auth";
 import { boot } from "@/lib/boot";
+import { formatUsdFromMicros, loadShopCredit } from "@/lib/openai-budget";
 import { novaKey, NOVA_MODEL } from "@/lib/nova/chat";
 import { getNovaClock } from "@/lib/nova/clock";
 import { dossierHeadline, loadDossier } from "@/lib/nova/dossier";
@@ -23,14 +24,21 @@ export async function GET(request: Request) {
   const org = await ensureTrialClock(ctx.org, isDemo);
   const access = shopAccess(org, isDemo);
   const dossier = await loadDossier(org.id, isDemo);
+  const credit = await loadShopCredit(org.id);
 
   return Response.json({
     shop: dossier.shop,
     trade: dossier.trade,
     headline: dossierHeadline(dossier),
     clock: getNovaClock(),
-    online: Boolean(novaKey()),
+    online: Boolean(novaKey()) && !credit.exhausted,
     model: NOVA_MODEL,
+    credit: {
+      used: formatUsdFromMicros(credit.spentMicros),
+      budget: formatUsdFromMicros(credit.budgetMicros),
+      remaining: formatUsdFromMicros(credit.remainingMicros),
+      exhausted: credit.exhausted,
+    },
     writable: !access.frozen && !isDemo,
     plan: access.status,
     money: dossier.money,

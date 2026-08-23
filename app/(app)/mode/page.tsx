@@ -1,8 +1,14 @@
 import { chooseShopModeAction } from "@/app/actions";
-import { Banner, Card } from "@/components/ui";
+import {
+  CONNECT_QUICKBOOKS_HREF,
+  CONNECT_SQUARE_HREF,
+  CONNECT_STRIPE_HREF,
+  CreateSereKeyButton,
+} from "@/components/ConnectStripe";
+import { Banner } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { loadApp } from "@/lib/page";
-import { DESK_MODE_NAME, parseShopMode, shopModeLabel } from "@/lib/shop-mode";
+import { parseShopMode } from "@/lib/shop-mode";
 
 export default async function ModePage({
   searchParams,
@@ -12,77 +18,50 @@ export default async function ModePage({
   const { shell } = await loadApp();
   const q = await searchParams;
   const mode = parseShopMode(shell.shopMode);
-  const left = mode !== "sandbox";
+  const inSandbox = mode === "sandbox";
 
   return (
-    <Shell
-      {...shell}
-      path="/mode"
-      title="How the shop runs"
-      sub={
-        <p className="page-sub">
-          You are in {shopModeLabel(mode)}. Sandbox is practice, like Stripe test
-          mode. At the end of setup, pick Live or {DESK_MODE_NAME}.
-        </p>
-      }
-    >
+    <Shell {...shell} path="/mode" title="">
       <Banner error={q.error} ok={q.ok} />
 
-      {left ? (
-        <Banner>
-          <div>
-            <strong>This shop already left Sandbox.</strong>
-            <p className="mt-1">
-              You can still switch. Live wants Stripe or Square. {DESK_MODE_NAME}{" "}
-              stays live with no processor.
-            </p>
-          </div>
-        </Banner>
-      ) : (
-        <Banner>
-          <div>
-            <strong>Sandbox is for practice.</strong>
-            <p className="mt-1">
-              Use test keys only. The customers and invoices you already added
-              stay in this shop when you leave.
-            </p>
-          </div>
-        </Banner>
-      )}
+      <section className="mode-live">
+        <h1 className="mode-live-title">
+          Connect a payment platform to continue in Live
+        </h1>
+        <p className="mode-live-sub">
+          {inSandbox
+            ? "Create a Sere Stripe key with the permissions already filled. Then paste it in Sere."
+            : "This shop already left Sandbox. You can still connect a processor."}
+        </p>
 
-      <div className="grid mode-grid">
-        <Card
-          title="Go live"
-          note="Connect Stripe or Square. Overview then shows cash that actually landed."
-        >
-          <p className="help">
-            Restricted Stripe keys or a Square token. Never paste a full{" "}
-            <code>sk_</code> key.
-          </p>
-          <form action={chooseShopModeAction} className="mt-2">
-            <input type="hidden" name="mode" value="live" />
-            <button className="btn" type="submit">
-              Go live and connect
-            </button>
-          </form>
-        </Card>
+        <div className="mode-live-primary">
+          <CreateSereKeyButton live className="btn btn-connect btn-stripe btn-connect-lg" />
+          <a className="mode-live-next" href={CONNECT_STRIPE_HREF}>
+            Then paste the key in Sere
+          </a>
+        </div>
 
-        <Card
-          title={DESK_MODE_NAME}
-          note="Live shop. No integrations. Less useful until you connect."
-        >
-          <p className="help">
-            Real customers and real invoices. You type payments in. Overview
-            will not show money that actually landed in Stripe or Square.
-          </p>
-          <form action={chooseShopModeAction} className="mt-2">
+        <div className="mode-live-alts" aria-label="Other connections">
+          <a className="btn btn-connect btn-stripe btn-sm" href={CONNECT_STRIPE_HREF}>
+            Stripe
+          </a>
+          <a className="btn btn-connect btn-square btn-sm" href={CONNECT_SQUARE_HREF}>
+            Square
+          </a>
+          <a className="btn btn-connect btn-quickbooks btn-sm" href={CONNECT_QUICKBOOKS_HREF}>
+            QuickBooks
+          </a>
+        </div>
+
+        {inSandbox ? (
+          <form action={chooseShopModeAction} className="mode-live-skip">
             <input type="hidden" name="mode" value="desk" />
-            <button className="btn btn-secondary" type="submit">
-              Continue in {DESK_MODE_NAME}
+            <button className="btn btn-ghost btn-sm" type="submit">
+              Continue without a processor
             </button>
           </form>
-        </Card>
-      </div>
+        ) : null}
+      </section>
     </Shell>
   );
 }

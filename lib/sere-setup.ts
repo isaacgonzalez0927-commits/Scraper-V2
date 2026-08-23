@@ -162,8 +162,8 @@ export function buildSetupGuide(state: SetupSnapshot, voice: SereVoice): SetupGu
     },
     {
       id: "mode",
-      title: "Leave Sandbox",
-      body: `Go live with Stripe or Square, or continue in ${DESK_MODE_NAME} without a processor.`,
+      title: "Go live",
+      body: "Connect a payment platform to continue in Live.",
       href: "/mode",
       state: modeReady ? "done" : "open",
       requirements: [

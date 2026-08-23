@@ -13,14 +13,16 @@ import {
   stripeDashboardCustomerUrl,
 } from "../lib/stripe-customers";
 
-test("connect link opens Stripe sandbox Developers, not a named create-key wizard", () => {
+test("create-key URL names Sere and preselects permissions", () => {
   const sandbox = stripeCreateRestrictedKeyUrl();
   const live = stripeCreateRestrictedKeyUrl({ test: false });
-  assert.equal(sandbox, "https://dashboard.stripe.com/test/apikeys");
-  assert.equal(live, "https://dashboard.stripe.com/apikeys");
-  assert.equal(sandbox.includes("create"), false);
-  assert.equal(sandbox.includes("name="), false);
-  assert.equal(sandbox.includes("permissions"), false);
+  assert.equal(sandbox.startsWith("https://dashboard.stripe.com/test/apikeys/create?"), true);
+  assert.equal(live.startsWith("https://dashboard.stripe.com/apikeys/create?"), true);
+  assert.match(sandbox, /name=Sere/);
+  assert.match(sandbox, /permissions/);
+  assert.match(sandbox, /rak_customer_write/);
+  assert.match(sandbox, /rak_balance_read/);
+  assert.equal(live.includes("/test/"), false);
   assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_customer_write"));
   assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_connected_account_read"));
 });

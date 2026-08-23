@@ -83,6 +83,18 @@ test("leaving Sandbox stays available even when the book is empty", () => {
   const mode = guide.milestones.find((item) => item.id === "mode");
   assert.equal(mode?.state, "open");
   assert.equal(mode?.href, "/mode");
+  assert.equal(mode?.title, "Go live");
+  assert.match(mode?.body || "", /payment platform/i);
+});
+
+test("the live screen asks for a payment platform and opens the Sere key", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const page = await readFile(new URL("../app/(app)/mode/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /Connect a payment platform to continue in Live/);
+  assert.match(page, /CreateSereKeyButton/);
+  assert.match(page, /CONNECT_SQUARE_HREF/);
+  assert.match(page, /CONNECT_QUICKBOOKS_HREF/);
+  assert.equal(page.includes("Go live and connect"), false);
 });
 
 test("instant field checks catch empty names, bad emails, and secret keys", () => {

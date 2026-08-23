@@ -1072,7 +1072,7 @@ a.copy-value:hover { color: var(--accent); border-color: var(--accent-line); }
   align-items: baseline;
   gap: 6px 12px;
   margin: 0 0 16px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
@@ -1086,6 +1086,7 @@ a.copy-value:hover { color: var(--accent); border-color: var(--accent-line); }
   border-color: var(--warn-line);
   background: var(--warn-soft);
 }
+.mode-banner-sandbox strong { font-size: 13px; font-weight: 600; }
 .mode-banner-desk {
   border-color: var(--line);
   background: var(--surface-2);
@@ -1982,6 +1983,67 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 .mode-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.mode-live {
+  max-width: 440px;
+  margin: 28px auto 0;
+  text-align: center;
+}
+.mode-live-title {
+  margin: 0 0 10px;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+.mode-live-sub {
+  margin: 0 0 24px;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.mode-live-primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.mode-live-primary .btn {
+  width: 100%;
+  max-width: 320px;
+  min-height: 44px;
+  font-size: 15px;
+  border-radius: 10px;
+}
+.mode-live-next {
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.mode-live-next:hover { text-decoration: underline; }
+.mode-live-alts {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+}
+.mode-live-alts .btn {
+  min-width: 96px;
+}
+.mode-live-skip {
+  margin-top: 28px;
+}
+.btn-quickbooks {
+  background: #2ca01c;
+  border-color: #2ca01c;
+  box-shadow: 0 1px 2px rgba(44, 160, 28, 0.28);
+}
+.btn-quickbooks:hover {
+  background: #248a18;
+  border-color: #248a18;
+  color: #fff;
+}
+a.btn-quickbooks, a.btn-quickbooks:hover { color: #fff; }
 
 .legal {
   min-height: 100vh;
@@ -2605,6 +2667,8 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   .landing-nav .brand { margin-left: 4px; }
   .landing-nav .brand-lockup { height: 22px; }
   .mode-grid { grid-template-columns: minmax(0, 1fr); }
+  .mode-live { margin-top: 12px; }
+  .mode-live-title { font-size: 22px; }
   .legal-nav, .legal-main { padding-left: 16px; padding-right: 16px; }
   .landing-nav nav { font-size: 16px; }
 

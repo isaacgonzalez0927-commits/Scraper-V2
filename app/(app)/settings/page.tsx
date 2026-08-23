@@ -1,13 +1,11 @@
 import { eq } from "drizzle-orm";
 import {
   connectEmailAction,
-  connectOpenAIAction,
   connectPaypalAction,
   connectQuickbooksAction,
   connectSquareAction,
   connectStripeAction,
   disconnectEmailAction,
-  disconnectOpenAIAction,
   disconnectPaypalAction,
   disconnectQuickbooksAction,
   disconnectSquareAction,
@@ -19,14 +17,16 @@ import {
   startStripeConnectAction,
 } from "@/app/actions";
 import { ConnectSereButton } from "@/components/ConnectSere";
-import { OpenAIKeyLink, OpenAILimitsLink, SquareKeyLink, SquareKeyTutorial } from "@/components/ConnectStripe";
+import { SquareKeyLink, SquareKeyTutorial } from "@/components/ConnectStripe";
 import { HashScroll } from "@/components/HashScroll";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { ThemeChooser } from "@/components/ThemeToggle";
 import { Banner, Card } from "@/components/ui";
 import { Shell } from "@/components/Shell";
-import { db } from "@/lib/db";
+import { dataStoreSummary, db } from "@/lib/db";
 import { integrationStatus } from "@/lib/integrations";
+import { openaiFromEnv } from "@/lib/openai";
+import { formatUsdFromMicros, loadShopCredit } from "@/lib/openai-budget";
 import { prettyDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
@@ -52,15 +52,18 @@ export default async function SettingsPage({
   const { org, user, shell, voice, access } = await loadApp();
   const q = await searchParams;
   const tab = TABS.some((t) => t.key === q.tab) ? (q.tab as string) : "company";
-  const [services, integrations, base] = await Promise.all([
+  const [services, integrations, base, credit] = await Promise.all([
     db().select().from(serviceItems).where(eq(serviceItems.organizationId, org.id)),
     integrationStatus(org.id),
     absoluteBaseUrl(),
+    loadShopCredit(org.id),
   ]);
   const webhookUrl = `${base}/api/webhooks/stripe`;
   const oneClick = stripeConnectEnabled();
   const demoShop = shell.isDemo;
   const shopMode = parseShopMode(org.operatingMode);
+  const platformOpenAI = openaiFromEnv();
+  const store = dataStoreSummary();
 
   return (
     <Shell
@@ -85,8 +88,7 @@ export default async function SettingsPage({
         integrations.email.unreadable ||
         integrations.square.unreadable ||
         integrations.paypal.unreadable ||
-        integrations.quickbooks.unreadable ||
-        integrations.openai.unreadable) ? (
+        integrations.quickbooks.unreadable) ? (
         <Banner warn="Saved credentials could not be read. This happens when SERE_SECRET_KEY changes. Paste the keys again to reconnect." />
       ) : null}
 
@@ -179,7 +181,7 @@ export default async function SettingsPage({
             title="How the shop runs"
             note={
               shopMode === "sandbox"
-                ? "Sandbox is practice. Test keys only. The book you build stays when you leave."
+                ? "Sandbox mode. Changes and payments are not live."
                 : shopMode === "desk"
                   ? `${DESK_MODE_NAME} is live with no Stripe or Square. Overview will not show cash that actually landed. Less useful until you connect.`
                   : "Live. Connect Stripe or Square so Overview can show cash that actually landed."
@@ -190,8 +192,8 @@ export default async function SettingsPage({
               <p className="muted">Harbor Air is the demo. It stays Live.</p>
             ) : shopMode === "sandbox" ? (
               <p className="help">
-                Finish the corner list, then pick Live or {DESK_MODE_NAME} on{" "}
-                <a href="/mode">How the shop runs</a>.
+                Finish the corner list, then connect a payment platform on{" "}
+                <a href="/mode">Go live</a>.
               </p>
             ) : (
               <div className="row mt-2">
@@ -505,136 +507,66 @@ export default async function SettingsPage({
           <Card
             id="openai"
             title="Serenity"
-            note="Serenity answers in English about this shop. Completing or moving a job still goes through Sere. gpt-4o-mini plus a $5 monthly budget in OpenAI is enough."
+            note="Ask about the board and the books. Completing or moving a job still goes through Sere."
             action={
               <span
                 className={`badge badge-${
-                  integrations.openai.connected ? "paid" : integrations.openai.unreadable ? "partial" : "draft"
+                  platformOpenAI
+                    ? credit.exhausted
+                      ? "partial"
+                      : "paid"
+                    : "draft"
                 }`}
               >
-                {integrations.openai.connected
-                  ? "Connected"
-                  : integrations.openai.unreadable
-                    ? "Needs reconnecting"
-                    : "Not connected"}
+                {!platformOpenAI
+                  ? "Not on this host"
+                  : credit.exhausted
+                    ? "Credit used"
+                    : "Included"}
               </span>
             }
           >
-            {integrations.openai.connected ? (
+            {platformOpenAI ? (
               <>
                 <div className="kv">
                   <div className="kv-row">
-                    <span className="kv-key">Account</span>
-                    <span className="kv-value">{integrations.openai.label}</span>
-                  </div>
-                  {integrations.openai.updatedAt ? (
-                    <div className="kv-row">
-                      <span className="kv-key">Connected on</span>
-                      <span className="kv-value">{prettyDate(integrations.openai.updatedAt)}</span>
-                    </div>
-                  ) : null}
-                  <div className="kv-row">
-                    <span className="kv-key">Connected with</span>
+                    <span className="kv-key">This month</span>
                     <span className="kv-value">
-                      {integrations.openai.fromEnv
-                        ? "Deployment environment variable"
-                        : "API key"}
+                      {formatUsdFromMicros(credit.spentMicros)} of{" "}
+                      {formatUsdFromMicros(credit.budgetMicros)}
                     </span>
+                  </div>
+                  <div className="kv-row">
+                    <span className="kv-key">Left</span>
+                    <span className="kv-value">{formatUsdFromMicros(credit.remainingMicros)}</span>
+                  </div>
+                  <div className="kv-row">
+                    <span className="kv-key">Key</span>
+                    <span className="kv-value">Sere&apos;s OpenAI account</span>
                   </div>
                 </div>
                 <Banner>
                   <div>
                     <strong>
-                      {integrations.openai.fromEnv
-                        ? "Serenity is using the deployment OpenAI key."
-                        : "Serenity can use GPT on this shop."}
+                      {credit.exhausted
+                        ? "This shop used its Serenity credit for the month."
+                        : "You do not paste an OpenAI key."}
                     </strong>
                     <p className="mt-1">
-                      {integrations.openai.fromEnv
-                        ? "All shops share this key, including the demo. Set a monthly budget in OpenAI so a busy week cannot run past it. $5 is enough for gpt-4o-mini."
-                        : "Questions about the board go to this shop's OpenAI account. The model cannot write jobs or invoices on its own."}{" "}
-                      <OpenAILimitsLink />.
+                      {credit.exhausted
+                        ? "The star and Serenity pause until the 1st. Rules-based answers still work."
+                        : "Every shop gets $3.00 of model use each month on Sere's key. The model cannot write jobs or invoices on its own."}
                     </p>
                   </div>
                 </Banner>
-                {integrations.openai.connected && !integrations.openai.fromEnv && !demoShop ? (
-                  <form action={disconnectOpenAIAction} className="mt-2">
-                    <button className="btn btn-ghost btn-sm" type="submit">Disconnect OpenAI</button>
-                  </form>
-                ) : null}
               </>
-            ) : demoShop ? (
-              <p className="muted">
-                Create your shop to paste a shop key. A deployment{" "}
-                <code>OPENAI_API_KEY</code> also turns GPT on for every shop,
-                including this demo.
-              </p>
             ) : (
-              <>
-                <p className="help">
-                  Put <code>OPENAI_API_KEY</code> on the server, or paste a key
-                  below. Use gpt-4o-mini and <OpenAILimitsLink /> — $5 a month
-                  is plenty. Starts with <code>sk-</code> or <code>sk-proj-</code>.{" "}
-                  <OpenAIKeyLink />.
-                </p>
-                <form action={connectOpenAIAction} className="form-grid mt-2">
-                  <div className="field full">
-                    <label>API key</label>
-                    <input
-                      name="openai_api_key"
-                      type="password"
-                      autoComplete="off"
-                      required
-                      placeholder="sk-... or sk-proj-..."
-                      spellCheck={false}
-                    />
-                    <p className="help">
-                      Stored encrypted. Sere never shows it again. Used only for
-                      Serenity on this shop.
-                    </p>
-                  </div>
-                  <details className="disclosure">
-                    <summary>Optional: model</summary>
-                    <div className="field full mt-2">
-                      <label>Model</label>
-                      <input
-                        name="openai_model"
-                        defaultValue="gpt-4o-mini"
-                        placeholder="gpt-4o-mini"
-                        autoComplete="off"
-                      />
-                      <p className="help">Leave gpt-4o-mini if you are capping spend at a few dollars a month.</p>
-                    </div>
-                  </details>
-                  <div className="form-actions">
-                    <button className="btn btn-connect btn-openai" type="submit">
-                      Connect OpenAI
-                    </button>
-                  </div>
-                </form>
-              </>
+              <p className="help">
+                Serenity is included with Sere. Shops never paste a key. It is
+                not on this host until the operator sets{" "}
+                <code>OPENAI_API_KEY</code>.
+              </p>
             )}
-            {!demoShop && integrations.openai.fromEnv ? (
-              <details className="disclosure">
-                <summary>Or paste a shop key to bill this shop separately</summary>
-                <form action={connectOpenAIAction} className="form-grid mt-2">
-                  <div className="field full">
-                    <label>API key</label>
-                    <input
-                      name="openai_api_key"
-                      type="password"
-                      autoComplete="off"
-                      required
-                      placeholder="sk-... or sk-proj-..."
-                      spellCheck={false}
-                    />
-                  </div>
-                  <div className="form-actions">
-                    <button className="btn" type="submit">Use this shop&apos;s key</button>
-                  </div>
-                </form>
-              </details>
-            ) : null}
           </Card>
 
           <Card
@@ -910,6 +842,29 @@ export default async function SettingsPage({
               Square cash. Crew is seats plus the assistant; texts and the tech
               phone are next. Card fees stay with your processor.
             </p>
+          </Card>
+          <Card
+            title="Your data"
+            note="Email and password sign you in. The shop book lives in Sere, not in Stripe and not in Supabase."
+          >
+            <div className="kv">
+              <div className="kv-row">
+                <span className="kv-key">Database</span>
+                <span className="kv-value">{store.label}</span>
+              </div>
+              <div className="kv-row">
+                <span className="kv-key">Sign in</span>
+                <span className="kv-value">Email and password on this shop</span>
+              </div>
+            </div>
+            {store.durable ? (
+              <p className="help mt-2">
+                Create a shop at signup. That email is the login. Customers,
+                jobs, and invoices stay with this shop.
+              </p>
+            ) : (
+              <Banner warn="This host is using a temporary file database. Add TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in Vercel, then redeploy, or accounts vanish when the server goes cold. You do not need Supabase." />
+            )}
           </Card>
           <Card title="Appearance">
             <p className="help">

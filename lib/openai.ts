@@ -1,15 +1,17 @@
 /**
  * OpenAI over plain HTTPS. No SDK.
  *
- * A deployment can set OPENAI_API_KEY (recommended: gpt-4o-mini plus a $5
- * monthly budget in OpenAI). A shop can still paste its own key to override.
+ * Shops never paste a key. The operator sets OPENAI_API_KEY (or
+ * NOVA_OPENAI_API_KEY). Each shop is capped at $3/month in lib/openai-budget.ts.
  */
+
+import type { OpenAIUsage } from "./openai-budget";
 
 const API = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
 
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 
-/** Short JSON replies. gpt-4o-mini at this size stays well under a $5 month. */
+/** Short JSON replies. gpt-4o-mini at this size stays well under a $3 month. */
 export const OPENAI_MAX_TOKENS = 400;
 
 export class OpenAIError extends Error {
@@ -36,7 +38,11 @@ export type OpenAICredentials = {
 };
 
 export function openaiFromEnv(): OpenAICredentials | null {
-  const apiKey = (process.env.OPENAI_API_KEY || "").trim();
+  const apiKey = (
+    process.env.OPENAI_API_KEY ||
+    process.env.NOVA_OPENAI_API_KEY ||
+    ""
+  ).trim();
   if (!looksLikeOpenAIKey(apiKey)) return null;
   const model = (process.env.OPENAI_MODEL || "").trim() || DEFAULT_OPENAI_MODEL;
   return { apiKey, model };
@@ -49,6 +55,11 @@ export type OpenAIChatJson = {
   query?: string;
   date?: string;
   reply?: string;
+};
+
+export type OpenAICompletion = {
+  plan: OpenAIChatJson;
+  usage: OpenAIUsage;
 };
 
 async function openaiFetch(apiKey: string, path: string, init: RequestInit = {}): Promise<Response> {
@@ -75,17 +86,13 @@ function errorMessage(payload: unknown, fallback: string): string {
   return err?.error?.message || fallback;
 }
 
-/** Confirms the key can list models before Sere stores it. */
-export async function validateOpenAIKey(apiKey: string): Promise<string> {
-  const response = await openaiFetch(apiKey, "/models");
-  const payload = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
-  if (response.status === 401) {
-    throw new OpenAIError("That OpenAI key was rejected.");
-  }
-  if (!response.ok) {
-    throw new OpenAIError(errorMessage(payload, "OpenAI did not accept that key."), response.status);
-  }
-  return `OpenAI · ${DEFAULT_OPENAI_MODEL}`;
+function readUsage(payload: {
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+}): OpenAIUsage {
+  return {
+    promptTokens: Math.max(0, Math.trunc(payload.usage?.prompt_tokens || 0)),
+    completionTokens: Math.max(0, Math.trunc(payload.usage?.completion_tokens || 0)),
+  };
 }
 
 /**
@@ -97,7 +104,7 @@ export async function completeShopJson(
   model: string,
   system: string,
   user: string,
-): Promise<OpenAIChatJson> {
+): Promise<OpenAICompletion> {
   const response = await openaiFetch(apiKey, "/chat/completions", {
     method: "POST",
     body: JSON.stringify({
@@ -114,14 +121,17 @@ export async function completeShopJson(
   const payload = (await response.json().catch(() => ({}))) as {
     error?: { message?: string };
     choices?: { message?: { content?: string } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
   if (!response.ok) {
     throw new OpenAIError(errorMessage(payload, "OpenAI could not answer."), response.status);
   }
   const content = payload.choices?.[0]?.message?.content || "";
+  let plan: OpenAIChatJson;
   try {
-    return JSON.parse(content) as OpenAIChatJson;
+    plan = JSON.parse(content) as OpenAIChatJson;
   } catch {
     throw new OpenAIError("OpenAI returned something that was not JSON.");
   }
+  return { plan, usage: readUsage(payload) };
 }

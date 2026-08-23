@@ -47,8 +47,8 @@ export function shopModeBanner(mode: ShopMode): ModeBanner | null {
   if (mode === "sandbox") {
     return {
       tone: "sandbox",
-      title: "Sandbox",
-      body: "Practice, like Stripe test mode. Use test keys only. The book you build stays when you leave Sandbox.",
+      title: "Sandbox mode. Changes and payments are not live.",
+      body: "",
       href: "/mode",
     };
   }

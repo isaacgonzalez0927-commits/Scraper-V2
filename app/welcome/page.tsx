@@ -40,8 +40,8 @@ export default async function WelcomePage() {
       </form>
       <p className="auth-fine">
         Next the book opens in Sandbox. A corner list shows what is still open.
-        At the end you pick Live or Desk mode. You can change the trade later
-        in Settings.
+        At the end you connect a payment platform to go live. You can change
+        the trade later in Settings.
       </p>
     </AuthShell>
   );
