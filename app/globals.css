@@ -2916,6 +2916,37 @@ a.btn-quickbooks, a.btn-quickbooks:hover { color: #fff; }
 
 /* Nova console */
 
+.nova-gate {
+  max-width: 32rem;
+  margin: 12vh auto 0;
+  padding: 0 20px 48px;
+}
+.nova-gate-kicker,
+.nova-desk-kicker {
+  margin: 0 0 8px;
+  color: var(--ink-4);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.nova-gate h1 {
+  margin: 0 0 12px;
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+.nova-gate p {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.nova-desk {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
 .nova {
   display: flex;
   flex-direction: column;

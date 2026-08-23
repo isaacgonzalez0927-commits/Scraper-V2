@@ -1,14 +1,13 @@
 /**
- * Nova's hands.
+ * Hands for two different people.
  *
- * Ported from RideBy's Nova, where the tools are outreach hands (find_leads,
- * work, send_today). Sere's Nova runs a shop instead, so the hands are the
- * shop: read the board, read the money, move a job, close a job out.
+ * Serenity runs a shop: board, money, move a job, close a job out.
+ * Nova runs outreach: find leads, work the pipeline, record outcomes.
+ * They do not share tools except remember.
  *
  * Two rules carried over from RideBy, both load-bearing:
- * - Nova never invents a number. Every figure comes from a tool.
- * - A write is a real database write through Sere's own logic, so a job Nova
- *   moves is indistinguishable from one the owner moved by hand.
+ * - Never invent a number. Every figure comes from a tool.
+ * - A write is a real database write through Sere's own logic.
  */
 
 import { and, eq, ne } from "drizzle-orm";
@@ -25,14 +24,17 @@ import { enqueueJob } from "../nexus/jobs";
 import { TRADE_QUERIES } from "../nexus/lead-filter";
 import { isSendEnabled } from "../nexus/policy";
 import { runTick } from "../nexus/runner";
-import { loadOutreachState, recordDraftOutcome } from "../nexus/state";
+import { loadOutreachState, outreachHeadline, recordDraftOutcome } from "../nexus/state";
+
+export type ChatPersona = "serenity" | "nova";
 
 export type ToolContext = {
   organizationId: number;
   isDemo: boolean;
-  /** False when the trial has ended: Nova may look but not touch. */
+  /** False when the trial has ended: Serenity may look but not touch. */
   writable: boolean;
   now: Date;
+  persona?: ChatPersona;
 };
 
 export type NovaToolDef = {
@@ -44,7 +46,7 @@ export type NovaToolDef = {
   };
 };
 
-export const NOVA_TOOLS: NovaToolDef[] = [
+const SHOP_TOOLS: NovaToolDef[] = [
   {
     type: "function",
     function: {
@@ -118,6 +120,28 @@ export const NOVA_TOOLS: NovaToolDef[] = [
       },
     },
   },
+];
+
+const REMEMBER_TOOL: NovaToolDef = {
+  type: "function",
+  function: {
+    name: "remember",
+    description:
+      "Save something durable: a lesson or a preference. Use a stable key so " +
+      "it updates instead of duplicating. Do not store passing chat as gospel.",
+    parameters: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["note", "lesson", "preference", "fact"] },
+        key: { type: "string", description: "Stable key, e.g. pricing.ac_replacement" },
+        content: { type: "string" },
+      },
+      required: ["kind", "content"],
+    },
+  },
+};
+
+const OUTREACH_TOOLS: NovaToolDef[] = [
   {
     type: "function",
     function: {
@@ -186,26 +210,17 @@ export const NOVA_TOOLS: NovaToolDef[] = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "remember",
-      description:
-        "Save something durable: a lesson about this shop, or a preference the " +
-        "owner stated. Use a stable key so it updates instead of duplicating. " +
-        "Do not store passing chat as gospel.",
-      parameters: {
-        type: "object",
-        properties: {
-          kind: { type: "string", enum: ["note", "lesson", "preference", "fact"] },
-          key: { type: "string", description: "Stable key, e.g. pricing.ac_replacement" },
-          content: { type: "string" },
-        },
-        required: ["kind", "content"],
-      },
-    },
-  },
 ];
+
+/** Shop owners talk to Serenity. These hands never touch the outreach pipeline. */
+export const SERENITY_TOOLS: NovaToolDef[] = [...SHOP_TOOLS, REMEMBER_TOOL];
+
+/** The operator talks to Nova. These hands never touch a shop's book. */
+export const NOVA_TOOLS: NovaToolDef[] = [...OUTREACH_TOOLS, REMEMBER_TOOL];
+
+export function toolNames(tools: NovaToolDef[]): string[] {
+  return tools.map((tool) => tool.function.name);
+}
 
 export async function runNovaTool(
   ctx: ToolContext,
@@ -217,6 +232,20 @@ export async function runNovaTool(
     args = argsJson ? (JSON.parse(argsJson) as Record<string, unknown>) : {};
   } catch {
     args = {};
+  }
+
+  const persona = ctx.persona || "serenity";
+  const shopNames = new Set(["shop", "status", "business", "payments", "find_job", "move_job", "complete_job"]);
+  const outreachNames = new Set(["outreach", "find_leads", "work", "outcome"]);
+  if (persona === "serenity" && outreachNames.has(name)) {
+    return JSON.stringify({
+      error: "Serenity does not run outreach. That is Nova, the operator's bot.",
+    });
+  }
+  if (persona === "nova" && shopNames.has(name)) {
+    return JSON.stringify({
+      error: "Nova does not run a shop book. That is Serenity.",
+    });
   }
 
   switch (name) {
@@ -242,8 +271,10 @@ export async function runNovaTool(
     case "complete_job":
       return JSON.stringify(await completeJob(ctx, Number(args.job_id)));
 
-    case "outreach":
-      return JSON.stringify(await loadOutreachState());
+    case "outreach": {
+      const state = await loadOutreachState();
+      return JSON.stringify({ ...state, headline: outreachHeadline(state) });
+    }
 
     case "find_leads": {
       const city = String(args.city || "").trim();

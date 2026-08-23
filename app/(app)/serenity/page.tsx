@@ -11,7 +11,7 @@ export default async function SerenityPage() {
   const firstName = user.name.trim().split(/\s+/)[0] || user.name;
   return (
     <Shell {...shell} path={SERENITY_PATH} title={SERENITY_NAME} sub={null}>
-      <NovaConsole ownerName={firstName} />
+      <NovaConsole kind="serenity" ownerName={firstName} />
     </Shell>
   );
 }

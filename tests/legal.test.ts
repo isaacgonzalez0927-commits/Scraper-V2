@@ -19,6 +19,7 @@ test("the Terms say what Sere is not, and do not force arbitration", () => {
   assert.match(text, /Florida/i);
   assert.match(text, /do not paste your own OpenAI key/i);
   assert.match(text, /\$3\.00 of model use/i);
+  assert.match(text, /does not do cold outreach/i);
   assert.equal(text.includes("—"), false);
 });
 

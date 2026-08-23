@@ -1,16 +1,13 @@
 /**
- * What Nova knows, without spending a model call. The console polls this so the
- * header numbers are live even when nobody is talking.
+ * Outreach numbers for the operator console. No shop book.
  */
 
 import { currentContext } from "@/lib/auth";
 import { boot } from "@/lib/boot";
-import { formatUsdFromMicros, loadShopCredit } from "@/lib/openai-budget";
 import { novaKey, NOVA_MODEL } from "@/lib/nova/chat";
 import { getNovaClock } from "@/lib/nova/clock";
-import { dossierHeadline, loadDossier } from "@/lib/nova/dossier";
-import { DEMO_EMAIL } from "@/lib/seed";
-import { ensureTrialClock, shopAccess } from "@/lib/trial";
+import { NOVA_FORBIDDEN, isNovaOperator } from "@/lib/nova/operator";
+import { loadOutreachState, outreachHeadline } from "@/lib/nexus/state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,37 +16,43 @@ export async function GET(request: Request) {
   await boot();
   const ctx = await currentContext(request);
   if (!ctx) return Response.json({ error: "Sign in first." }, { status: 401 });
+  if (!isNovaOperator(ctx.user.email)) {
+    return Response.json({ error: NOVA_FORBIDDEN }, { status: 403 });
+  }
 
-  const isDemo = ctx.user.email === DEMO_EMAIL;
-  const org = await ensureTrialClock(ctx.org, isDemo);
-  const access = shopAccess(org, isDemo);
-  const dossier = await loadDossier(org.id, isDemo);
-  const credit = await loadShopCredit(org.id);
+  const state = await loadOutreachState();
+  const sendNote = state.send.enabled
+    ? state.send.clearToSend
+      ? "Sending is armed."
+      : state.send.blocked[0] || "Sending is on but not clear to send."
+    : "Sending is off. Drafting and queueing only.";
 
   return Response.json({
-    shop: dossier.shop,
-    trade: dossier.trade,
-    headline: dossierHeadline(dossier),
+    kind: "nova",
+    shop: "Sere outreach",
+    trade: "outreach",
+    headline: outreachHeadline(state),
     clock: getNovaClock(),
-    online: Boolean(novaKey()) && !credit.exhausted,
+    online: Boolean(novaKey()),
     model: NOVA_MODEL,
-    credit: {
-      used: formatUsdFromMicros(credit.spentMicros),
-      budget: formatUsdFromMicros(credit.budgetMicros),
-      remaining: formatUsdFromMicros(credit.remainingMicros),
-      exhausted: credit.exhausted,
-    },
-    writable: !access.frozen && !isDemo,
-    plan: access.status,
-    money: dossier.money,
+    writable: true,
+    plan: "operator",
+    sendEnabled: state.send.enabled,
     counts: {
-      today: dossier.board.today.length,
-      tomorrow: dossier.board.tomorrow.length,
-      unscheduled: dossier.board.unscheduled.length,
-      finishedNotInvoiced: dossier.board.finishedNotInvoiced.length,
-      overdue: dossier.invoices.overdue.length,
-      drafts: dossier.invoices.drafts,
+      today: state.pipeline.total,
+      tomorrow: state.drafts.pendingReview,
+      unscheduled: state.queue.queued,
+      finishedNotInvoiced: 0,
+      overdue: 0,
+      drafts: state.drafts.pendingReview,
+      pipeline: state.pipeline.total,
+      sent: state.learning.sent,
+      replies: state.learning.replies,
     },
-    followUps: dossier.followUps.slice(0, 5),
+    followUps: [
+      sendNote,
+      state.learning.note,
+      ...state.send.problems.slice(0, 3),
+    ].filter(Boolean),
   });
 }

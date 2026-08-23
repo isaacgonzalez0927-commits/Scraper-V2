@@ -1,11 +1,13 @@
 /**
- * Nova's streaming chat. Operator outreach only. Shop owners get 403.
+ * Serenity's streaming chat. Shop owners only. No outreach tools.
  */
 
 import { currentContext } from "@/lib/auth";
 import { boot } from "@/lib/boot";
-import { NovaError, runNova } from "@/lib/nova/chat";
-import { NOVA_FORBIDDEN, NOVA_MEMORY_ORG, NOVA_NAME, isNovaOperator } from "@/lib/nova/operator";
+import { NovaError, runSerenity } from "@/lib/nova/chat";
+import { DEMO_EMAIL } from "@/lib/seed";
+import { SERENITY_NAME } from "@/lib/serenity";
+import { ensureTrialClock, shopAccess } from "@/lib/trial";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,9 +17,6 @@ export async function POST(request: Request) {
   await boot();
   const ctx = await currentContext(request);
   if (!ctx) return Response.json({ error: "Sign in first." }, { status: 401 });
-  if (!isNovaOperator(ctx.user.email)) {
-    return Response.json({ error: NOVA_FORBIDDEN }, { status: 403 });
-  }
 
   let message = "";
   try {
@@ -28,6 +27,10 @@ export async function POST(request: Request) {
   }
   if (!message) return Response.json({ error: "Say what you need." }, { status: 400 });
 
+  const isDemo = ctx.user.email === DEMO_EMAIL;
+  const org = await ensureTrialClock(ctx.org, isDemo);
+  const access = shopAccess(org, isDemo);
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -35,15 +38,15 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       };
       try {
-        const result = await runNova(
+        const result = await runSerenity(
           {
-            organizationId: NOVA_MEMORY_ORG,
-            isDemo: false,
-            writable: true,
+            organizationId: org.id,
+            isDemo,
+            writable: !access.frozen && !isDemo,
             now: new Date(),
             ownerName: ctx.user.name.trim().split(/\s+/)[0] || ctx.user.name,
-            shopName: "Sere",
-            persona: "nova",
+            shopName: org.name,
+            persona: "serenity",
           },
           message,
           { onDelta: (delta) => send("delta", { delta }) },
@@ -56,7 +59,7 @@ export async function POST(request: Request) {
         const text =
           error instanceof NovaError
             ? error.message
-            : `${NOVA_NAME} hit a problem: ${(error as Error).message}`;
+            : `${SERENITY_NAME} hit a problem: ${(error as Error).message}`;
         send("error", { error: text });
       } finally {
         controller.close();
