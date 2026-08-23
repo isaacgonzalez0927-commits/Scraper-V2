@@ -853,6 +853,18 @@ export default async function SettingsPage({
                 <span className="kv-value">{store.label}</span>
               </div>
               <div className="kv-row">
+                <span className="kv-key">Turso URL</span>
+                <span className="kv-value">
+                  {store.urlSet ? "Set on this host" : "Missing on this host"}
+                </span>
+              </div>
+              <div className="kv-row">
+                <span className="kv-key">Turso token</span>
+                <span className="kv-value">
+                  {store.tokenSet ? "Set on this host" : "Missing on this host"}
+                </span>
+              </div>
+              <div className="kv-row">
                 <span className="kv-key">Sign in</span>
                 <span className="kv-value">Email and password on this shop</span>
               </div>
@@ -863,7 +875,7 @@ export default async function SettingsPage({
                 jobs, and invoices stay with this shop.
               </p>
             ) : (
-              <Banner warn="This host is using a temporary file database. Add TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in Vercel, then redeploy, or accounts vanish when the server goes cold. You do not need Supabase." />
+              <Banner warn="This host is using a temporary file database. In Vercel, add TURSO_DATABASE_URL and TURSO_AUTH_TOKEN for Production, then Redeploy. Preview and Production are separate. Do not wrap the values in quotes. You do not need Supabase." />
             )}
           </Card>
           <Card title="Appearance">

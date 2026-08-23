@@ -1,32 +1,64 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createClient, type Client } from "@libsql/client";
+import { createClient as createWebClient } from "@libsql/client/web";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
 let cached: LibSQLDatabase<typeof schema> | null = null;
 let raw: Client | null = null;
 
-export function databaseUrl(): string {
-  if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-  // Vercel’s app filesystem is read-only. /tmp is the only writable place.
-  if (process.env.VERCEL) return "file:/tmp/sere.db";
-  return "file:./data/sere.db";
+/** Vercel and dashboards often wrap values in quotes. Those quotes break the client. */
+export function cleanEnv(value: string | undefined | null): string {
+  let text = String(value || "").trim();
+  if (
+    (text.startsWith('"') && text.endsWith('"')) ||
+    (text.startsWith("'") && text.endsWith("'"))
+  ) {
+    text = text.slice(1, -1).trim();
+  }
+  return text;
 }
 
-function configuredDatabaseUrl(): string {
-  return (process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || "").trim();
+function envOf(...keys: string[]): string {
+  for (const key of keys) {
+    const value = cleanEnv(process.env[key]);
+    if (value) return value;
+  }
+  return "";
+}
+
+export function databaseAuthToken(): string {
+  return envOf("TURSO_AUTH_TOKEN", "TURSO_DATABASE_AUTH_TOKEN", "LIBSQL_AUTH_TOKEN");
+}
+
+/** Remote libSQL URL if one is set. File URLs do not count. */
+export function configuredRemoteUrl(): string {
+  for (const key of ["TURSO_DATABASE_URL", "LIBSQL_URL", "DATABASE_URL"]) {
+    const value = cleanEnv(process.env[key]);
+    if (value && !value.startsWith("file:")) return value.replace(/\/+$/, "");
+  }
+  return "";
+}
+
+export function databaseUrl(): string {
+  const remote = configuredRemoteUrl();
+  if (remote) return remote;
+  const local = envOf("TURSO_DATABASE_URL", "DATABASE_URL");
+  if (local.startsWith("file:") && !process.env.VERCEL) return local;
+  // Vercel's app filesystem is read-only. /tmp is the only writable place.
+  if (process.env.VERCEL) return "file:/tmp/sere.db";
+  return "file:./data/sere.db";
 }
 
 /**
  * True when signups and the shop book will still be there after a cold start.
  * Local file SQLite is fine on a laptop. On Vercel, /tmp is wiped, so Turso
- * (or any remote libSQL URL) is required. Supabase is not part of this stack.
+ * (or any remote libSQL URL plus a token) is required.
  */
 export function isDurableDatabase(): boolean {
-  const configured = configuredDatabaseUrl();
-  if (configured) return !configured.startsWith("file:");
+  const remote = configuredRemoteUrl();
+  if (remote) return Boolean(databaseAuthToken());
   return !process.env.VERCEL;
 }
 
@@ -34,21 +66,34 @@ export type DataStoreSummary = {
   durable: boolean;
   kind: "turso" | "remote" | "local" | "ephemeral";
   label: string;
+  urlSet: boolean;
+  tokenSet: boolean;
 };
 
+function looksLikeTurso(url: string): boolean {
+  if (url.startsWith("file:")) return false;
+  return /turso\.io/i.test(url) || url.startsWith("libsql://");
+}
+
 export function dataStoreSummary(): DataStoreSummary {
+  const urlSet = Boolean(configuredRemoteUrl());
+  const tokenSet = Boolean(databaseAuthToken());
   if (!isDurableDatabase()) {
     return {
       durable: false,
       kind: "ephemeral",
       label: "Temporary file on this server. Accounts vanish when it goes cold.",
+      urlSet,
+      tokenSet,
     };
   }
-  if (process.env.TURSO_DATABASE_URL) {
+  if (looksLikeTurso(databaseUrl())) {
     return {
       durable: true,
       kind: "turso",
       label: "Turso (libSQL). Accounts and the shop book persist.",
+      urlSet,
+      tokenSet,
     };
   }
   if (databaseUrl().startsWith("file:")) {
@@ -56,19 +101,42 @@ export function dataStoreSummary(): DataStoreSummary {
       durable: true,
       kind: "local",
       label: "Local file database on this machine.",
+      urlSet,
+      tokenSet,
     };
   }
   return {
     durable: true,
     kind: "remote",
     label: "Remote libSQL database.",
+    urlSet,
+    tokenSet,
   };
 }
 
 export const EPHEMERAL_DB_MESSAGE =
-  "Sere cannot keep accounts on this host yet. Add TURSO_DATABASE_URL and " +
-  "TURSO_AUTH_TOKEN in Vercel (a free Turso database), then redeploy. " +
-  "You do not need Supabase.";
+  "Sere cannot keep accounts on this host yet. In Vercel, add " +
+  "TURSO_DATABASE_URL and TURSO_AUTH_TOKEN for Production (not only Preview), " +
+  "then Redeploy. Do not wrap the values in quotes. You do not need Supabase.";
+
+export const TURSO_TOKEN_MISSING =
+  "Turso URL is set on this host, but TURSO_AUTH_TOKEN is missing. " +
+  "Add the database token in Vercel for Production, then Redeploy.";
+
+export const TURSO_CONNECT_FAILED =
+  "Turso is set on this host, but Sere could not open it. Use the database " +
+  "URL (libsql:// or https://) and a database token, with no quotes. Set " +
+  "both for Production in Vercel, then Redeploy.";
+
+/** Public copy for signup/login. Does not leak the URL or token. */
+export function databaseRefusalMessage(connectFailed = false): string {
+  const url = configuredRemoteUrl();
+  const token = databaseAuthToken();
+  if (!url) return process.env.VERCEL ? EPHEMERAL_DB_MESSAGE : "";
+  if (!token) return TURSO_TOKEN_MISSING;
+  if (connectFailed) return TURSO_CONNECT_FAILED;
+  return "";
+}
 
 function ensureLocalDir(url: string) {
   if (!url.startsWith("file:")) return;
@@ -81,10 +149,10 @@ export function getClient(): Client {
   if (raw) return raw;
   const url = databaseUrl();
   ensureLocalDir(url);
-  raw = createClient({
-    url,
-    ...(url.startsWith("file:") ? {} : { authToken: process.env.TURSO_AUTH_TOKEN }),
-  });
+  const authToken = databaseAuthToken() || undefined;
+  raw = url.startsWith("file:")
+    ? createClient({ url })
+    : createWebClient({ url, authToken });
   return raw;
 }
 

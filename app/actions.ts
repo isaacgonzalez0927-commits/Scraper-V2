@@ -11,7 +11,7 @@ import {
   safeAppPath,
   verifyPassword,
 } from "@/lib/auth";
-import { db, EPHEMERAL_DB_MESSAGE, isDurableDatabase, nowISO, token } from "@/lib/db";
+import { databaseRefusalMessage, db, isDurableDatabase, nowISO, token } from "@/lib/db";
 import { invoiceEmail, sendEmail } from "@/lib/email";
 import {
   addEvent,
@@ -98,7 +98,7 @@ export async function loginAction(form: FormData) {
 export async function signupAction(form: FormData) {
   await boot();
   if (!isDurableDatabase()) {
-    redirect(`/signup?error=${encodeURIComponent(EPHEMERAL_DB_MESSAGE)}`);
+    redirect(`/signup?error=${encodeURIComponent(databaseRefusalMessage() || "Database is not ready.")}`);
   }
   const name = str(form, "name");
   const email = str(form, "email").toLowerCase();
