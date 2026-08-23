@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   cleanEnv,
@@ -124,6 +125,15 @@ test("a Turso URL without a token is not ready", () => {
   } finally {
     restoreEnv(previous);
   }
+});
+
+test("Turso env names are read as process.env.NAME so Next.js inlines them", () => {
+  const source = readFileSync(new URL("../lib/db-env.ts", import.meta.url), "utf8");
+  assert.ok(source.includes("process.env.TURSO_DATABASE_URL"));
+  assert.ok(source.includes("process.env.TURSO_AUTH_TOKEN"));
+  assert.ok(source.includes("process.env.LIBSQL_URL"));
+  assert.ok(source.includes("process.env.DATABASE_URL"));
+  assert.equal(/\bprocess\.env\[[^\]]+\]/.test(source), false);
 });
 
 test("cleanEnv strips wrapping quotes and leaves the value", () => {
