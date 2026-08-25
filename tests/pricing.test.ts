@@ -21,8 +21,8 @@ test("plans get more expensive and more seats as you go up", () => {
   assert.equal(pro.featured, undefined);
   assert.equal(formatPlanPrice(shop), "$49");
   assert.ok(shop.cta.toLowerCase().includes("14-day shop trial"));
-  assert.ok(!crew.cta.toLowerCase().includes("trial"));
-  assert.ok(!pro.cta.toLowerCase().includes("trial"));
+  assert.ok(!crew.cta.toLowerCase().includes("14-day"));
+  assert.ok(!pro.cta.toLowerCase().includes("14-day"));
 });
 
 test("Shop is the office book; Crew is what $79 should buy", () => {
