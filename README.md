@@ -65,10 +65,13 @@ Two rules the code keeps:
 1. Import this repo in Vercel. Framework preset: Next.js.
 2. Create a [Turso](https://turso.tech) database for real data. Signup on Vercel is
    refused until `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are set **for
-   Production**, then you Redeploy. Preview has its own env vars. Do not wrap
-   the values in quotes. Without Turso, Sere can still boot Harbor Air in `/tmp`,
-   but that file disappears when the serverless instance goes cold. You do not
-   need Supabase. Auth is email and password in this database.
+   Production**, then you Redeploy. Put them on the Vercel project whose
+   **Settings → Domains** lists `sere.cash`. That project may be named `sere`.
+   The GitHub repo can still be `Scraper-V2`. Those are different names for the
+   same app. Preview has its own env vars. Do not wrap the values in quotes.
+   Without Turso, Sere can still boot Harbor Air in `/tmp`, but that file
+   disappears when the serverless instance goes cold. You do not need Supabase.
+   Auth is email and password in this database.
 3. Set environment variables:
 
 | Variable | Required | Purpose |

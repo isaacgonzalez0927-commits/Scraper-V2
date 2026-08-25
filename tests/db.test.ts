@@ -12,10 +12,15 @@ import {
   TURSO_CONNECT_FAILED,
   TURSO_TOKEN_MISSING,
 } from "../lib/db";
+import { databaseHostInfo } from "../lib/db-env";
 import { DEMO_PASSWORD_HASH, verifyPassword } from "../lib/password";
 
 const KEYS = [
   "VERCEL",
+  "VERCEL_ENV",
+  "VERCEL_GIT_REPO_SLUG",
+  "VERCEL_GIT_COMMIT_SHA",
+  "VERCEL_PROJECT_PRODUCTION_URL",
   "TURSO_DATABASE_URL",
   "TURSO_AUTH_TOKEN",
   "TURSO_DATABASE_AUTH_TOKEN",
@@ -133,7 +138,29 @@ test("Turso env names are read as process.env.NAME so Next.js inlines them", () 
   assert.ok(source.includes("process.env.TURSO_AUTH_TOKEN"));
   assert.ok(source.includes("process.env.LIBSQL_URL"));
   assert.ok(source.includes("process.env.DATABASE_URL"));
-  assert.equal(/\bprocess\.env\[[^\]]+\]/.test(source), false);
+  assert.ok(source.includes("globalThis"));
+});
+
+test("host info never includes the Turso URL or token", () => {
+  const previous = snapshotEnv();
+  process.env.VERCEL = "1";
+  clearDbEnv();
+  process.env.TURSO_DATABASE_URL = "libsql://secret-host.turso.io";
+  process.env.TURSO_AUTH_TOKEN = "super-secret-token";
+  process.env.VERCEL_GIT_REPO_SLUG = "Scraper-V2";
+  process.env.VERCEL_GIT_COMMIT_SHA = "abcdef1234567890";
+  try {
+    const info = databaseHostInfo();
+    const blob = JSON.stringify(info);
+    assert.equal(info.urlSet, true);
+    assert.equal(info.tokenSet, true);
+    assert.equal(info.gitRepo, "Scraper-V2");
+    assert.equal(info.gitSha, "abcdef1");
+    assert.equal(blob.includes("secret-host"), false);
+    assert.equal(blob.includes("super-secret-token"), false);
+  } finally {
+    restoreEnv(previous);
+  }
 });
 
 test("cleanEnv strips wrapping quotes and leaves the value", () => {

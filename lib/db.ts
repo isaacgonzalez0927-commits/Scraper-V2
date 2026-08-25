@@ -92,9 +92,11 @@ export function dataStoreSummary(): DataStoreSummary {
 }
 
 export const EPHEMERAL_DB_MESSAGE =
-  "Sere cannot keep accounts on this host yet. In Vercel, add " +
-  "TURSO_DATABASE_URL and TURSO_AUTH_TOKEN for Production (not only Preview), " +
-  "then Redeploy. Do not wrap the values in quotes. You do not need Supabase.";
+  "Sere cannot keep accounts on this host yet. Open the Vercel project " +
+  "whose Settings, then Domains, lists sere.cash. That project. Not the " +
+  "GitHub repo name. Add TURSO_DATABASE_URL and TURSO_AUTH_TOKEN for " +
+  "Production, then Redeploy and turn off Use existing Build Cache. " +
+  "Do not wrap the values in quotes. You do not need Supabase.";
 
 export const TURSO_TOKEN_MISSING =
   "Turso URL is set on this host, but TURSO_AUTH_TOKEN is missing. " +
