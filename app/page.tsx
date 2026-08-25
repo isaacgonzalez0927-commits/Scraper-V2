@@ -35,6 +35,44 @@ const POINTS = [
 
 const TRADES = TRADE_LIST.filter((trade) => trade.key !== "other").map((trade) => trade.name);
 
+const HOW_IT_WORKS = [
+  {
+    title: "Open the working shop",
+    body: "Harbor Air is real sample data, not a slideshow. Click through customers, estimates, jobs, invoices, and cash.",
+  },
+  {
+    title: "Try Pro with your shop",
+    body: "Create your shop in Sandbox and use every available Pro feature for 14 days. No card or setup call.",
+  },
+  {
+    title: "Keep the plan that fits",
+    body: "Stay on Pro, or step down to Crew or Shop. Your customers, work, and ledger stay in the same book.",
+  },
+  {
+    title: "Go live when you are ready",
+    body: "Connect a restricted Stripe key or Square, or use Desk mode for manual payments. Practice data stays.",
+  },
+];
+
+const BUYING_ANSWERS = [
+  {
+    title: "Do I need a meeting?",
+    body: "No. Open the demo, create your shop, and connect your own processor when you are ready.",
+  },
+  {
+    title: "Does Sere hold my money?",
+    body: "No. Customers pay your Stripe, Square, or PayPal account. Sere does not take a cut.",
+  },
+  {
+    title: "What happens after day 14?",
+    body: "The Pro trial becomes read-only until you keep Pro or choose Crew or Shop. Nothing is deleted.",
+  },
+  {
+    title: "Can I take my data out?",
+    body: "Yes. Export jobs, invoices, and payments as CSV. There is no annual lock.",
+  },
+];
+
 export default function LandingPage() {
   return (
     <div className={`landing ${display.variable}`}>
@@ -47,7 +85,7 @@ export default function LandingPage() {
           <a href="#pricing">Pricing</a>
           <Link href={IPHONE_PATH}>iPhone</Link>
           <Link href="/login">Sign in</Link>
-          <ConnectSereButton />
+          <ConnectSereButton label="Try Pro free" />
         </nav>
       </header>
 
@@ -61,7 +99,7 @@ export default function LandingPage() {
               is the number in the bank.
             </p>
             <div className="hero-actions">
-              <ConnectSereButton />
+              <ConnectSereButton label="Start Pro trial" />
               <a className="btn btn-connect btn-secondary" href="/demo">Try Harbor Air</a>
             </div>
             <p className="hero-note">HVAC shop in Fort Myers. Open it with no account.</p>
@@ -125,14 +163,29 @@ export default function LandingPage() {
           ))}
         </section>
 
+        <section className="landing-pricing" id="how-it-works">
+          <div className="landing-pricing-head">
+            <h2>See it, try it, choose</h2>
+            <p>The product does the explaining. No discovery call and no waiting for a walkthrough.</p>
+          </div>
+          <div className="landing-points mt-2">
+            {HOW_IT_WORKS.map((step) => (
+              <article key={step.title}>
+                <h2>{step.title}</h2>
+                <p>{step.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section className="landing-pricing" id="pricing">
           <div className="landing-pricing-head">
             <h2>What it costs</h2>
             <p>
-              Housecall Pro starts around $65 a person. Jobber Core is $49 for
-              one login. Sere keeps the office book practical at Shop and Crew,
-              with a Pro roadmap for growing teams. 14 days on us, then pick the
-              plan that fits the shop.
+              Shop is a complete office book, not a stripped trial plan. Crew
+              gives a small team room to work. Pro adds the dispatch and customer
+              automation growing shops usually pay much more for. The 14-day
+              free trial is Pro only.
             </p>
           </div>
           <div className="plan-grid">
@@ -144,7 +197,7 @@ export default function LandingPage() {
                 }
               >
                 {plan.featured ? (
-                  <p className="plan-kicker">Most 1–2 truck shops</p>
+                  <p className="plan-kicker">14-day trial plan</p>
                 ) : null}
                 <h3 className="plan-name">{plan.name}</h3>
                 <p className="plan-price">
@@ -173,6 +226,20 @@ export default function LandingPage() {
           <p className="landing-pricing-note">{PRICING_NOTE}</p>
         </section>
 
+        <section className="landing-pricing">
+          <div className="landing-pricing-head">
+            <h2>Before you open your shop</h2>
+          </div>
+          <div className="landing-points mt-2">
+            {BUYING_ANSWERS.map((item) => (
+              <article key={item.title}>
+                <h2>{item.title}</h2>
+                <p>{item.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <p className="landing-trades">{TRADES.join(" · ")}</p>
         <p className="landing-legal">
           <Link href={IPHONE_PATH}>iPhone</Link>
@@ -184,7 +251,7 @@ export default function LandingPage() {
       </main>
 
       <div className="landing-dock">
-        <ConnectSereButton />
+        <ConnectSereButton label="Start Pro trial" />
         <a className="btn btn-connect btn-secondary" href="/demo">Try Harbor Air</a>
       </div>
     </div>

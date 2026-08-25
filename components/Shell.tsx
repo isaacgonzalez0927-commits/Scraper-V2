@@ -140,7 +140,7 @@ export function Shell({
           {isDemo ? (
             <a className="demo-chip" href="/signup">
               <strong>Demo shop</strong>
-              <span>Change anything. Create your own when you are ready.</span>
+              <span>Change anything. Start your Pro trial when this feels useful.</span>
             </a>
           ) : null}
           <a className="org-chip" href="/settings">

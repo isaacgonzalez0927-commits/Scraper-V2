@@ -820,9 +820,9 @@ export default async function SettingsPage({
               demoShop
                 ? "Harbor Air is the demo. It is not on a trial."
                 : access.status === "expired"
-                ? "Trial ended. You can look. When billing opens, pick Shop, Crew, or Pro and the shop opens again."
+                ? "Pro trial ended. You can look. When billing opens, keep Pro or step down to Crew or Shop."
                   : access.status === "trial"
-                    ? `${access.banner} Shop is $39/month after that. We are not taking cards yet.`
+                    ? `${access.banner} Then keep Pro or step down to Crew or Shop. We are not taking cards yet.`
                     : `You are on ${access.plan === "pro" ? "Pro" : access.plan === "crew" ? "Crew" : "Shop"}.`
             }
           >
@@ -838,10 +838,10 @@ export default async function SettingsPage({
               ))}
             </ul>
             <p className="help mt-2">
-              14 days of the book, then the shop freezes. Shop is the clean office
-              book. Crew adds seats and the assistant. Pro is the roadmap for
-              recurring work, booking, dispatch, and customer automation. Card
-              fees stay with your processor.
+              The free trial is 14 days of Pro. Shop is the complete office book.
+              Crew adds room for a small team. Pro is the roadmap for recurring
+              work, booking, dispatch, and customer automation. Card fees stay
+              with your processor.
             </p>
           </Card>
           <Card

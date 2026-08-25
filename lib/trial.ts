@@ -14,7 +14,7 @@ import { DEMO_EMAIL } from "./seed";
 export const TRIAL_DAYS = 14;
 
 export const TRIAL_ENDED =
-  "Trial ended. You can look, not add. Shop is $39/month when billing opens.";
+  "Pro trial ended. You can look, not add. Keep Pro or step down to Crew or Shop when billing opens.";
 
 export type TrialOrg = {
   plan: string;
@@ -83,7 +83,7 @@ export function shopAccess(
       daysLeft: TRIAL_DAYS,
       trialEndsAt: "",
       plan: "trial",
-      banner: `${TRIAL_DAYS} days left in your trial.`,
+      banner: `${TRIAL_DAYS} days left in your Pro trial.`,
       block: TRIAL_ENDED,
     };
   }
@@ -95,7 +95,7 @@ export function shopAccess(
       daysLeft: 0,
       trialEndsAt,
       plan: "trial",
-      banner: "Trial ended. You can look, not add.",
+      banner: "Pro trial ended. You can look, not add.",
       block: TRIAL_ENDED,
     };
   }
@@ -106,7 +106,7 @@ export function shopAccess(
     daysLeft: left,
     trialEndsAt,
     plan: "trial",
-    banner: left === 1 ? "Last day of your trial." : `${left} days left in your trial.`,
+    banner: left === 1 ? "Last day of your Pro trial." : `${left} days left in your Pro trial.`,
     block: TRIAL_ENDED,
   };
 }

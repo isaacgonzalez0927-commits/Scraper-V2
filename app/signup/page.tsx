@@ -4,6 +4,7 @@ import { AuthShell } from "@/components/AuthShell";
 import { Banner } from "@/components/ui";
 import { boot } from "@/lib/boot";
 import { databaseRefusalMessage, isDurableDatabase } from "@/lib/db";
+import { planByKey } from "@/lib/pricing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,9 +13,10 @@ export const maxDuration = 60;
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; plan?: string }>;
 }) {
   const q = await searchParams;
+  const chosenPlan = planByKey(q.plan);
   let bootError = "";
   try {
     await boot();
@@ -27,8 +29,8 @@ export default async function SignupPage({
   const storeError = bootError || setupError;
   return (
     <AuthShell
-      title="Create your shop"
-      sub="14 days free. No card. Two questions and you are in."
+      title="Try Pro with your shop"
+      sub="14 days of Pro. No card, meeting, or setup call."
       foot={
         <>
           <span>Already have a shop?</span>
@@ -37,6 +39,11 @@ export default async function SignupPage({
       }
     >
       <Banner error={storeError || q.error} />
+      {chosenPlan && chosenPlan.key !== "pro" ? (
+        <Banner
+          info={`Try everything first. After 14 days, choose ${chosenPlan.name} for $${chosenPlan.price}/month.`}
+        />
+      ) : null}
       <form action={signupAction} className="stack">
         <label>
           Shop name
@@ -95,8 +102,8 @@ export default async function SignupPage({
         </button>
       </form>
       <p className="auth-fine">
-        You start in Sandbox, like Stripe test mode. After 14 days it is $39 a
-        month. We are not taking cards yet.
+        You start in Sandbox, like Stripe test mode. The trial is Pro only. At
+        the end, keep Pro or step down to Crew or Shop. We are not taking cards yet.
       </p>
     </AuthShell>
   );

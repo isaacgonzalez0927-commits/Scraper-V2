@@ -99,7 +99,7 @@ export const TERMS_SECTIONS: { id: string; title: string; body: string[] }[] = [
     id: "fees",
     title: "Trial, plans, and processor fees",
     body: [
-      "New shops get a 14-day trial of the book. After that the shop may freeze until a plan is paid. We will say so in the product before we take a card.",
+      "New shops get a 14-day trial of Pro. Shop and Crew do not have separate free trials. After the Pro trial, the shop may freeze until you keep Pro or choose another paid plan. We will say so in the product before we take a card.",
       "Plan prices shown in the product are for Sere. Card fees, Square fees, and payout timing stay with your processor.",
       "If we charge you in error, tell us and we will correct it. Chargebacks on a valid Sere fee may result in a frozen shop until resolved.",
     ],

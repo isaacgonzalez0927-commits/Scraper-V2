@@ -1,7 +1,7 @@
 /**
  * What a local shop would actually pay, and what that money should buy.
  * Checkout is not live. These are the prices we will charge, not a paywall.
- * Signup is a 14-day trial of the book. Free is not a plan.
+ * Signup is a 14-day Pro trial. Shop and Crew are paid plans, not trials.
  */
 
 export const PLAN_KEYS = ["shop", "crew", "pro"] as const;
@@ -34,15 +34,16 @@ export const PLANS: readonly Plan[] = [
     priceNote: "Owner plus whoever answers the phone",
     blurb:
       "What a 1–2 truck shop should pay for an office book that shows cash, not just invoices.",
-    cta: "Start 14-day trial",
-    featured: true,
+    cta: "Choose Shop after trial",
     features: [
-      { text: "14 days of the book, then $39/month" },
       { text: "2 logins" },
-      { text: "Jobs, invoices, and payments" },
+      { text: "Customer CRM and job history" },
       { text: "Estimates with customer approval" },
+      { text: "Jobs, calendar, invoices, and payments" },
+      { text: "Public invoice links and online payment" },
       { text: "Live cash from your Stripe or Square" },
-      { text: "Email the invoice" },
+      { text: "Serenity with included monthly credit" },
+      { text: "Cash, invoice, and job-profit reports" },
       { text: "CSV of jobs, invoices, and payments" },
       { text: "Sere does not take a cut of what you collect" },
     ],
@@ -54,17 +55,17 @@ export const PLANS: readonly Plan[] = [
     seats: 5,
     priceNote: "Office plus a few trucks",
     blurb:
-      "What you would pay to stop texting the board around. Seats and the assistant " +
-      "are here; texts and the tech phone are next.",
-    cta: "Start 14-day trial",
+      "The same clean book with enough room for the office and a few trucks to work together.",
+    cta: "Choose Crew after trial",
     features: [
       { text: "5 logins" },
       { text: "Everything on Shop" },
-      { text: "Assistant that knows today's board" },
-      { text: "Week and month reports" },
+      { text: "Shared calendar and customer history" },
+      { text: "Serenity for board, cash, and job questions" },
+      { text: "Week, month, and custom-range reports" },
+      { text: "Estimate to job to invoice" },
       { text: "Texts: reminders, on-my-way, invoice link", soon: true },
       { text: "Today's jobs on the tech's phone", soon: true },
-      { text: "Estimate to job to invoice" },
     ],
   },
   {
@@ -75,7 +76,8 @@ export const PLANS: readonly Plan[] = [
     priceNote: "A growing office and field crew",
     blurb:
       "The practical dispatch and customer tools a growing shop needs, without fleet hardware or enterprise bloat.",
-    cta: "Start 14-day trial",
+    cta: "Start 14-day Pro trial",
+    featured: true,
     features: [
       { text: "10 logins" },
       { text: "Everything on Crew" },
@@ -90,9 +92,9 @@ export const PLANS: readonly Plan[] = [
 ];
 
 export const PRICING_NOTE =
-  "14 days of the book. Then the shop freezes until you pick Shop or Crew. " +
-  "We are not taking cards yet. When billing opens, you pay and the shop opens again. " +
-  "Card fees stay with Stripe or Square. Sere does not take a cut. No annual lock.";
+  "The free trial is Pro: every available feature for 14 days, no card. " +
+  "Then keep Pro or step down to Crew or Shop. No sales call and no annual lock. " +
+  "Card fees stay with Stripe or Square. Sere does not take a cut.";
 
 export function isPlanKey(value: string | null | undefined): value is PlanKey {
   return (PLAN_KEYS as readonly string[]).includes(value || "");

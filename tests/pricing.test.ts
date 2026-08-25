@@ -16,15 +16,19 @@ test("plans get more expensive and more seats as you go up", () => {
   assert.equal(crew.price, 79);
   assert.equal(pro.price, 149);
   assert.ok(shop.seats < crew.seats && crew.seats < pro.seats);
-  assert.equal(shop.featured, true);
+  assert.equal(shop.featured, undefined);
+  assert.equal(pro.featured, true);
   assert.equal(formatPlanPrice(shop), "$39");
-  assert.ok(shop.cta.toLowerCase().includes("14-day"));
+  assert.ok(!shop.cta.toLowerCase().includes("trial"));
+  assert.ok(!crew.cta.toLowerCase().includes("trial"));
+  assert.ok(pro.cta.toLowerCase().includes("14-day pro trial"));
 });
 
 test("Shop is the office book; Crew is what $79 should buy", () => {
   const shop = planByKey("shop");
   const crew = planByKey("crew");
-  assert.ok(shop?.features.some((f) => /14 days/i.test(f.text)));
+  assert.ok(shop?.features.some((f) => /customer crm/i.test(f.text)));
+  assert.ok(shop?.features.some((f) => /serenity/i.test(f.text)));
   assert.ok(shop?.features.some((f) => /stripe or square/i.test(f.text)));
   assert.ok(shop?.features.some((f) => /does not take a cut/i.test(f.text)));
   assert.ok(!shop?.features.some((f) => f.soon));

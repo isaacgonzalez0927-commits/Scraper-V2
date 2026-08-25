@@ -14,7 +14,7 @@
 
 import { tradeCopy } from "../business";
 
-export const MAX_WORDS = 90;
+export const MAX_WORDS = 75;
 export const MAX_SUBJECT_CHARS = 60;
 
 export const BANNED_PHRASES = [
@@ -47,6 +47,8 @@ export const BANNED_PHRASES = [
   "robust solution",
   "state-of-the-art",
   "unlock your",
+  "would you be open",
+  "are you interested",
 ];
 
 export function ctaUrl(): string {
@@ -102,7 +104,7 @@ export function draftSystemPrompt(prospect: Prospect): string {
     "You write one short cold email selling Sere to the owner of a local shop.",
     `Sere is the office book for a ${voice.name.toLowerCase()} shop: ${work} and invoices in one place,`,
     "and what actually landed in the bank next to what was invoiced, on the owner's phone.",
-    `The only ask: open a real working shop with sample ${work} already in it — one tap, no account.`,
+    `The only ask: open a real working shop with sample ${work} already in it. One tap, no account.`,
     "",
     "Rules, all hard:",
     `- Under ${MAX_WORDS} words in the body. Shorter is better.`,
@@ -112,8 +114,8 @@ export function draftSystemPrompt(prospect: Prospect): string {
     "- Plain trade English. Short sentences. No marketing words.",
     "- No greeting cliches. Never say you hope they are well, that you are reaching out,",
     "  or that you came across their website.",
-    "- Do not ask for a call or a meeting. Make the one ask above.",
-    "- One question maximum, at the end.",
+    "- Do not ask for a reply, call, meeting, demo, or walkthrough. The link does the selling.",
+    "- Do not end with a question. End with a quiet reason to open the working shop.",
     `- Subject: under ${MAX_SUBJECT_CHARS} characters, lowercase, no emoji, no exclamation mark,`,
     "  like a person typed it on a phone.",
     "- If the fact is thin, write a shorter email. Do not pad.",
@@ -186,9 +188,12 @@ export function validateDraft(draft: Draft, prospect: Prospect): string[] {
   }
 
   const questions = (body.match(/\?/g) || []).length;
-  if (questions > 1) problems.push(`${questions} questions in the body. One at most.`);
+  if (questions) problems.push("The body asks a question. The working shop is the only next step.");
   if (/\b(call|meeting|zoom|calendar|calendly)\b/i.test(body)) {
     problems.push("Asks for a call. The ask is the demo link.");
+  }
+  if (/\b(reply|respond|write back|let me know)\b/i.test(body)) {
+    problems.push("Asks for a reply. The working shop should handle the next step.");
   }
   if (!usesFact(body, prospect.fact)) {
     problems.push("Body does not use the researched fact. It is generic.");
@@ -228,7 +233,15 @@ function usesFact(body: string, fact: string): boolean {
  * compliance is not something to leave to a language model's discretion.
  */
 export function assembleBody(draft: Draft): string {
-  const lines = [draft.body.trim(), "", `— ${senderName()}`, "", `Try it: ${ctaUrl()}`, "", UNSUBSCRIBE_LINE];
+  const lines = [
+    draft.body.trim(),
+    "",
+    `- ${senderName()}`,
+    "",
+    `Working shop: ${ctaUrl()}`,
+    "",
+    UNSUBSCRIBE_LINE,
+  ];
   const address = postalAddress();
   if (address) lines.push(address);
   return lines.join("\n");

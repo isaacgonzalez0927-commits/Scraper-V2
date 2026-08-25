@@ -18,7 +18,7 @@ test("a trial runs fourteen days and then freezes", () => {
   assert.equal(open.frozen, false);
   assert.equal(open.status, "trial");
   assert.equal(open.daysLeft, 14);
-  assert.equal(open.banner, "14 days left in your trial.");
+  assert.equal(open.banner, "14 days left in your Pro trial.");
   const last = shopAccess(
     { plan: "trial", trialEndsAt: ends.toISOString() },
     false,
@@ -26,7 +26,7 @@ test("a trial runs fourteen days and then freezes", () => {
   );
   assert.equal(last.frozen, false);
   assert.equal(last.daysLeft, 1);
-  assert.equal(last.banner, "Last day of your trial.");
+  assert.equal(last.banner, "Last day of your Pro trial.");
   const frozen = shopAccess(
     { plan: "trial", trialEndsAt: ends.toISOString() },
     false,
