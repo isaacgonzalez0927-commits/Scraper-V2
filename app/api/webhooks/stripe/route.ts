@@ -10,6 +10,7 @@ import {
   verifyWebhookSignature,
   type StripeCustomer,
   type StripeInvoice,
+  type StripePaymentIntent,
 } from "@/lib/stripe";
 import { ingestStripeCustomer, stripeCustomerEventNames } from "@/lib/stripe-customers";
 import {
@@ -241,7 +242,7 @@ export async function POST(request: Request) {
 
   if (stripePaymentEventNames().includes(event.type || "") && object.id) {
     const config = await stripeConfig(organizationId);
-    let remote = {
+    let remote: StripePaymentIntent = {
       id: object.id,
       status: object.status || "succeeded",
       amount: object.amount,
