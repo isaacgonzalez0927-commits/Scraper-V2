@@ -1,10 +1,10 @@
 /**
  * What a local shop would actually pay, and what that money should buy.
- * Checkout is not live — these are the prices we will charge, not a paywall.
+ * Checkout is not live. These are the prices we will charge, not a paywall.
  * Signup is a 14-day trial of the book. Free is not a plan.
  */
 
-export const PLAN_KEYS = ["shop", "crew"] as const;
+export const PLAN_KEYS = ["shop", "crew", "pro"] as const;
 
 export type PlanKey = (typeof PLAN_KEYS)[number];
 
@@ -40,6 +40,7 @@ export const PLANS: readonly Plan[] = [
       { text: "14 days of the book, then $39/month" },
       { text: "2 logins" },
       { text: "Jobs, invoices, and payments" },
+      { text: "Estimates with customer approval" },
       { text: "Live cash from your Stripe or Square" },
       { text: "Email the invoice" },
       { text: "CSV of jobs, invoices, and payments" },
@@ -63,14 +64,34 @@ export const PLANS: readonly Plan[] = [
       { text: "Week and month reports" },
       { text: "Texts: reminders, on-my-way, invoice link", soon: true },
       { text: "Today's jobs on the tech's phone", soon: true },
-      { text: "Estimate to job to invoice", soon: true },
+      { text: "Estimate to job to invoice" },
+    ],
+  },
+  {
+    key: "pro",
+    name: "Pro",
+    price: 149,
+    seats: 10,
+    priceNote: "A growing office and field crew",
+    blurb:
+      "The practical dispatch and customer tools a growing shop needs, without fleet hardware or enterprise bloat.",
+    cta: "Start 14-day trial",
+    features: [
+      { text: "10 logins" },
+      { text: "Everything on Crew" },
+      { text: "Recurring jobs and service plans", soon: true },
+      { text: "Online booking and customer hub", soon: true },
+      { text: "Crew roles and dispatch by technician", soon: true },
+      { text: "Job photos, checklists, and signatures", soon: true },
+      { text: "Automated estimate and invoice reminders", soon: true },
+      { text: "Advanced job costing and custom reports", soon: true },
     ],
   },
 ];
 
 export const PRICING_NOTE =
   "14 days of the book. Then the shop freezes until you pick Shop or Crew. " +
-  "We are not taking cards yet — when billing opens, you pay and the shop opens again. " +
+  "We are not taking cards yet. When billing opens, you pay and the shop opens again. " +
   "Card fees stay with Stripe or Square. Sere does not take a cut. No annual lock.";
 
 export function isPlanKey(value: string | null | undefined): value is PlanKey {

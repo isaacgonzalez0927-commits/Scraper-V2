@@ -166,6 +166,8 @@ export async function ensureSchema(): Promise<void> {
       tax_id TEXT NOT NULL DEFAULT '',
       invoice_prefix TEXT NOT NULL DEFAULT 'INV-',
       next_invoice_number INTEGER NOT NULL DEFAULT 1001,
+      estimate_prefix TEXT NOT NULL DEFAULT 'EST-',
+      next_estimate_number INTEGER NOT NULL DEFAULT 1001,
       payment_terms_days INTEGER NOT NULL DEFAULT 14,
       default_invoice_notes TEXT NOT NULL DEFAULT '',
       default_tax_bps INTEGER NOT NULL DEFAULT 0,
@@ -411,6 +413,54 @@ export async function ensureSchema(): Promise<void> {
       unit_price_cents INTEGER NOT NULL DEFAULT 0,
       amount_cents INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS estimates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      customer_id INTEGER NOT NULL,
+      number TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',
+      issue_date TEXT NOT NULL,
+      valid_until TEXT NOT NULL,
+      notes TEXT NOT NULL DEFAULT '',
+      discount_cents INTEGER NOT NULL DEFAULT 0,
+      tax_bps INTEGER NOT NULL DEFAULT 0,
+      tax_cents INTEGER NOT NULL DEFAULT 0,
+      subtotal_cents INTEGER NOT NULL DEFAULT 0,
+      total_cents INTEGER NOT NULL DEFAULT 0,
+      public_token TEXT NOT NULL UNIQUE,
+      sent_at TEXT,
+      viewed_at TEXT,
+      approved_at TEXT,
+      declined_at TEXT,
+      converted_at TEXT,
+      voided_at TEXT,
+      converted_job_id INTEGER,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(organization_id, number)
+    );
+    CREATE INDEX IF NOT EXISTS estimates_org ON estimates (organization_id);
+    CREATE INDEX IF NOT EXISTS estimates_customer ON estimates (organization_id, customer_id);
+    CREATE TABLE IF NOT EXISTS estimate_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      estimate_id INTEGER NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      description TEXT NOT NULL,
+      quantity TEXT NOT NULL DEFAULT '1',
+      unit_price_cents INTEGER NOT NULL DEFAULT 0,
+      amount_cents INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS estimate_lines_estimate ON estimate_lines (organization_id, estimate_id);
+    CREATE TABLE IF NOT EXISTS estimate_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      estimate_id INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS estimate_events_estimate ON estimate_events (organization_id, estimate_id);
     CREATE TABLE IF NOT EXISTS payments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       organization_id INTEGER NOT NULL,
@@ -482,6 +532,8 @@ export async function ensureSchema(): Promise<void> {
   await addColumnIfMissing("organizations", "plan", "TEXT NOT NULL DEFAULT 'trial'");
   await addColumnIfMissing("organizations", "trial_ends_at", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing("organizations", "operating_mode", "TEXT NOT NULL DEFAULT 'live'");
+  await addColumnIfMissing("organizations", "estimate_prefix", "TEXT NOT NULL DEFAULT 'EST-'");
+  await addColumnIfMissing("organizations", "next_estimate_number", "INTEGER NOT NULL DEFAULT 1001");
   await addColumnIfMissing("customers", "details", "TEXT NOT NULL DEFAULT '{}'");
   await addColumnIfMissing("jobs", "details", "TEXT NOT NULL DEFAULT '{}'");
   await addColumnIfMissing("customers", "stripe_customer_id", "TEXT NOT NULL DEFAULT ''");

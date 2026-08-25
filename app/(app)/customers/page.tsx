@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, like, or } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, like, or } from "drizzle-orm";
 import { syncCustomersWithStripeAction } from "@/app/actions";
 import { Banner, Empty, RecordTable, SearchField, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
@@ -36,7 +36,7 @@ export default async function CustomersPage({
     );
   }
   const [rows, integrations] = await Promise.all([
-    db().select().from(customers).where(and(...filters)),
+    db().select().from(customers).where(and(...filters)).orderBy(asc(customers.name)),
     integrationStatus(org.id),
   ]);
   const cards = await Promise.all(

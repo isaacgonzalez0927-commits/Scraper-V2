@@ -4,6 +4,7 @@ import { displayName } from "./display";
 import { amountPaidCents, balanceCents } from "./finance";
 import {
   customers,
+  estimates,
   invoiceLines,
   invoices,
   jobCosts,
@@ -230,6 +231,17 @@ export async function searchOrg(organizationId: number, q: string) {
     .innerJoin(customers, eq(customers.id, invoices.customerId))
     .where(and(eq(invoices.organizationId, organizationId), or(like(invoices.number, term), like(customers.name, term))))
     .limit(8);
+  const estimateRows = await db()
+    .select({ estimate: estimates, customer: customers })
+    .from(estimates)
+    .innerJoin(customers, eq(customers.id, estimates.customerId))
+    .where(
+      and(
+        eq(estimates.organizationId, organizationId),
+        or(like(estimates.number, term), like(customers.name, term), like(customers.companyName, term)),
+      ),
+    )
+    .limit(8);
   return {
     customers: customerRows.map((c) => ({
       href: `/customers/${c.id}`,
@@ -244,6 +256,11 @@ export async function searchOrg(organizationId: number, q: string) {
     invoices: invoiceRows.map(({ invoice, customer }) => ({
       href: `/invoices/${invoice.id}`,
       label: invoice.number,
+      meta: displayName(customer),
+    })),
+    estimates: estimateRows.map(({ estimate, customer }) => ({
+      href: `/estimates/${estimate.id}`,
+      label: estimate.number,
       meta: displayName(customer),
     })),
   };

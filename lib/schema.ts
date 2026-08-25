@@ -14,6 +14,8 @@ export const organizations = sqliteTable("organizations", {
   taxId: text("tax_id").notNull().default(""),
   invoicePrefix: text("invoice_prefix").notNull().default("INV-"),
   nextInvoiceNumber: integer("next_invoice_number").notNull().default(1001),
+  estimatePrefix: text("estimate_prefix").notNull().default("EST-"),
+  nextEstimateNumber: integer("next_estimate_number").notNull().default(1001),
   paymentTermsDays: integer("payment_terms_days").notNull().default(14),
   defaultInvoiceNotes: text("default_invoice_notes").notNull().default(""),
   defaultTaxBps: integer("default_tax_bps").notNull().default(0),
@@ -343,6 +345,68 @@ export const invoiceLines = sqliteTable("invoice_lines", {
   unitPriceCents: integer("unit_price_cents").notNull().default(0),
   amountCents: integer("amount_cents").notNull().default(0),
 });
+
+export const estimates = sqliteTable(
+  "estimates",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    customerId: integer("customer_id").notNull().references(() => customers.id),
+    number: text("number").notNull(),
+    status: text("status").notNull().default("draft"),
+    issueDate: text("issue_date").notNull(),
+    validUntil: text("valid_until").notNull(),
+    notes: text("notes").notNull().default(""),
+    discountCents: integer("discount_cents").notNull().default(0),
+    taxBps: integer("tax_bps").notNull().default(0),
+    taxCents: integer("tax_cents").notNull().default(0),
+    subtotalCents: integer("subtotal_cents").notNull().default(0),
+    totalCents: integer("total_cents").notNull().default(0),
+    publicToken: text("public_token").notNull().unique(),
+    sentAt: text("sent_at"),
+    viewedAt: text("viewed_at"),
+    approvedAt: text("approved_at"),
+    declinedAt: text("declined_at"),
+    convertedAt: text("converted_at"),
+    voidedAt: text("voided_at"),
+    convertedJobId: integer("converted_job_id"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("estimates_org_number").on(t.organizationId, t.number),
+    index("estimates_org").on(t.organizationId),
+    index("estimates_customer").on(t.organizationId, t.customerId),
+  ],
+);
+
+export const estimateLines = sqliteTable(
+  "estimate_lines",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    estimateId: integer("estimate_id").notNull().references(() => estimates.id),
+    position: integer("position").notNull().default(0),
+    description: text("description").notNull(),
+    quantity: text("quantity").notNull().default("1"),
+    unitPriceCents: integer("unit_price_cents").notNull().default(0),
+    amountCents: integer("amount_cents").notNull().default(0),
+  },
+  (t) => [index("estimate_lines_estimate").on(t.organizationId, t.estimateId)],
+);
+
+export const estimateEvents = sqliteTable(
+  "estimate_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    estimateId: integer("estimate_id").notNull().references(() => estimates.id),
+    kind: text("kind").notNull(),
+    message: text("message").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("estimate_events_estimate").on(t.organizationId, t.estimateId)],
+);
 
 export const payments = sqliteTable("payments", {
   id: integer("id").primaryKey({ autoIncrement: true }),

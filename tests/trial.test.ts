@@ -50,6 +50,9 @@ test("Harbor Air and paid shops are never on a trial clock", () => {
   const crew = shopAccess({ plan: "crew", trialEndsAt: ends }, false, addTrialDays(now, 30));
   assert.equal(crew.frozen, false);
   assert.equal(crew.status, "paid");
+  const pro = shopAccess({ plan: "pro", trialEndsAt: ends }, false, addTrialDays(now, 30));
+  assert.equal(pro.frozen, false);
+  assert.equal(pro.status, "paid");
 });
 
 test("days left rounds up to a whole day", () => {

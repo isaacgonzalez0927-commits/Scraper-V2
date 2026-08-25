@@ -20,8 +20,8 @@ const POINTS = [
     body: "Every card, check, and cash payment is a line in the ledger. An invoice is paid only when the balance hits zero.",
   },
   {
-    title: "Job to invoice in one tap",
-    body: "Schedule the call, log the parts and labor, then bill it. Nobody retypes the work.",
+    title: "Estimate to paid without retyping",
+    body: "Get approval, turn the estimate into a job, finish the work, then invoice it from the same record.",
   },
   {
     title: "Ask it to move Friday",
@@ -56,8 +56,9 @@ export default function LandingPage() {
           <div className="hero-copy">
             <h1>What you billed. What came in. What is still owed.</h1>
             <p className="hero-lede">
-              Sere is the book for a local shop. Jobs, invoices, and payments stay
-              together, so the number on the screen is the number in the bank.
+              Sere is the book for a local shop. Customers, estimates, jobs,
+              invoices, and payments stay together, so the number on the screen
+              is the number in the bank.
             </p>
             <div className="hero-actions">
               <ConnectSereButton />
@@ -129,9 +130,9 @@ export default function LandingPage() {
             <h2>What it costs</h2>
             <p>
               Housecall Pro starts around $65 a person. Jobber Core is $49 for
-              one login. Sere is the book for the office — priced like that, not
-              like a full dispatch OS we have not built. 14 days on us, then
-              Shop or Crew.
+              one login. Sere keeps the office book practical at Shop and Crew,
+              with a Pro roadmap for growing teams. 14 days on us, then pick the
+              plan that fits the shop.
             </p>
           </div>
           <div className="plan-grid">

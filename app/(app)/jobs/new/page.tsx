@@ -17,6 +17,9 @@ export default async function NewJobPage({
     .select()
     .from(customers)
     .where(and(eq(customers.organizationId, org.id), isNull(customers.archivedAt)));
+  const selectedCustomer = q.customerId
+    ? customerRows.find((customer) => customer.id === Number(q.customerId))
+    : undefined;
   return (
     <Shell
       {...shell}
@@ -31,8 +34,12 @@ export default async function NewJobPage({
         voice={voice}
         fields={tradeFieldsFor(org.businessType, "job")}
         job={{
-          customerId: q.customerId ? Number(q.customerId) : undefined,
+          customerId: selectedCustomer?.id,
           scheduledStart: q.start || null,
+          serviceLine1: selectedCustomer?.serviceLine1,
+          serviceCity: selectedCustomer?.serviceCity,
+          serviceState: selectedCustomer?.serviceState,
+          servicePostal: selectedCustomer?.servicePostal,
         }}
       />
     </Shell>

@@ -16,6 +16,16 @@ export const INVOICE_STATUSES = [
   "void",
 ] as const;
 
+export const ESTIMATE_STATUSES = [
+  "draft",
+  "sent",
+  "viewed",
+  "approved",
+  "declined",
+  "converted",
+  "void",
+] as const;
+
 export const PAYMENT_METHODS = ["card", "ach", "cash", "check", "zelle", "venmo", "other"] as const;
 export const COST_CATEGORIES = [
   "materials",
@@ -38,6 +48,9 @@ export const LABELS: Record<string, string> = {
   paid: "Paid",
   overdue: "Overdue",
   void: "Void",
+  approved: "Approved",
+  declined: "Declined",
+  converted: "Converted",
   card: "Card",
   ach: "ACH / bank",
   cash: "Cash",

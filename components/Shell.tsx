@@ -108,6 +108,7 @@ export function Shell({
     ["/serenity", "Serenity", "spark"],
     ["/jobs", jobsLabel, "briefcase"],
     ["/customers", customersLabel, "users"],
+    ["/estimates", "Estimates", "file"],
     ["/invoices", "Invoices", "file"],
     ["/payments", "Payments", "card"],
     ["/calendar", "Calendar", "calendar"],

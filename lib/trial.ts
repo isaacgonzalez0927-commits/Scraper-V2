@@ -65,7 +65,7 @@ export function shopAccess(
       block: TRIAL_ENDED,
     };
   }
-  if (plan === "shop" || plan === "crew") {
+  if (plan === "shop" || plan === "crew" || plan === "pro") {
     return {
       frozen: false,
       status: "paid",
