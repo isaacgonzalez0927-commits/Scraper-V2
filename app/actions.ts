@@ -660,6 +660,14 @@ export async function sendInvoiceAction(form: FormData) {
 
   const config = await emailConfig(org.id);
   let notice = "Marked as sent. Share the customer link below.";
+  const sync = await pushInvoiceToStripe(org.id, id, { finalize: true, send: true });
+  if (sync.ok && sync.sent) {
+    notice = customer?.email
+      ? `Invoice sent through Stripe to ${customer.email}.`
+      : "Invoice sent through Stripe.";
+    if (sync.hostedUrl) notice = `${notice} Also on the Stripe hosted invoice.`;
+    redirect(`/invoices/${id}?notice=${encodeURIComponent(notice)}`);
+  }
   if (!customer?.email) {
     notice = "Marked as sent. This customer has no email address on file.";
   } else if (!config) {
@@ -683,7 +691,6 @@ export async function sendInvoiceAction(form: FormData) {
       notice = `Marked as sent, but the email did not go out. ${(error as Error).message}`;
     }
   }
-  const sync = await pushInvoiceToStripe(org.id, id, { finalize: true });
   if (sync.ok && sync.hostedUrl) {
     notice = `${notice} Also in Stripe.`;
   } else if (sync.error) {

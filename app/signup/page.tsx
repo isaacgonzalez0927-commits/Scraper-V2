@@ -29,8 +29,8 @@ export default async function SignupPage({
   const storeError = bootError || setupError;
   return (
     <AuthShell
-      title="Try Pro with your shop"
-      sub="14 days of Pro. No card, meeting, or setup call."
+      title="Try Shop with your shop"
+      sub="14 days of Shop. No card, meeting, or setup call."
       foot={
         <>
           <span>Already have a shop?</span>
@@ -39,9 +39,9 @@ export default async function SignupPage({
       }
     >
       <Banner error={storeError || q.error} />
-      {chosenPlan && chosenPlan.key !== "pro" ? (
+      {chosenPlan && chosenPlan.key !== "shop" ? (
         <Banner
-          info={`Try everything first. After 14 days, choose ${chosenPlan.name} for $${chosenPlan.price}/month.`}
+          info={`Try Shop first. After 14 days, stay on Shop for $49/month or choose ${chosenPlan.name} for $${chosenPlan.price}/month.`}
         />
       ) : null}
       <form action={signupAction} className="stack">
@@ -102,8 +102,9 @@ export default async function SignupPage({
         </button>
       </form>
       <p className="auth-fine">
-        You start in Sandbox, like Stripe test mode. The trial is Pro only. At
-        the end, keep Pro or step down to Crew or Shop. We are not taking cards yet.
+        You start in Sandbox, like Stripe test mode. The trial is Shop. After
+        14 days, stay on Shop for $49/month or upgrade to Crew or Pro. We are
+        not taking cards yet.
       </p>
     </AuthShell>
   );

@@ -1,7 +1,7 @@
 /**
  * What a local shop would actually pay, and what that money should buy.
  * Checkout is not live. These are the prices we will charge, not a paywall.
- * Signup is a 14-day Pro trial. Shop and Crew are paid plans, not trials.
+ * Signup is a 14-day Shop trial. Crew and Pro are paid upgrades after that.
  */
 
 export const PLAN_KEYS = ["shop", "crew", "pro"] as const;
@@ -29,12 +29,13 @@ export const PLANS: readonly Plan[] = [
   {
     key: "shop",
     name: "Shop",
-    price: 39,
+    price: 49,
     seats: 2,
     priceNote: "Owner plus whoever answers the phone",
     blurb:
       "What a 1–2 truck shop should pay for an office book that shows cash, not just invoices.",
-    cta: "Choose Shop after trial",
+    cta: "Start 14-day Shop trial",
+    featured: true,
     features: [
       { text: "2 logins" },
       { text: "Customer CRM and job history" },
@@ -76,8 +77,7 @@ export const PLANS: readonly Plan[] = [
     priceNote: "A growing office and field crew",
     blurb:
       "The practical dispatch and customer tools a growing shop needs, without fleet hardware or enterprise bloat.",
-    cta: "Start 14-day Pro trial",
-    featured: true,
+    cta: "Choose Pro after trial",
     features: [
       { text: "10 logins" },
       { text: "Everything on Crew" },
@@ -92,8 +92,8 @@ export const PLANS: readonly Plan[] = [
 ];
 
 export const PRICING_NOTE =
-  "The free trial is Pro: every available feature for 14 days, no card. " +
-  "Then keep Pro or step down to Crew or Shop. No sales call and no annual lock. " +
+  "The free trial is Shop: the full office book for 14 days, no card. " +
+  "Then stay on Shop for $49/month, or upgrade to Crew or Pro. No sales call and no annual lock. " +
   "Card fees stay with Stripe or Square. Sere does not take a cut.";
 
 export function isPlanKey(value: string | null | undefined): value is PlanKey {

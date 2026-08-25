@@ -58,7 +58,7 @@ export const TERMS_SECTIONS: { id: string; title: string; body: string[] }[] = [
     title: "Stripe, Square, and other connections",
     body: [
       "You connect processors with credentials you create in their dashboards. For Stripe, Sere only accepts restricted keys (rk_test_ or rk_live_). Full secret keys (sk_) can move money and change payouts. Do not paste those into Sere or any other app.",
-      "You decide the permissions on a restricted key. A key that cannot read balance, charges, and payouts cannot show live cash. A key that cannot write customers or invoices cannot sync those records.",
+      "You decide the permissions on a restricted key. A key that cannot read balance, charges, and payouts cannot show live cash. A key that cannot write customers or invoices cannot sync or send those records. A key that cannot write Checkout Sessions or Payment Intents cannot take card payments into your Stripe account.",
       "Sere stores connected secrets encrypted. We do not show them back to you. We use them only to provide the features you turned on.",
       "Stripe, Square, PayPal, Intuit, OpenAI, Resend, and other third parties have their own terms and privacy policies. You must follow those as well. We are not those companies and we do not control their outages, fees, holds, or account closures.",
       "You do not paste an OpenAI key. Serenity and the shop assistant run on our key, within the monthly credit described below.",
@@ -99,7 +99,7 @@ export const TERMS_SECTIONS: { id: string; title: string; body: string[] }[] = [
     id: "fees",
     title: "Trial, plans, and processor fees",
     body: [
-      "New shops get a 14-day trial of Pro. Shop and Crew do not have separate free trials. After the Pro trial, the shop may freeze until you keep Pro or choose another paid plan. We will say so in the product before we take a card.",
+      "New shops get a 14-day trial of Shop. Crew and Pro are paid upgrades. After the Shop trial, the shop may freeze until you stay on Shop or choose Crew or Pro. We will say so in the product before we take a card.",
       "Plan prices shown in the product are for Sere. Card fees, Square fees, and payout timing stay with your processor.",
       "If we charge you in error, tell us and we will correct it. Chargebacks on a valid Sere fee may result in a frozen shop until resolved.",
     ],

@@ -40,6 +40,7 @@ export const SERE_STRIPE_RAK_PERMISSIONS = [
   "rak_invoiceitem_write",
   "rak_invoice_item_write",
   "rak_checkout_session_write",
+  "rak_payment_intent_write",
 ] as const;
 
 /** Opens Stripe Developers → API keys. Defaults to the sandbox. */
@@ -87,7 +88,8 @@ export type StripeKeyCheck = {
 
 /**
  * Confirms the key is restricted and has the permissions Sere needs for cash view.
- * Checkout on invoice links additionally needs Checkout Sessions: Write (optional).
+ * Checkout, Payment Intents, and invoice send additionally need Write on those
+ * rows (optional for cash view, required to send invoices and take card payments).
  */
 export async function validateStripeKeyForSere(key: string): Promise<StripeKeyCheck> {
   const trimmed = key.trim();
@@ -158,8 +160,9 @@ export const SERE_STRIPE_PERMISSIONS = {
   optional: [
     { resource: "Connect: Accounts", permission: "Read", for: "Shop name on Overview" },
     { resource: "Customers", permission: "Write", for: "Customer and invoice sync" },
-    { resource: "Invoices", permission: "Write", for: "Invoice sync" },
-    { resource: "Invoice Items", permission: "Write", for: "Invoice sync" },
-    { resource: "Checkout Sessions", permission: "Write", for: "Pay with Stripe on invoice links" },
+    { resource: "Invoices", permission: "Write", for: "Create, send, and sync invoices" },
+    { resource: "Invoice Items", permission: "Write", for: "Invoice line items" },
+    { resource: "Checkout Sessions", permission: "Write", for: "Take card payments on invoice links" },
+    { resource: "Payment Intents", permission: "Write", for: "Receive card payments into your Stripe" },
   ],
 } as const;

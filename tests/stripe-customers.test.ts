@@ -25,6 +25,8 @@ test("create-key URL names Sere and preselects permissions", () => {
   assert.equal(live.includes("/test/"), false);
   assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_customer_write"));
   assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_connected_account_read"));
+  assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_invoice_write"));
+  assert.ok(SERE_STRIPE_RAK_PERMISSIONS.includes("rak_payment_intent_write"));
 });
 
 test("customer webhooks cover create, update, and delete", () => {

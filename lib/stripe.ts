@@ -485,6 +485,43 @@ export function payStripeInvoiceOutOfBand(
 }
 
 /**
+ * Emails a finalized Stripe invoice to the customer (Send Invoice).
+ * Requires Invoices: Write on the restricted key.
+ */
+export function sendStripeInvoice(
+  secretKey: string,
+  id: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<StripeInvoice> {
+  return stripeRequest<StripeInvoice>(secretKey, `/invoices/${encodeURIComponent(id)}/send`, {
+    method: "POST",
+    stripeAccount: opts.stripeAccount,
+  });
+}
+
+export type StripePaymentIntent = {
+  id: string;
+  status?: string | null;
+  amount?: number | null;
+  amount_received?: number | null;
+  invoice?: string | { id?: string } | null;
+  customer?: string | { id?: string } | null;
+  metadata?: Record<string, string> | null;
+};
+
+export function retrievePaymentIntent(
+  secretKey: string,
+  id: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<StripePaymentIntent> {
+  return stripeRequest<StripePaymentIntent>(
+    secretKey,
+    `/payment_intents/${encodeURIComponent(id)}`,
+    { stripeAccount: opts.stripeAccount },
+  );
+}
+
+/**
  * Verifies the Stripe-Signature header the way Stripe documents it:
  * HMAC-SHA256 over "<timestamp>.<raw body>" compared against every v1 signature.
  */

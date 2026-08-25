@@ -34,7 +34,7 @@ export function maxReviewCount(): number {
 
 /**
  * National trade franchises and roll-ups. These have corporate software and a
- * procurement process; they are not buying a $39 book from a cold email.
+ * procurement process; they are not buying a $49 book from a cold email.
  */
 const BLOCKED_NAME_PATTERNS: RegExp[] = [
   /\bone hour (heating|air)\b/i,

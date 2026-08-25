@@ -41,12 +41,12 @@ const HOW_IT_WORKS = [
     body: "Harbor Air is real sample data, not a slideshow. Click through customers, estimates, jobs, invoices, and cash.",
   },
   {
-    title: "Try Pro with your shop",
-    body: "Create your shop in Sandbox and use every available Pro feature for 14 days. No card or setup call.",
+    title: "Try Shop with your shop",
+    body: "Create your shop in Sandbox and use the office book for 14 days. No card or setup call.",
   },
   {
     title: "Keep the plan that fits",
-    body: "Stay on Pro, or step down to Crew or Shop. Your customers, work, and ledger stay in the same book.",
+    body: "Stay on Shop, or upgrade to Crew or Pro. Your customers, work, and ledger stay in the same book.",
   },
   {
     title: "Go live when you are ready",
@@ -65,7 +65,7 @@ const BUYING_ANSWERS = [
   },
   {
     title: "What happens after day 14?",
-    body: "The Pro trial becomes read-only until you keep Pro or choose Crew or Shop. Nothing is deleted.",
+    body: "The Shop trial becomes read-only until you stay on Shop or choose Crew or Pro. Nothing is deleted.",
   },
   {
     title: "Can I take my data out?",
@@ -85,7 +85,7 @@ export default function LandingPage() {
           <a href="#pricing">Pricing</a>
           <Link href={IPHONE_PATH}>iPhone</Link>
           <Link href="/login">Sign in</Link>
-          <ConnectSereButton label="Try Pro free" />
+          <ConnectSereButton label="Try Shop free" />
         </nav>
       </header>
 
@@ -99,7 +99,7 @@ export default function LandingPage() {
               is the number in the bank.
             </p>
             <div className="hero-actions">
-              <ConnectSereButton label="Start Pro trial" />
+              <ConnectSereButton label="Start Shop trial" />
               <a className="btn btn-connect btn-secondary" href="/demo">Try Harbor Air</a>
             </div>
             <p className="hero-note">HVAC shop in Fort Myers. Open it with no account.</p>
@@ -185,7 +185,7 @@ export default function LandingPage() {
               Shop is a complete office book, not a stripped trial plan. Crew
               gives a small team room to work. Pro adds the dispatch and customer
               automation growing shops usually pay much more for. The 14-day
-              free trial is Pro only.
+              free trial is Shop. Crew and Pro are upgrades after.
             </p>
           </div>
           <div className="plan-grid">
@@ -251,7 +251,7 @@ export default function LandingPage() {
       </main>
 
       <div className="landing-dock">
-        <ConnectSereButton label="Start Pro trial" />
+        <ConnectSereButton label="Start Shop trial" />
         <a className="btn btn-connect btn-secondary" href="/demo">Try Harbor Air</a>
       </div>
     </div>

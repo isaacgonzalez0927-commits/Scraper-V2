@@ -14,7 +14,7 @@ import { DEMO_EMAIL } from "./seed";
 export const TRIAL_DAYS = 14;
 
 export const TRIAL_ENDED =
-  "Pro trial ended. You can look, not add. Keep Pro or step down to Crew or Shop when billing opens.";
+  "Shop trial ended. You can look, not add. Stay on Shop or upgrade to Crew or Pro when billing opens.";
 
 export type TrialOrg = {
   plan: string;
@@ -83,7 +83,7 @@ export function shopAccess(
       daysLeft: TRIAL_DAYS,
       trialEndsAt: "",
       plan: "trial",
-      banner: `${TRIAL_DAYS} days left in your Pro trial.`,
+      banner: `${TRIAL_DAYS} days left in your Shop trial.`,
       block: TRIAL_ENDED,
     };
   }
@@ -95,7 +95,7 @@ export function shopAccess(
       daysLeft: 0,
       trialEndsAt,
       plan: "trial",
-      banner: "Pro trial ended. You can look, not add.",
+      banner: "Shop trial ended. You can look, not add.",
       block: TRIAL_ENDED,
     };
   }
@@ -106,7 +106,7 @@ export function shopAccess(
     daysLeft: left,
     trialEndsAt,
     plan: "trial",
-    banner: left === 1 ? "Last day of your Pro trial." : `${left} days left in your Pro trial.`,
+    banner: left === 1 ? "Last day of your Shop trial." : `${left} days left in your Shop trial.`,
     block: TRIAL_ENDED,
   };
 }

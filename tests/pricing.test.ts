@@ -5,6 +5,7 @@ import {
   parsePlanKey,
   PLANS,
   planByKey,
+  PRICING_NOTE,
   signupHref,
 } from "../lib/pricing";
 
@@ -12,16 +13,16 @@ test("plans get more expensive and more seats as you go up", () => {
   const [shop, crew, pro] = PLANS;
   assert.equal(PLANS.length, 3);
   assert.equal(shop.key, "shop");
-  assert.equal(shop.price, 39);
+  assert.equal(shop.price, 49);
   assert.equal(crew.price, 79);
   assert.equal(pro.price, 149);
   assert.ok(shop.seats < crew.seats && crew.seats < pro.seats);
-  assert.equal(shop.featured, undefined);
-  assert.equal(pro.featured, true);
-  assert.equal(formatPlanPrice(shop), "$39");
-  assert.ok(!shop.cta.toLowerCase().includes("trial"));
+  assert.equal(shop.featured, true);
+  assert.equal(pro.featured, undefined);
+  assert.equal(formatPlanPrice(shop), "$49");
+  assert.ok(shop.cta.toLowerCase().includes("14-day shop trial"));
   assert.ok(!crew.cta.toLowerCase().includes("trial"));
-  assert.ok(pro.cta.toLowerCase().includes("14-day pro trial"));
+  assert.ok(!pro.cta.toLowerCase().includes("trial"));
 });
 
 test("Shop is the office book; Crew is what $79 should buy", () => {
@@ -46,4 +47,10 @@ test("unknown plan keys do not invent a product", () => {
   assert.equal(signupHref(PLANS[0]), "/signup?plan=shop");
   assert.equal(signupHref(PLANS[1]), "/signup?plan=crew");
   assert.equal(signupHref(PLANS[2]), "/signup?plan=pro");
+});
+
+test("the free trial is Shop at forty-nine a month", () => {
+  assert.match(PRICING_NOTE, /trial is Shop/i);
+  assert.match(PRICING_NOTE, /\$49/);
+  assert.match(PRICING_NOTE, /Crew or Pro/);
 });

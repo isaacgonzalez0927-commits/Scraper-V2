@@ -140,7 +140,7 @@ export function Shell({
           {isDemo ? (
             <a className="demo-chip" href="/signup">
               <strong>Demo shop</strong>
-              <span>Change anything. Start your Pro trial when this feels useful.</span>
+              <span>Change anything. Start your Shop trial when this feels useful.</span>
             </a>
           ) : null}
           <a className="org-chip" href="/settings">
@@ -197,7 +197,7 @@ export function Shell({
               href="/settings?tab=account"
             >
               <strong>{trialBanner}</strong>
-              <span>{frozen ? "Shop is $39/month when billing opens." : "Shop is $39/month after that."}</span>
+              <span>{frozen ? "Shop is $49/month when billing opens." : "Shop is $49/month after that."}</span>
             </a>
           ) : null}
           {modeNote ? (

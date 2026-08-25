@@ -820,9 +820,9 @@ export default async function SettingsPage({
               demoShop
                 ? "Harbor Air is the demo. It is not on a trial."
                 : access.status === "expired"
-                ? "Pro trial ended. You can look. When billing opens, keep Pro or step down to Crew or Shop."
+                ? "Shop trial ended. You can look. When billing opens, stay on Shop or upgrade to Crew or Pro."
                   : access.status === "trial"
-                    ? `${access.banner} Then keep Pro or step down to Crew or Shop. We are not taking cards yet.`
+                    ? `${access.banner} Then stay on Shop or upgrade to Crew or Pro. We are not taking cards yet.`
                     : `You are on ${access.plan === "pro" ? "Pro" : access.plan === "crew" ? "Crew" : "Shop"}.`
             }
           >
