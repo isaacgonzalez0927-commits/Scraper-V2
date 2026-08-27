@@ -1,10 +1,13 @@
 import { boot } from "@/lib/boot";
-import { db } from "@/lib/db";
-import { recordOnlinePayment } from "@/lib/finance";
-import { squareConfig } from "@/lib/integrations";
+import { connectedSquareShops, squareConfig } from "@/lib/integrations";
+import {
+  ingestSquareInvoiceId,
+  ingestSquarePayment,
+  parseSereSquareNote,
+  squareInvoiceEventNames,
+  squarePaymentEventNames,
+} from "@/lib/square-invoices";
 import { retrieveSquareOrder, verifySquareSignature } from "@/lib/square";
-import { invoices } from "@/lib/schema";
-import { eq } from "drizzle-orm";
 import { absoluteBaseUrl } from "@/lib/url";
 
 export const runtime = "nodejs";
@@ -13,17 +16,59 @@ export const dynamic = "force-dynamic";
 type SquareEvent = {
   type?: string;
   data?: {
+    id?: string;
     object?: {
       payment?: {
         id?: string;
         status?: string;
         order_id?: string;
+        invoice_id?: string;
+        customer_id?: string;
         amount_money?: { amount?: number };
         note?: string;
+        created_at?: string;
+      };
+      invoice?: {
+        id?: string;
       };
     };
   };
 };
+
+async function resolveSquareOrg(
+  payload: string,
+  signature: string | null,
+  noteOrgId: number,
+): Promise<number> {
+  const base = await absoluteBaseUrl();
+  const notificationUrl = `${base}/api/webhooks/square`;
+  if (noteOrgId) {
+    const config = await squareConfig(noteOrgId);
+    if (!config) return 0;
+    if (config.webhookSignatureKey) {
+      const ok = verifySquareSignature({
+        payload,
+        signature,
+        signatureKey: config.webhookSignatureKey,
+        notificationUrl,
+      });
+      if (!ok) return 0;
+    }
+    return noteOrgId;
+  }
+  const shops = await connectedSquareShops();
+  for (const shop of shops) {
+    if (!shop.webhookSignatureKey) continue;
+    const ok = verifySquareSignature({
+      payload,
+      signature,
+      signatureKey: shop.webhookSignatureKey,
+      notificationUrl,
+    });
+    if (ok) return shop.organizationId;
+  }
+  return 0;
+}
 
 export async function POST(request: Request) {
   await boot();
@@ -36,51 +81,64 @@ export async function POST(request: Request) {
   }
 
   const payment = event.data?.object?.payment;
-  const note = payment?.note || "";
-  const parts = note.startsWith("sere:") ? note.slice(5).split(":") : [];
-  const organizationId = Number(parts[0] || 0);
-  const invoiceId = Number(parts[1] || 0);
-  const customerId = Number(parts[2] || 0);
-  if (!organizationId || !invoiceId) {
-    return Response.json({ received: true, ignored: "no Sere note on this payment" });
+  const invoiceId = event.data?.object?.invoice?.id || "";
+  const tagged = parseSereSquareNote(payment?.note);
+  const organizationId = await resolveSquareOrg(
+    payload,
+    request.headers.get("x-square-hmacsha256-signature"),
+    tagged?.organizationId || 0,
+  );
+  if (!organizationId) {
+    if (tagged?.organizationId) {
+      return Response.json({ error: "Signature check failed." }, { status: 400 });
+    }
+    return Response.json({ received: true, ignored: "no Square shop matched this event" });
+  }
+
+  if (squareInvoiceEventNames().includes(event.type || "") && invoiceId) {
+    const ingested = await ingestSquareInvoiceId(organizationId, invoiceId);
+    return Response.json({
+      received: true,
+      invoiceId: ingested?.invoiceId || null,
+      created: ingested?.created || false,
+    });
+  }
+
+  if (!squarePaymentEventNames().includes(event.type || "")) {
+    return Response.json({ received: true, ignored: event.type || "unknown" });
+  }
+  if ((payment?.status || "").toUpperCase() !== "COMPLETED") {
+    return Response.json({ received: true, ignored: payment?.status || "not completed" });
   }
 
   const config = await squareConfig(organizationId);
-  if (!config) return Response.json({ error: "Square is not connected." }, { status: 400 });
-  if (config.webhookSignatureKey) {
-    const base = await absoluteBaseUrl();
-    const ok = verifySquareSignature({
-      payload,
-      signature: request.headers.get("x-square-hmacsha256-signature"),
-      signatureKey: config.webhookSignatureKey,
-      notificationUrl: `${base}/api/webhooks/square`,
-    });
-    if (!ok) return Response.json({ error: "Signature check failed." }, { status: 400 });
-  }
-
-  if (event.type !== "payment.updated" || payment?.status !== "COMPLETED") {
-    return Response.json({ received: true, ignored: event.type || "unknown" });
-  }
-
-  const [invoice] = await db().select().from(invoices).where(eq(invoices.id, invoiceId));
-  if (!invoice || invoice.organizationId !== organizationId) {
-    return Response.json({ received: true, ignored: "invoice not found" });
-  }
-
   let amount = Number(payment?.amount_money?.amount || 0);
-  if (!amount && payment?.order_id) {
-    const order = await retrieveSquareOrder(config.accessToken, payment.order_id, config.sandbox).catch(() => null);
+  if (!amount && payment?.order_id && config?.accessToken) {
+    const order = await retrieveSquareOrder(
+      config.accessToken,
+      payment.order_id,
+      config.sandbox,
+    ).catch(() => null);
     amount = Number(order?.total_money?.amount || 0);
   }
 
-  const result = await recordOnlinePayment({
+  const ingested = await ingestSquarePayment(
     organizationId,
-    customerId: customerId || invoice.customerId,
-    invoiceId,
-    amountCents: amount,
-    reference: String(payment?.id || payment?.order_id || ""),
-    method: "card",
-    notes: "Paid online through Square",
+    {
+      id: payment?.id,
+      status: payment?.status,
+      order_id: payment?.order_id,
+      invoice_id: payment?.invoice_id,
+      customer_id: payment?.customer_id,
+      amount_money: amount ? { amount } : payment?.amount_money,
+      note: payment?.note,
+      created_at: payment?.created_at,
+    },
+    { accessToken: config?.accessToken, sandbox: config?.sandbox },
+  );
+  return Response.json({
+    received: true,
+    invoiceId: ingested?.invoiceId || null,
+    recorded: ingested ? !ingested.alreadyRecorded : false,
   });
-  return Response.json({ received: true, recorded: !result.alreadyRecorded });
 }

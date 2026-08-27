@@ -133,9 +133,15 @@ export type StripeCharge = {
   id?: string;
   amount?: number;
   amount_refunded?: number;
+  amount_captured?: number;
   status?: string;
+  paid?: boolean;
   created?: number;
   description?: string | null;
+  customer?: string | { id?: string } | null;
+  invoice?: string | { id?: string } | null;
+  payment_intent?: string | { id?: string } | null;
+  metadata?: Record<string, string> | null;
 };
 
 export async function listCharges(
@@ -180,6 +186,41 @@ export async function listCharges(
 export function chargeNetCents(charge: StripeCharge): number {
   if (charge.status && charge.status !== "succeeded") return 0;
   return Math.max(0, Number(charge.amount || 0) - Number(charge.amount_refunded || 0));
+}
+
+export async function listStripeInvoices(
+  secretKey: string,
+  opts: {
+    limit?: number;
+    startingAfter?: string;
+    status?: string;
+    stripeAccount?: string;
+  } = {},
+): Promise<{ data: StripeInvoice[]; hasMore: boolean }> {
+  const payload = await stripeRequest<{ data?: StripeInvoice[]; has_more?: boolean }>(
+    secretKey,
+    "/invoices",
+    {
+      stripeAccount: opts.stripeAccount,
+      params: {
+        limit: opts.limit || 100,
+        starting_after: opts.startingAfter,
+        status: opts.status,
+        expand: ["data.lines.data"],
+      },
+    },
+  );
+  return { data: payload.data || [], hasMore: Boolean(payload.has_more) };
+}
+
+export function retrieveStripeCharge(
+  secretKey: string,
+  id: string,
+  opts: { stripeAccount?: string } = {},
+): Promise<StripeCharge> {
+  return stripeRequest<StripeCharge>(secretKey, `/charges/${encodeURIComponent(id)}`, {
+    stripeAccount: opts.stripeAccount,
+  });
 }
 
 export type StripePayout = {

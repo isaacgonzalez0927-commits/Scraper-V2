@@ -215,6 +215,30 @@ export async function connectedStripeShops(): Promise<Array<{ organizationId: nu
   return shops;
 }
 
+export async function connectedSquareShops(): Promise<
+  Array<{ organizationId: number; webhookSignatureKey: string }>
+> {
+  const rows = await db()
+    .select({ organizationId: integrations.organizationId, secretCipher: integrations.secretCipher })
+    .from(integrations)
+    .where(and(eq(integrations.provider, "square"), eq(integrations.status, "connected")));
+  const shops: Array<{ organizationId: number; webhookSignatureKey: string }> = [];
+  for (const row of rows) {
+    const plain = decryptSecret(row.secretCipher);
+    if (!plain) continue;
+    try {
+      const saved = JSON.parse(plain) as SquareConfig;
+      shops.push({
+        organizationId: row.organizationId,
+        webhookSignatureKey: saved.webhookSignatureKey || "",
+      });
+    } catch {
+      // Skip unreadable rows.
+    }
+  }
+  return shops;
+}
+
 export async function stripeConfig(organizationId: number): Promise<StripeConfig | null> {
   const saved = await readConfig<StoredStripe>(organizationId, "stripe");
   if (saved) {
