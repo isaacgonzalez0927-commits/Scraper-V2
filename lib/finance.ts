@@ -243,6 +243,54 @@ export async function recordOnlinePayment(opts: {
   return { paymentId, alreadyRecorded: false };
 }
 
+/**
+ * Same idempotent ledger write as online checkout, but the row may have no
+ * invoice (a Stripe charge, Square payment, or QuickBooks payment that is not
+ * linked to a Sere invoice yet).
+ */
+export async function recordExternalPayment(opts: {
+  organizationId: number;
+  customerId: number;
+  invoiceId?: number | null;
+  amountCents: number;
+  reference: string;
+  method?: string;
+  notes?: string;
+  paidOn?: string;
+}): Promise<{ paymentId: number | null; alreadyRecorded: boolean }> {
+  const reference = (opts.reference || "").trim();
+  if (!reference) return { paymentId: null, alreadyRecorded: false };
+  const existing = await db()
+    .select({ id: payments.id })
+    .from(payments)
+    .where(and(eq(payments.organizationId, opts.organizationId), eq(payments.reference, reference)));
+  if (existing.length) return { paymentId: existing[0].id, alreadyRecorded: true };
+  if (opts.invoiceId) {
+    return recordOnlinePayment({
+      organizationId: opts.organizationId,
+      customerId: opts.customerId,
+      invoiceId: opts.invoiceId,
+      amountCents: opts.amountCents,
+      reference,
+      method: opts.method,
+      notes: opts.notes,
+    });
+  }
+  const amount = Math.max(0, Math.round(Number(opts.amountCents || 0)));
+  if (amount <= 0) return { paymentId: null, alreadyRecorded: true };
+  const paymentId = await applyPayment({
+    organizationId: opts.organizationId,
+    customerId: opts.customerId,
+    invoiceId: null,
+    amountCents: amount,
+    paidOn: opts.paidOn || new Date().toISOString().slice(0, 10),
+    method: opts.method || "card",
+    reference,
+    notes: opts.notes || "",
+  });
+  return { paymentId, alreadyRecorded: false };
+}
+
 export async function nextInvoiceNumber(organizationId: number): Promise<string> {
   const [org] = await db().select().from(organizations).where(eq(organizations.id, organizationId));
   const number = `${org.invoicePrefix}${org.nextInvoiceNumber}`;

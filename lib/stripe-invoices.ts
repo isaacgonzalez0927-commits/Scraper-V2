@@ -8,9 +8,11 @@
  *                  Invoice for the same customer and line items. Send also
  *                  finalizes and calls Stripe Send Invoice.
  *   Stripe → Sere  a webhook for invoice.created / paid / voided, plus
- *                  payment_intent.succeeded and checkout.session.completed,
- *                  imports or updates the matching Sere invoice and records
- *                  the payment, without duplicating.
+ *                  payment_intent.succeeded, charge.succeeded, and
+ *                  checkout.session.completed, imports or updates the matching
+ *                  Sere invoice and records the payment, without duplicating.
+ *                  Sync from Stripe also pulls recent invoices and charges,
+ *                  including dashboard charges that are not tied to an invoice.
  *
  * Linked IDs (stripe_customer_id, stripe_invoice_id) are the only matching key.
  * Events that originated in Sere carry metadata.sere_invoice_id so they bounce
@@ -19,17 +21,21 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 import { db, nowISO, token } from "./db";
-import { addEvent, refreshInvoice, recordOnlinePayment } from "./finance";
+import { addEvent, refreshInvoice, recordExternalPayment, recordOnlinePayment } from "./finance";
 import { stripeConfig } from "./integrations";
 import { ensureStripeCustomer, findOrCreateSereCustomer } from "./stripe-customers";
 import {
   addStripeInvoiceItem,
+  chargeNetCents,
   createStripeInvoice,
   finalizeStripeInvoice,
+  listCharges,
+  listStripeInvoices,
   payStripeInvoiceOutOfBand,
   retrieveStripeInvoice,
   sendStripeInvoice,
   voidStripeInvoice,
+  type StripeCharge,
   type StripeInvoice,
   type StripeInvoiceLine,
   type StripePaymentIntent,
@@ -513,7 +519,7 @@ export function stripePaymentEventNames(): string[] {
 export async function ingestStripePaymentIntent(
   organizationId: number,
   remote: StripePaymentIntent,
-): Promise<{ invoiceId: number; alreadyRecorded: boolean } | null> {
+): Promise<{ invoiceId: number | null; alreadyRecorded: boolean } | null> {
   if (!remote.id || remote.status !== "succeeded") return null;
   const amountCents = Number(remote.amount_received || remote.amount || 0);
   if (amountCents <= 0) return null;
@@ -539,23 +545,215 @@ export async function ingestStripePaymentIntent(
     }
   }
 
-  if (!sereInvoiceId) return null;
-  const [invoice] = await db()
-    .select()
-    .from(invoices)
-    .where(and(eq(invoices.id, sereInvoiceId), eq(invoices.organizationId, organizationId)));
-  if (!invoice) return null;
-  const result = await recordOnlinePayment({
+  if (sereInvoiceId) {
+    const [invoice] = await db()
+      .select()
+      .from(invoices)
+      .where(and(eq(invoices.id, sereInvoiceId), eq(invoices.organizationId, organizationId)));
+    if (invoice) {
+      const result = await recordOnlinePayment({
+        organizationId,
+        customerId: invoice.customerId,
+        invoiceId: invoice.id,
+        amountCents,
+        reference: remote.id,
+        method: "card",
+        notes: "Paid in Stripe",
+      });
+      if (!result.alreadyRecorded) {
+        await markStripePaidIfLinked(organizationId, invoice.id);
+      }
+      return { invoiceId: invoice.id, alreadyRecorded: result.alreadyRecorded };
+    }
+  }
+
+  const stripeCustomerId = stripeCustomerIdOf(remote);
+  if (!stripeCustomerId) return null;
+  const unmatchedConfig = await stripeConfig(organizationId);
+  const { id: customerId } = await findOrCreateSereCustomer({
     organizationId,
-    customerId: invoice.customerId,
-    invoiceId: invoice.id,
+    stripeCustomerId,
+    secretKey: unmatchedConfig?.secretKey || "",
+    stripeAccount: unmatchedConfig?.stripeAccount,
+    fallbackName: "Stripe customer",
+  });
+  const result = await recordExternalPayment({
+    organizationId,
+    customerId,
     amountCents,
     reference: remote.id,
     method: "card",
     notes: "Paid in Stripe",
   });
-  if (!result.alreadyRecorded) {
-    await markStripePaidIfLinked(organizationId, invoice.id);
+  return { invoiceId: null, alreadyRecorded: result.alreadyRecorded };
+}
+
+function stripeCustomerIdOf(
+  object: { customer?: string | { id?: string } | null } | null | undefined,
+): string {
+  const customer = object?.customer;
+  if (!customer) return "";
+  return typeof customer === "string" ? customer : customer.id || "";
+}
+
+function unixDay(seconds?: number | null): string {
+  if (!seconds) return new Date().toISOString().slice(0, 10);
+  return new Date(seconds * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * A Stripe Charge that paid an invoice updates that invoice. A dashboard
+ * charge with no invoice still lands in the Sere payments ledger.
+ */
+export async function ingestStripeCharge(
+  organizationId: number,
+  remote: StripeCharge,
+): Promise<{ invoiceId: number | null; paymentId: number | null; alreadyRecorded: boolean } | null> {
+  if (!remote.id) return null;
+  const net = chargeNetCents(remote);
+  if (net <= 0) return null;
+
+  const stripeInvoice = stripeInvoiceIdOf(remote);
+  if (stripeInvoice) {
+    const config = await stripeConfig(organizationId);
+    if (config?.secretKey) {
+      try {
+        const invoice = await retrieveStripeInvoice(
+          config.secretKey,
+          stripeInvoice,
+          stripeOpts(config),
+        );
+        const ingested = await ingestStripeInvoice(organizationId, invoice);
+        if (ingested) {
+          return { invoiceId: ingested.invoiceId, paymentId: null, alreadyRecorded: true };
+        }
+      } catch {
+        // Fall through to a Sere invoice id on the charge.
+      }
+    }
   }
-  return { invoiceId: invoice.id, alreadyRecorded: result.alreadyRecorded };
+
+  const sereInvoiceId = Number(remote.metadata?.sere_invoice_id || remote.metadata?.invoice_id || 0);
+  if (sereInvoiceId) {
+    const [invoice] = await db()
+      .select()
+      .from(invoices)
+      .where(and(eq(invoices.id, sereInvoiceId), eq(invoices.organizationId, organizationId)));
+    if (invoice) {
+      const result = await recordExternalPayment({
+        organizationId,
+        customerId: invoice.customerId,
+        invoiceId: invoice.id,
+        amountCents: net,
+        reference: remote.id,
+        method: "card",
+        notes: "Paid in Stripe",
+        paidOn: unixDay(remote.created),
+      });
+      if (!result.alreadyRecorded) await markStripePaidIfLinked(organizationId, invoice.id);
+      return {
+        invoiceId: invoice.id,
+        paymentId: result.paymentId,
+        alreadyRecorded: result.alreadyRecorded,
+      };
+    }
+  }
+
+  const stripeCustomerId = stripeCustomerIdOf(remote);
+  if (!stripeCustomerId) return null;
+  const config = await stripeConfig(organizationId);
+  const { id: customerId } = await findOrCreateSereCustomer({
+    organizationId,
+    stripeCustomerId,
+    secretKey: config?.secretKey || "",
+    stripeAccount: config?.stripeAccount,
+    fallbackName: remote.description || "Stripe customer",
+  });
+  const paymentIntentId =
+    typeof remote.payment_intent === "string"
+      ? remote.payment_intent
+      : remote.payment_intent?.id || "";
+  const result = await recordExternalPayment({
+    organizationId,
+    customerId,
+    amountCents: net,
+    reference: paymentIntentId || remote.id,
+    method: "card",
+    notes: remote.description || "Paid in Stripe",
+    paidOn: unixDay(remote.created),
+  });
+  return {
+    invoiceId: null,
+    paymentId: result.paymentId,
+    alreadyRecorded: result.alreadyRecorded,
+  };
+}
+
+export type BookSyncResult = {
+  ok: boolean;
+  invoices: number;
+  payments: number;
+  error?: string;
+};
+
+export function describeBookSync(provider: string, result: BookSyncResult): string {
+  if (!result.ok) {
+    return result.error || `Could not sync ${provider} into Sere.`;
+  }
+  const inv = `${result.invoices} ${result.invoices === 1 ? "invoice" : "invoices"}`;
+  const pay = `${result.payments} ${result.payments === 1 ? "payment" : "payments"}`;
+  return `Pulled ${inv} and ${pay} from ${provider} into Sere.`;
+}
+
+/**
+ * Pull recent Stripe invoices and charges into the shop book. Webhooks keep
+ * it current after this; this covers history from before the webhook existed.
+ */
+export async function syncStripeBook(
+  organizationId: number,
+  opts: { limit?: number } = {},
+): Promise<BookSyncResult> {
+  const config = await stripeConfig(organizationId);
+  if (!config?.secretKey) {
+    return { ok: false, invoices: 0, payments: 0, error: "Connect Stripe first." };
+  }
+  const max = opts.limit && opts.limit > 0 ? opts.limit : 100;
+  let invoicesIn = 0;
+  let paymentsIn = 0;
+  try {
+    let startingAfter: string | undefined;
+    let pulled = 0;
+    while (pulled < max) {
+      const page = await listStripeInvoices(config.secretKey, {
+        limit: Math.min(100, max - pulled),
+        startingAfter,
+        stripeAccount: config.stripeAccount,
+      });
+      for (const remote of page.data) {
+        const ingested = await ingestStripeInvoice(organizationId, remote);
+        if (ingested) invoicesIn += 1;
+      }
+      pulled += page.data.length;
+      if (!page.hasMore || !page.data.length) break;
+      startingAfter = page.data[page.data.length - 1]?.id;
+      if (!startingAfter) break;
+    }
+
+    const charges = await listCharges(config.secretKey, {
+      limit: max,
+      stripeAccount: config.stripeAccount,
+    });
+    for (const charge of charges) {
+      const ingested = await ingestStripeCharge(organizationId, charge);
+      if (ingested && !ingested.alreadyRecorded && ingested.paymentId) paymentsIn += 1;
+    }
+    return { ok: true, invoices: invoicesIn, payments: paymentsIn };
+  } catch (error) {
+    return {
+      ok: false,
+      invoices: invoicesIn,
+      payments: paymentsIn,
+      error: (error as Error).message,
+    };
+  }
 }

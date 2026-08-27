@@ -15,6 +15,9 @@ import {
   saveSettingsAction,
   sendTestEmailAction,
   startStripeConnectAction,
+  syncQuickbooksBookAction,
+  syncSquareBookAction,
+  syncStripeBookAction,
 } from "@/app/actions";
 import { ConnectSereButton } from "@/components/ConnectSere";
 import { SquareKeyLink, SquareKeyTutorial } from "@/components/ConnectStripe";
@@ -286,8 +289,9 @@ export default async function SettingsPage({
                       <p className="mt-1">
                         Overview reads the live Stripe balance. Customers and
                         invoices you save in Sere also appear in Stripe. Add a
-                        webhook below so customers and invoices created in
-                        Stripe come back into Sere.
+                        webhook below so customers, invoices, and payments
+                        created in Stripe come back into Sere. Tap Sync from
+                        Stripe to pull recent invoices and payments received.
                       </p>
                     </div>
                   </Banner>
@@ -315,7 +319,10 @@ export default async function SettingsPage({
                     In Stripe, Developers → Webhooks → Add endpoint. Events:{" "}
                     <code>customer.created</code>, <code>customer.updated</code>,{" "}
                     <code>customer.deleted</code>, <code>invoice.created</code>,{" "}
-                    <code>invoice.paid</code>, <code>invoice.voided</code>,{" "}
+                    <code>invoice.paid</code>, <code>invoice.payment_succeeded</code>,{" "}
+                    <code>invoice.voided</code>,{" "}
+                    <code>payment_intent.succeeded</code>,{" "}
+                    <code>charge.succeeded</code>,{" "}
                     <code>checkout.session.completed</code>.
                     Paste the <code>whsec_...</code> it gives you, then reconnect the key above
                     with this field filled in.
@@ -386,6 +393,14 @@ export default async function SettingsPage({
               </details>
             ) : null}
 
+            {integrations.stripe.connected && !demoShop ? (
+              <form action={syncStripeBookAction} className="mt-2">
+                <button className="btn btn-sm" type="submit">
+                  Sync from Stripe
+                </button>
+              </form>
+            ) : null}
+
             {integrations.stripe.connected && !integrations.stripe.fromEnv && !demoShop ? (
               <form action={disconnectStripeAction} className="mt-2">
                 <button className="btn btn-ghost btn-sm" type="submit">Disconnect Stripe</button>
@@ -396,14 +411,16 @@ export default async function SettingsPage({
           <p className="section-label mt-1">Also works with</p>
           <p className="muted">
             Square is the same idea: paste the access token and tap Connect Square.
-            Overview then shows cash that actually landed in Square. OpenAI is for
-            Serenity. PayPal and QuickBooks stay optional extras.
+            Overview then shows cash that actually landed in Square. Sync from Square
+            pulls invoices and payments into the book. OpenAI is for
+            Serenity. PayPal stays optional. QuickBooks pulls invoices and payments
+            the same way.
           </p>
 
           <Card
             id="square"
             title="Square"
-              note="Read the shop's Square so Overview shows payments and payouts, not just invoices you typed in."
+              note="Read Square payments and invoices into the shop book. Overview also shows cash that landed there."
               action={
                 <span
                   className={`badge badge-${
@@ -437,7 +454,8 @@ export default async function SettingsPage({
                       <strong>Overview is reading this Square account.</strong>
                       <p className="mt-1">
                         Taken this month and payouts to the bank show on Overview and Reports.
-                        A webhook is only if you also want invoice checkout recorded.
+                        Tap Sync from Square to pull invoices and payments received into
+                        the book. A webhook keeps those current after that.
                       </p>
                     </div>
                   </Banner>
@@ -447,6 +465,13 @@ export default async function SettingsPage({
                       Copy
                     </button>
                   </div>
+                  {!demoShop ? (
+                    <form action={syncSquareBookAction} className="mt-2">
+                      <button className="btn btn-sm" type="submit">
+                        Sync from Square
+                      </button>
+                    </form>
+                  ) : null}
                   {!demoShop ? (
                     <form action={disconnectSquareAction} className="mt-2">
                       <button className="btn btn-ghost btn-sm" type="submit">Disconnect Square</button>
@@ -473,7 +498,7 @@ export default async function SettingsPage({
                       />
                       <p className="help">
                         Stored encrypted. Sere never shows it again. Used to read
-                        payments and payouts.
+                        invoices, payments, and payouts.
                       </p>
                     </div>
                     <details className="disclosure">
@@ -642,7 +667,7 @@ export default async function SettingsPage({
           <Card
             id="quickbooks"
             title="QuickBooks"
-              note="Books link only. Invoices and card checkout still live in Sere."
+              note="Pull invoices and payments from QuickBooks into Sere. One way. Sere does not write back."
               action={
                 <span
                   className={`badge badge-${
@@ -671,10 +696,22 @@ export default async function SettingsPage({
                       </div>
                     ) : null}
                   </div>
+                  <p className="help mt-2">
+                    QuickBooks tokens expire in about an hour. Tap Sync from QuickBooks
+                    after you reconnect if the pull goes stale. Card checkout still
+                    lives in Stripe or Square.
+                  </p>
                   {!demoShop ? (
-                    <form action={disconnectQuickbooksAction} className="mt-2">
-                      <button className="btn btn-ghost btn-sm" type="submit">Disconnect QuickBooks</button>
-                    </form>
+                    <>
+                      <form action={syncQuickbooksBookAction} className="mt-2">
+                        <button className="btn btn-sm" type="submit">
+                          Sync from QuickBooks
+                        </button>
+                      </form>
+                      <form action={disconnectQuickbooksAction} className="mt-2">
+                        <button className="btn btn-ghost btn-sm" type="submit">Disconnect QuickBooks</button>
+                      </form>
+                    </>
                   ) : null}
                 </>
               ) : demoShop ? (

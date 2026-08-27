@@ -121,6 +121,10 @@ export type SquarePayment = {
   id?: string;
   status?: string;
   order_id?: string;
+  invoice_id?: string;
+  customer_id?: string;
+  note?: string;
+  created_at?: string;
   amount_money?: { amount?: number };
 };
 
@@ -132,6 +136,10 @@ export type SquareListedPayment = {
   amount_money?: SquareMoney;
   refunded_money?: SquareMoney;
   created_at?: string;
+  customer_id?: string;
+  invoice_id?: string;
+  order_id?: string;
+  note?: string;
 };
 
 export function squarePaymentNetCents(payment: SquareListedPayment): number {
@@ -210,6 +218,104 @@ export async function retrieveSquarePayment(
     { sandbox },
   );
   return payload.payment || {};
+}
+
+export type SquareCustomer = {
+  id?: string;
+  given_name?: string;
+  family_name?: string;
+  company_name?: string;
+  email_address?: string;
+  phone_number?: string;
+};
+
+export async function retrieveSquareCustomer(
+  accessToken: string,
+  customerId: string,
+  sandbox?: boolean,
+): Promise<SquareCustomer | null> {
+  try {
+    const payload = await request<{ customer?: SquareCustomer }>(
+      accessToken,
+      `/v2/customers/${encodeURIComponent(customerId)}`,
+      { sandbox },
+    );
+    return payload.customer || null;
+  } catch {
+    return null;
+  }
+}
+
+export type SquareInvoice = {
+  id?: string;
+  version?: number;
+  location_id?: string;
+  order_id?: string;
+  invoice_number?: string;
+  title?: string;
+  description?: string;
+  status?: string;
+  primary_recipient?: {
+    customer_id?: string;
+    given_name?: string;
+    family_name?: string;
+    email_address?: string;
+    phone_number?: string;
+  };
+  payment_requests?: Array<{
+    request_type?: string;
+    due_date?: string;
+    computed_amount_money?: SquareMoney;
+    total_completed_amount_money?: SquareMoney;
+  }>;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export async function retrieveSquareInvoice(
+  accessToken: string,
+  invoiceId: string,
+  sandbox?: boolean,
+): Promise<SquareInvoice | null> {
+  try {
+    const payload = await request<{ invoice?: SquareInvoice }>(
+      accessToken,
+      `/v2/invoices/${encodeURIComponent(invoiceId)}`,
+      { sandbox },
+    );
+    return payload.invoice || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function listSquareInvoices(
+  accessToken: string,
+  opts: { locationId: string; sandbox?: boolean; limit?: number } = { locationId: "" },
+): Promise<SquareInvoice[]> {
+  if (!opts.locationId) return [];
+  const rows: SquareInvoice[] = [];
+  let cursor: string | undefined;
+  const max = opts.limit && opts.limit > 0 ? opts.limit : 100;
+  while (rows.length < max) {
+    const payload = await request<{ invoices?: SquareInvoice[]; cursor?: string }>(
+      accessToken,
+      "/v2/invoices",
+      {
+        sandbox: opts.sandbox,
+        query: {
+          location_id: opts.locationId,
+          limit: Math.min(100, max - rows.length),
+          cursor,
+        },
+      },
+    );
+    const page = payload.invoices || [];
+    rows.push(...page);
+    if (!payload.cursor || !page.length) break;
+    cursor = payload.cursor;
+  }
+  return rows.slice(0, max);
 }
 
 export async function retrieveSquareOrder(

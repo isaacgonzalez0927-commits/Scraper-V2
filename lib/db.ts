@@ -539,8 +539,27 @@ export async function ensureSchema(): Promise<void> {
   await addColumnIfMissing("customers", "stripe_customer_id", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing("invoices", "stripe_invoice_id", "TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing("invoices", "stripe_hosted_url", "TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing("customers", "square_customer_id", "TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing("customers", "qbo_customer_id", "TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing("invoices", "square_invoice_id", "TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing("invoices", "qbo_invoice_id", "TEXT NOT NULL DEFAULT ''");
   await getClient().execute(
     "CREATE INDEX IF NOT EXISTS customers_stripe ON customers (stripe_customer_id)",
+  );
+  await getClient().execute(
+    "CREATE INDEX IF NOT EXISTS customers_square ON customers (square_customer_id)",
+  );
+  await getClient().execute(
+    "CREATE INDEX IF NOT EXISTS customers_qbo ON customers (qbo_customer_id)",
+  );
+  await getClient().execute(
+    "CREATE INDEX IF NOT EXISTS invoices_stripe ON invoices (stripe_invoice_id)",
+  );
+  await getClient().execute(
+    "CREATE INDEX IF NOT EXISTS invoices_square ON invoices (square_invoice_id)",
+  );
+  await getClient().execute(
+    "CREATE INDEX IF NOT EXISTS invoices_qbo ON invoices (qbo_invoice_id)",
   );
 }
 
