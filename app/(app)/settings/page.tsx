@@ -20,7 +20,7 @@ import {
   syncStripeBookAction,
 } from "@/app/actions";
 import { ConnectSereButton } from "@/components/ConnectSere";
-import { SquareKeyLink, SquareKeyTutorial } from "@/components/ConnectStripe";
+import { SquareKeyTutorial } from "@/components/ConnectStripe";
 import { HashScroll } from "@/components/HashScroll";
 import { StripeKeyTutorial } from "@/components/StripeKeyTutorial";
 import { ThemeChooser } from "@/components/ThemeToggle";
@@ -299,7 +299,7 @@ export default async function SettingsPage({
               </>
             ) : !demoShop ? (
               <>
-                <StripeKeyTutorial />
+                <StripeKeyTutorial live={shopMode !== "sandbox"} />
                 <form id="stripe-keys-form" action={connectStripeAction} className="connect-paste mt-2">
                   <input
                     className="input"
@@ -364,7 +364,7 @@ export default async function SettingsPage({
             {!demoShop && integrations.stripe.connected ? (
               <details className="disclosure" open={false}>
                 <summary>Update restricted key</summary>
-                <StripeKeyTutorial defaultOpen={false} />
+                <StripeKeyTutorial defaultOpen={false} live={shopMode !== "sandbox"} />
                 <form id="stripe-keys-update-form" action={connectStripeAction} className="form-grid mt-2">
                   <div className="field full">
                     <label>Restricted key</label>
@@ -410,11 +410,8 @@ export default async function SettingsPage({
 
           <p className="section-label mt-1">Also works with</p>
           <p className="muted">
-            Square is the same idea: paste the access token and tap Connect Square.
-            Overview then shows cash that actually landed in Square. Sync from Square
-            pulls invoices and payments into the book. OpenAI is for
-            Serenity. PayPal stays optional. QuickBooks pulls invoices and payments
-            the same way.
+            Square is the same idea: create the token, paste it, tap Connect Square.
+            QuickBooks pulls invoices and payments the same way. PayPal stays optional.
           </p>
 
           <Card
@@ -483,9 +480,6 @@ export default async function SettingsPage({
               ) : (
                 <>
                   <SquareKeyTutorial />
-                  <p className="help">
-                    Create an app if you do not have one. <SquareKeyLink />.
-                  </p>
                   <form action={connectSquareAction} className="form-grid mt-2">
                     <div className="field full">
                       <label>Access token</label>

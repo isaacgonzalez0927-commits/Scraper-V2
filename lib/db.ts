@@ -561,6 +561,46 @@ export async function ensureSchema(): Promise<void> {
   await getClient().execute(
     "CREATE INDEX IF NOT EXISTS invoices_qbo ON invoices (qbo_invoice_id)",
   );
+  await addColumnIfMissing("customers", "public_token", "TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing("customers", "follow_up_on", "TEXT");
+  await addColumnIfMissing("customers", "follow_up_note", "TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing("jobs", "property_id", "INTEGER");
+  await getClient().execute(`
+    CREATE TABLE IF NOT EXISTS properties (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      customer_id INTEGER NOT NULL,
+      label TEXT NOT NULL DEFAULT 'Service',
+      line1 TEXT NOT NULL DEFAULT '',
+      city TEXT NOT NULL DEFAULT '',
+      state TEXT NOT NULL DEFAULT '',
+      postal TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      details TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL
+    )
+  `);
+  await getClient().execute(`
+    CREATE TABLE IF NOT EXISTS customer_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      customer_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    )
+  `);
+  await getClient().execute(
+    "CREATE INDEX IF NOT EXISTS properties_customer ON properties (organization_id, customer_id)",
+  );
+  await getClient().execute(
+    "CREATE INDEX IF NOT EXISTS customer_contacts_customer ON customer_contacts (organization_id, customer_id)",
+  );
+  await getClient().execute(
+    "CREATE INDEX IF NOT EXISTS customers_public_token ON customers (public_token)",
+  );
 }
 
 async function addColumnIfMissing(table: string, column: string, definition: string): Promise<void> {

@@ -4,6 +4,7 @@ import { Shell } from "@/components/Shell";
 import { tradeFieldsFor } from "@/lib/business";
 import { db } from "@/lib/db";
 import { loadApp } from "@/lib/page";
+import { listProperties } from "@/lib/properties";
 import { customers } from "@/lib/schema";
 
 export default async function NewJobPage({
@@ -20,6 +21,9 @@ export default async function NewJobPage({
   const selectedCustomer = q.customerId
     ? customerRows.find((customer) => customer.id === Number(q.customerId))
     : undefined;
+  const propertyRows = selectedCustomer
+    ? await listProperties(org.id, selectedCustomer.id)
+    : [];
   return (
     <Shell
       {...shell}
@@ -41,6 +45,7 @@ export default async function NewJobPage({
           serviceState: selectedCustomer?.serviceState,
           servicePostal: selectedCustomer?.servicePostal,
         }}
+        propertyRows={propertyRows}
       />
     </Shell>
   );

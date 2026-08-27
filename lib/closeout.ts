@@ -63,6 +63,29 @@ export function parseCloseout(input: {
   };
 }
 
+export type NoChargeDraft =
+  | { ok: true; workCompleted: string; reason: string }
+  | { ok: false; error: string };
+
+/**
+ * No-charge closeout: the visit happened, nothing is billed.
+ * A reason is required so the office can see why money was left on the table.
+ */
+export function parseNoCharge(input: {
+  workCompleted: string;
+  reason: string;
+}): NoChargeDraft {
+  const workCompleted = input.workCompleted.trim();
+  if (!workCompleted) {
+    return { ok: false, error: "Say what was completed before closing the job." };
+  }
+  const reason = input.reason.trim();
+  if (!reason) {
+    return { ok: false, error: "Say why this visit is no charge." };
+  }
+  return { ok: true, workCompleted, reason };
+}
+
 /** Calendar-day invoice terms from the day the work is closed. */
 export function closeoutDueDate(issueDate: string, termsDays: number): string {
   return addDaysISO(issueDate, Math.max(0, Math.trunc(termsDays)));

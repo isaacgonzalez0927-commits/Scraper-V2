@@ -1165,6 +1165,76 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   min-height: 28px;
   font-size: 13px;
 }
+.key-guide-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+.key-guide-cta .btn {
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+.nav-count {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.nav a.active .nav-count {
+  background: var(--accent-strong);
+}
+.bottom-icon {
+  position: relative;
+  display: inline-flex;
+}
+.nav-dot {
+  position: absolute;
+  top: -5px;
+  right: -9px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+.house-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.house-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.collect-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.collect-item + .collect-item {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
 .connect-paste .btn { flex-shrink: 0; }
 
 .key-guide {
@@ -2477,8 +2547,8 @@ a.btn-quickbooks, a.btn-quickbooks:hover { color: #fff; }
   }
   .connect-cta .btn,
   .connect-paste .btn,
-  .key-guide .btn,
-  .btn-connect {
+  .key-guide .key-guide-cta .btn,
+  .btn-connect-lg {
     width: auto;
     min-height: 26px;
     padding: 0 8px;
@@ -2496,6 +2566,12 @@ a.btn-quickbooks, a.btn-quickbooks:hover { color: #fff; }
     border-radius: 8px;
     align-self: flex-start;
     flex: 0 0 auto;
+  }
+  .key-guide .key-guide-cta .btn {
+    min-height: 40px;
+    padding: 0 16px;
+    font-size: 14px;
+    border-radius: 8px;
   }
   .help { font-size: 13px; }
   .checkbox { min-height: 44px; font-size: 16px; }

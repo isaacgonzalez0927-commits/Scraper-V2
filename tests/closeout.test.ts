@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { closeoutDueDate, parseCloseout } from "../lib/closeout";
+import { closeoutDueDate, parseCloseout, parseNoCharge } from "../lib/closeout";
 
 test("closeout requires a completed-work record and a final amount", () => {
   assert.deepEqual(
@@ -49,6 +49,24 @@ test("an extra cost must say what was bought", () => {
       extraCost: "19",
     }),
     { ok: false, error: "Name the part or cost you are adding." },
+  );
+});
+
+test("no-charge closeout needs completed work and a reason, not an amount", () => {
+  assert.deepEqual(
+    parseNoCharge({ workCompleted: "Looked at the unit", reason: "" }),
+    { ok: false, error: "Say why this visit is no charge." },
+  );
+  assert.deepEqual(
+    parseNoCharge({
+      workCompleted: " Diagnosed a failed capacitor. ",
+      reason: " Warranty visit. ",
+    }),
+    {
+      ok: true,
+      workCompleted: "Diagnosed a failed capacitor.",
+      reason: "Warranty visit.",
+    },
   );
 });
 

@@ -74,20 +74,26 @@ export function SquareKeyLink() {
 export function SquareKeyTutorial() {
   return (
     <div className="key-guide">
-      <p className="key-guide-lede">Three steps. Same idea as Stripe.</p>
+      <p className="key-guide-lede">
+        Open Square Developers, copy the production access token, paste it below.
+      </p>
+      <div className="key-guide-cta">
+        <a
+          className="btn btn-connect btn-square btn-connect-lg"
+          href={SQUARE_KEYS_URL}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open Square Developers
+        </a>
+      </div>
       <ol className="key-steps">
+        <li>Pick your app, or create one.</li>
         <li>
-          Open{" "}
-          <a href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
-            Square Developers
-          </a>
-          . Pick your app, or create one.
+          Credentials, then Production. Copy the access token. Use Sandbox only
+          for a test app.
         </li>
-        <li>
-          Credentials → Production. Copy the access token. Use Sandbox only if
-          that is a test app.
-        </li>
-        <li>Paste it below. Tap Connect Square.</li>
+        <li>Paste it below and tap Connect Square.</li>
       </ol>
     </div>
   );

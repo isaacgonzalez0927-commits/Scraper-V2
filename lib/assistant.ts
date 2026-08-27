@@ -5,6 +5,8 @@ import { displayName } from "./display";
 import { logActivity } from "./finance";
 import { prettyDate, prettyWhen } from "./labels";
 import { formatMoney } from "./money";
+import { jobIsUnbilled } from "./collect";
+import { collectTotals, describeCollect, loadCollectQueue } from "./collect-queue";
 import { collectedCents, isoDate, outstandingTotals, weekBounds } from "./queries";
 import { customers, invoices, jobs, organizations } from "./schema";
 import { integrationStatus, openaiConfig } from "./integrations";
@@ -48,6 +50,7 @@ type RescheduleIntent = { kind: "reschedule"; query: string; when: string };
 type CompleteIntent = { kind: "complete"; query: string };
 type JobsIntent = { kind: "jobs"; when: "today" | "tomorrow" | "week" | "unscheduled" };
 type InvoicesIntent = { kind: "invoices"; filter: "overdue" | "unpaid" | "draft" | "due_soon" };
+type CollectIntent = { kind: "collect" };
 type AnswerIntent = { kind: "answer"; text: string };
 type BriefIntent = { kind: "brief" };
 type CashIntent = { kind: "cash" };
@@ -62,6 +65,7 @@ export type AssistantIntent =
   | BriefIntent
   | CashIntent
   | HelpIntent
+  | CollectIntent
   | AnswerIntent
   | UnknownIntent;
 
@@ -183,6 +187,10 @@ export function parseAssistant(message: string, now = new Date()): AssistantInte
   }
   if (/\bdraft invoices?\b/.test(lower)) return { kind: "invoices", filter: "draft" };
 
+  if (/\b(never billed|unbilled|sitting out|bill later)\b/.test(lower) || /^collect\b/.test(lower)) {
+    return { kind: "collect" };
+  }
+
   if (/\b(cash|collected|money in|what came in|revenue)\b/.test(lower)) {
     return { kind: "cash" };
   }
@@ -252,6 +260,7 @@ export function planToIntent(plan: OpenAIChatJson, now = new Date()): AssistantI
   if (intent === "help") return { kind: "help" };
   if (intent === "brief") return { kind: "brief" };
   if (intent === "cash") return { kind: "cash" };
+  if (intent === "collect") return { kind: "collect" };
   if (intent === "jobs") {
     const when =
       plan.when === "tomorrow" || plan.when === "week" || plan.when === "unscheduled"
@@ -323,7 +332,22 @@ export async function buildBrief(
     return due >= today && due <= until;
   });
 
+  const invoicedJobIds = new Set(
+    invoiceRows.filter((i) => i.status !== "void" && i.jobId).map((i) => i.jobId as number),
+  );
+  const unbilled = jobRows.filter((j) => jobIsUnbilled(j, invoicedJobIds));
+
   const alerts: AssistantAlert[] = [];
+  if (unbilled.length || drafts.length) {
+    alerts.push({
+      tone: "warn",
+      title: unbilled.length
+        ? `${unbilled.length} never billed`
+        : `${drafts.length} draft ${drafts.length === 1 ? "invoice" : "invoices"}`,
+      body: "Money sitting outside the bank. Open Collect.",
+      href: "/collect",
+    });
+  }
   if (overdue > 0) {
     alerts.push({
       tone: "bad",
@@ -363,14 +387,6 @@ export async function buildBrief(
       title: `${unscheduled.length} unscheduled`,
       body: `Ask me to move one onto a day, or open ${voice.jobs}.`,
       href: "/jobs?status=unscheduled",
-    });
-  }
-  if (drafts.length) {
-    alerts.push({
-      tone: "warn",
-      title: `${drafts.length} draft ${drafts.length === 1 ? "invoice" : "invoices"}`,
-      body: "Still sitting, not sent.",
-      href: "/invoices?status=draft",
     });
   }
   if (!integrations.stripe.connected && !integrations.square.connected) {
@@ -547,7 +563,7 @@ async function askOpenAIForIntent(
         "with query (title or job id) and date (e.g. Friday, tomorrow, 2026-08-21).",
         "If they ask a question, set intent to answer and a short reply from the snapshot.",
         "JSON keys: intent, when, filter, query, date, reply.",
-        "intent is one of: jobs, invoices, cash, brief, complete, reschedule, help, answer.",
+        "intent is one of: jobs, invoices, cash, collect, brief, complete, reschedule, help, answer.",
         "when is today, tomorrow, week, or unscheduled. filter is overdue, unpaid, draft, or due_soon.",
       ].join(" "),
       `Snapshot:\n${snapshot}\n\nOwner said:\n${message}`,
@@ -608,7 +624,7 @@ export async function runAssistant(
     const unknownText = !gpt
       ? [
           `I did not catch that. I can show today's ${work}, catch you up,`,
-          `list overdue invoices, or move a ${unit}. Serenity is not on this host yet.`,
+          `list overdue invoices, open Collect, or move a ${unit}. Serenity is not on this host yet.`,
           `Try: move the next ${unit} to Friday.`,
         ].join(" ")
       : credit?.exhausted
@@ -622,7 +638,7 @@ export async function runAssistant(
         intent.kind === "unknown"
           ? unknownText
           : [
-              `I watch ${shop} for you. Ask for today's ${work}, overdue invoices,`,
+              `I watch ${shop} for you. Ask for today's ${work}, Collect, overdue invoices,`,
               `or cash this week. Or say move the next ${unit} to Friday.`,
             ].join(" "),
       links:
@@ -640,6 +656,21 @@ export async function runAssistant(
     return {
       text: `${brief.greeting}. ${brief.summary}\n${lines}`,
       links: brief.alerts.map((a) => ({ href: a.href, label: a.title })),
+    };
+  }
+
+  if (intent.kind === "collect") {
+    const queue = await loadCollectQueue(organizationId);
+    const totals = collectTotals(queue);
+    return {
+      text: describeCollect(totals),
+      links: [
+        { href: "/collect", label: "Collect" },
+        ...queue.slice(0, 5).map((row) => ({
+          href: row.href,
+          label: `${row.customerName} · ${row.title}`,
+        })),
+      ],
     };
   }
 

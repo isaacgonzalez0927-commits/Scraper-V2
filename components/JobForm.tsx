@@ -5,20 +5,24 @@ import { parseDetails, type TradeField, type TradeProfile } from "@/lib/business
 import { toLocalInput } from "@/lib/display";
 import { JOB_STATUSES, label } from "@/lib/labels";
 import { centsToInput } from "@/lib/money";
-import type { customers, jobs } from "@/lib/schema";
+import { propertyLabel } from "@/lib/properties";
+import type { customers, jobs, properties } from "@/lib/schema";
 
 type Customer = typeof customers.$inferSelect;
 type Job = typeof jobs.$inferSelect;
+type Property = typeof properties.$inferSelect;
 
 export function JobForm({
   job,
   customerRows,
+  propertyRows = [],
   error,
   voice,
   fields,
 }: {
   job?: Partial<Job>;
   customerRows: Customer[];
+  propertyRows?: Property[];
   error?: string;
   voice: TradeProfile;
   fields: readonly TradeField[];
@@ -42,6 +46,20 @@ export function JobForm({
           </select>
           <p className="help"><a href="/customers/new">Add a new {voice.customer.toLowerCase()}</a></p>
         </div>
+        {propertyRows.length ? (
+          <div className="field">
+            <label>House</label>
+            <select name="property_id" defaultValue={job?.propertyId || ""}>
+              <option value="">Use the address below</option>
+              {propertyRows.map((property) => (
+                <option key={property.id} value={property.id}>
+                  {propertyLabel(property)}
+                </option>
+              ))}
+            </select>
+            <p className="help">Picking a house copies its address onto this {voice.job.toLowerCase()}.</p>
+          </div>
+        ) : null}
         <div className="field">
           <label>{voice.jobTitleLabel}</label>
           <input name="title" defaultValue={job?.title || ""} required placeholder={voice.jobPlaceholder} />

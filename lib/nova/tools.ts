@@ -54,7 +54,8 @@ const SHOP_TOOLS: NovaToolDef[] = [
       description:
         "The whole shop right now: money this month and week, outstanding and " +
         "overdue, profit and costs, live Stripe/Square cash, today's and " +
-        "tomorrow's board, unscheduled work, work finished but never invoiced, " +
+        "tomorrow's board, unscheduled work, work finished but never invoiced " +
+        "(send them to Collect at /collect), " +
         "overdue and due-soon invoices, and who to follow up with. Call this " +
         "before answering anything about numbers or the schedule.",
       parameters: { type: "object", properties: {} },

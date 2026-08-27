@@ -245,13 +245,50 @@ export const customers = sqliteTable(
     stripeCustomerId: text("stripe_customer_id").notNull().default(""),
     squareCustomerId: text("square_customer_id").notNull().default(""),
     qboCustomerId: text("qbo_customer_id").notNull().default(""),
+    publicToken: text("public_token").notNull().default(""),
+    followUpOn: text("follow_up_on"),
+    followUpNote: text("follow_up_note").notNull().default(""),
   },
   (t) => [
     index("customers_org").on(t.organizationId),
     index("customers_stripe").on(t.stripeCustomerId),
     index("customers_square").on(t.squareCustomerId),
     index("customers_qbo").on(t.qboCustomerId),
+    index("customers_public_token").on(t.publicToken),
   ],
+);
+
+export const properties = sqliteTable(
+  "properties",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    customerId: integer("customer_id").notNull().references(() => customers.id),
+    label: text("label").notNull().default("Service"),
+    line1: text("line1").notNull().default(""),
+    city: text("city").notNull().default(""),
+    state: text("state").notNull().default(""),
+    postal: text("postal").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    details: text("details").notNull().default("{}"),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("properties_customer").on(t.organizationId, t.customerId)],
+);
+
+export const customerContacts = sqliteTable(
+  "customer_contacts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    customerId: integer("customer_id").notNull().references(() => customers.id),
+    name: text("name").notNull(),
+    role: text("role").notNull().default(""),
+    phone: text("phone").notNull().default(""),
+    email: text("email").notNull().default(""),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("customer_contacts_customer").on(t.organizationId, t.customerId)],
 );
 
 export const jobs = sqliteTable(
@@ -260,6 +297,7 @@ export const jobs = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     organizationId: integer("organization_id").notNull().references(() => organizations.id),
     customerId: integer("customer_id").notNull().references(() => customers.id),
+    propertyId: integer("property_id"),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
     serviceLine1: text("service_line1").notNull().default(""),

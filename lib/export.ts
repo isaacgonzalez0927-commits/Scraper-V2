@@ -11,10 +11,15 @@ function dollars(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
-export type ExportKind = "payments" | "invoices" | "jobs";
+export type ExportKind = "payments" | "invoices" | "jobs" | "customers";
 
 export function isExportKind(value: string): value is ExportKind {
-  return value === "payments" || value === "invoices" || value === "jobs";
+  return (
+    value === "payments" ||
+    value === "invoices" ||
+    value === "jobs" ||
+    value === "customers"
+  );
 }
 
 export async function buildExport(
@@ -69,6 +74,42 @@ export async function buildExport(
             dollars(balance),
           ];
         }),
+      ),
+    };
+  }
+
+  if (kind === "customers") {
+    const rows = await db()
+      .select()
+      .from(customers)
+      .where(eq(customers.organizationId, organizationId));
+    return {
+      filename: csvFileName("customers", day),
+      body: csvTable(
+        [
+          "Name",
+          "Company",
+          "Email",
+          "Phone",
+          "Service street",
+          "Service city",
+          "Service state",
+          "Service ZIP",
+          "Billing street",
+          "Notes",
+        ],
+        rows.map((customer) => [
+          customer.name,
+          customer.companyName,
+          customer.email,
+          customer.phone,
+          customer.serviceLine1,
+          customer.serviceCity,
+          customer.serviceState,
+          customer.servicePostal,
+          customer.billingLine1,
+          customer.notes,
+        ]),
       ),
     };
   }

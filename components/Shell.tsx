@@ -20,6 +20,7 @@ const PATHS: Record<string, React.ReactNode> = {
   bell: <><path d="M18 15.5V11a6 6 0 1 0-12 0v4.5L4.5 18h15z" /><path d="M9.5 18a2.5 2.5 0 0 0 5 0" /></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
   spark: <><path d="M12 3.2 13.9 9l5.8 2-5.8 2-1.9 5.8L10.1 13 4.3 11l5.8-2z" /><path d="M18.5 4v3M17 5.5h3" /></>,
+  cash: <><rect x="3" y="6" width="18" height="12" rx="2" /><circle cx="12" cy="12" r="2.3" /><path d="M7 9.5h.01M17 14.5h.01" /></>,
 };
 
 /* Solid silhouettes for the selected tab, the way SF Symbols fill on iOS. */
@@ -78,6 +79,7 @@ export function Shell({
   title,
   sub,
   actions,
+  collectCount = 0,
   children,
 }: {
   orgName: string;
@@ -95,6 +97,7 @@ export function Shell({
   setup?: { guide: SetupGuideView } | null;
   shopMode?: ShopMode;
   native?: boolean;
+  collectCount?: number;
   path: string;
   title: string;
   sub?: React.ReactNode;
@@ -103,23 +106,25 @@ export function Shell({
 }) {
   const active = (href: string) => path === href || path.startsWith(`${href}/`);
   const modeNote = !isDemo && shopMode ? shopModeBanner(shopMode) : null;
-  const nav: [string, string, string][] = [
+  const collectBadge = collectCount > 0 ? (collectCount > 9 ? "9+" : String(collectCount)) : "";
+  const nav: [string, string, string, string?][] = [
     ["/overview", "Overview", "grid"],
     ["/serenity", "Serenity", "spark"],
     ["/jobs", jobsLabel, "briefcase"],
     ["/customers", customersLabel, "users"],
     ["/estimates", "Estimates", "file"],
+    ["/collect", "Collect", "cash", collectBadge],
     ["/invoices", "Invoices", "file"],
     ["/payments", "Payments", "card"],
     ["/calendar", "Calendar", "calendar"],
     ["/reports", "Reports", "chart"],
     ["/settings", "Settings", "settings"],
   ];
-  const bottom: [string, string, string][] = [
+  const bottom: [string, string, string, string?][] = [
     ["/overview", "Home", "grid"],
     ["/jobs", jobsLabel, "briefcase"],
     ["/serenity", "Serenity", "spark"],
-    ["/invoices", "Invoices", "file"],
+    ["/collect", "Collect", "cash", collectBadge],
     ["/settings", "Settings", "settings"],
   ];
   return (
@@ -129,10 +134,11 @@ export function Shell({
           <BrandLogo className="brand-lockup" />
         </a>
         <nav className="nav">
-          {nav.map(([href, name, icon]) => (
+          {nav.map(([href, name, icon, count]) => (
             <a key={href} href={href} className={active(href) ? "active" : ""}>
               <Icon name={icon} />
               {name}
+              {count ? <span className="nav-count">{count}</span> : null}
             </a>
           ))}
         </nav>
@@ -232,11 +238,14 @@ export function Shell({
       <div className="scrim" data-close-nav />
 
       <nav className="bottom-nav" aria-label="Primary">
-        {bottom.map(([href, name, icon]) => {
+        {bottom.map(([href, name, icon, count]) => {
           const on = active(href);
           return (
             <a key={href} href={href} className={on ? "active" : ""} aria-current={on ? "page" : undefined}>
-              <Icon name={icon} className="" filled={on} />
+              <span className="bottom-icon">
+                <Icon name={icon} className="" filled={on} />
+                {count ? <span className="nav-dot">{count}</span> : null}
+              </span>
               {name}
             </a>
           );

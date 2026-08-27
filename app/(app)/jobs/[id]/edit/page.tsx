@@ -5,6 +5,7 @@ import { Shell } from "@/components/Shell";
 import { tradeFieldsFor } from "@/lib/business";
 import { db } from "@/lib/db";
 import { loadApp } from "@/lib/page";
+import { listProperties } from "@/lib/properties";
 import { customers, jobs } from "@/lib/schema";
 
 export default async function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,6 +20,7 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
     .select()
     .from(customers)
     .where(and(eq(customers.organizationId, org.id), isNull(customers.archivedAt)));
+  const propertyRows = await listProperties(org.id, job.customerId);
   return (
     <Shell
       {...shell}
@@ -29,6 +31,7 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
       <JobForm
         job={job}
         customerRows={customerRows}
+        propertyRows={propertyRows}
         voice={voice}
         fields={tradeFieldsFor(org.businessType, "job")}
       />

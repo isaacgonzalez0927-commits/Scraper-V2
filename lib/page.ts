@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { requireContext } from "./auth";
 import { buildBrief } from "./assistant";
+import { collectCount } from "./collect-queue";
 import { tradeCopy } from "./business";
 import { db } from "./db";
 import { integrationStatus } from "./integrations";
@@ -17,10 +18,11 @@ export async function loadApp() {
   const org = await ensureTrialClock(ctx.org, isDemo);
   const access = shopAccess(org, isDemo);
   const voice = tradeCopy(org.businessType);
-  const [unread, brief, setup] = await Promise.all([
+  const [unread, brief, setup, sitting] = await Promise.all([
     unreadCount(org.id),
     buildBrief(org.id, ctx.user.name, org.businessType),
     isDemo ? Promise.resolve(null) : loadSetupForShell(org, voice),
+    collectCount(org.id),
   ]);
   return {
     ...ctx,
@@ -45,6 +47,7 @@ export async function loadApp() {
       setup,
       shopMode: parseShopMode(org.operatingMode),
       native: false,
+      collectCount: sitting,
     },
   };
 }

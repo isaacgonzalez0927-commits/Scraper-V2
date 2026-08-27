@@ -40,7 +40,8 @@ import {
   tradeCopy,
   tradeFieldsFor,
 } from "@/lib/business";
-import { closeoutDueDate, parseCloseout } from "@/lib/closeout";
+import { closeoutDueDate, parseCloseout, parseNoCharge } from "@/lib/closeout";
+import { ensureDefaultProperty } from "@/lib/properties";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
 import { paypalAccountLabel } from "@/lib/paypal";
@@ -77,6 +78,7 @@ import {
   jobs,
   memberships,
   notes,
+  properties,
   notifications,
   organizations,
   passwordResets,
@@ -256,6 +258,8 @@ export async function saveCustomerAction(form: FormData) {
     servicePostal: same ? str(form, "billing_postal") : str(form, "service_postal"),
     notes: str(form, "notes"),
     details,
+    followUpOn: str(form, "follow_up_on") || null,
+    followUpNote: str(form, "follow_up_note"),
     customerSince: str(form, "customer_since") || new Date().toISOString().slice(0, 10),
   };
   const fromSetup = str(form, "setup") === "1";
@@ -273,9 +277,10 @@ export async function saveCustomerAction(form: FormData) {
   } else {
     const [created] = await db()
       .insert(customers)
-      .values({ ...row, organizationId: org.id, createdAt: nowISO() })
+      .values({ ...row, organizationId: org.id, publicToken: token(), createdAt: nowISO() })
       .returning();
     customerId = created.id;
+    await ensureDefaultProperty(org.id, created);
     await logActivity(org.id, "customer_created", `New customer: ${created.name}`, null, `/customers/${created.id}`);
   }
   const sync = await pushCustomerToStripe(org.id, customerId);
@@ -340,14 +345,41 @@ export async function saveJobAction(form: FormData) {
       details = serializeDetails(mergeDetails(parseDetails(existing.details), fields, incoming));
     }
   }
+  const customerId = Number(str(form, "customer_id"));
+  const propertyId = Number(str(form, "property_id") || 0) || null;
+  let serviceLine1 = str(form, "service_line1");
+  let serviceCity = str(form, "service_city");
+  let serviceState = str(form, "service_state");
+  let servicePostal = str(form, "service_postal");
+  let linkedPropertyId: number | null = null;
+  if (propertyId && customerId) {
+    const [property] = await db()
+      .select()
+      .from(properties)
+      .where(
+        and(
+          eq(properties.id, propertyId),
+          eq(properties.organizationId, org.id),
+          eq(properties.customerId, customerId),
+        ),
+      );
+    if (property) {
+      linkedPropertyId = property.id;
+      serviceLine1 = property.line1;
+      serviceCity = property.city;
+      serviceState = property.state;
+      servicePostal = property.postal;
+    }
+  }
   const row = {
-    customerId: Number(str(form, "customer_id")),
+    customerId,
+    propertyId: linkedPropertyId,
     title: str(form, "title"),
     description: str(form, "description"),
-    serviceLine1: str(form, "service_line1"),
-    serviceCity: str(form, "service_city"),
-    serviceState: str(form, "service_state"),
-    servicePostal: str(form, "service_postal"),
+    serviceLine1,
+    serviceCity,
+    serviceState,
+    servicePostal,
     scheduledStart,
     status: scheduledStart && status === "unscheduled" ? "scheduled" : status,
     technicianName: str(form, "technician_name"),
@@ -360,7 +392,7 @@ export async function saveJobAction(form: FormData) {
   };
   const fromSetup = str(form, "setup") === "1";
   const back = isSafeAppPath(str(form, "next")) ? str(form, "next") : "/overview";
-  if (!row.customerId || !row.title) {
+  if (!customerId || !row.title) {
     redirect(
       fromSetup
         ? withQuery(back, "error", "A title is required.")
@@ -513,6 +545,38 @@ export async function finishJobAction(form: FormData) {
     .from(jobs)
     .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
   if (!job) redirect("/jobs");
+  const next = str(form, "next") || "collect";
+
+  if (next === "nocharge") {
+    const draft = parseNoCharge({
+      workCompleted: str(form, "work_completed"),
+      reason: str(form, "no_charge_reason"),
+    });
+    if (!draft.ok) {
+      redirect(`/jobs/${job.id}/finish?error=${encodeURIComponent(draft.error)}`);
+    }
+    const completedAt = job.completedAt || nowISO();
+    await db()
+      .update(jobs)
+      .set({
+        description: draft.workCompleted,
+        actualRevenueCents: 0,
+        status: "completed",
+        completedAt,
+      })
+      .where(and(eq(jobs.id, job.id), eq(jobs.organizationId, org.id)));
+    await db().insert(notes).values({
+      organizationId: org.id,
+      customerId: job.customerId,
+      jobId: job.id,
+      body: `No charge. ${draft.reason}`,
+      createdAt: nowISO(),
+    });
+    if (job.status !== "completed") {
+      await logActivity(org.id, "job_completed", `Job completed: ${job.title}`, 0, `/jobs/${job.id}`);
+    }
+    redirect(`/jobs/${job.id}?notice=${encodeURIComponent("Job finished. No charge.")}`);
+  }
 
   const draft = parseCloseout({
     workCompleted: str(form, "work_completed"),
@@ -557,15 +621,25 @@ export async function finishJobAction(form: FormData) {
     );
   }
 
-  if (str(form, "next") !== "invoice") {
-    redirect(`/jobs/${job.id}?notice=${encodeURIComponent("Job finished and final amount saved.")}`);
-  }
-
   const [fresh] = await db()
     .select()
     .from(jobs)
     .where(and(eq(jobs.id, job.id), eq(jobs.organizationId, org.id)));
   const result = await invoiceForJob(org, fresh, true);
+
+  if (next === "draft" || next === "job") {
+    redirect(
+      `/collect?ok=${encodeURIComponent("Job finished. Draft invoice is on Collect.")}`,
+    );
+  }
+
+  if (next === "collect") {
+    const notice = await deliverInvoice(org, result.invoice.id);
+    redirect(
+      `/jobs/${job.id}/finish?ok=${encodeURIComponent(notice)}&invoice=${result.invoice.id}`,
+    );
+  }
+
   const notice = result.created
     ? "Job finished. Review the invoice, then send it."
     : "Job finished. This invoice was already linked to it.";
@@ -649,35 +723,42 @@ export async function saveInvoiceAction(form: FormData) {
   redirect(`/invoices/${invoice.id}`);
 }
 
-export async function sendInvoiceAction(form: FormData) {
-  const { org } = await requireWritableContext("/invoices");
-  const id = Number(str(form, "id"));
-  const [invoice] = await db().select().from(invoices).where(and(eq(invoices.id, id), eq(invoices.organizationId, org.id)));
-  if (!invoice) redirect("/invoices");
+async function deliverInvoice(
+  org: typeof organizations.$inferSelect,
+  invoiceId: number,
+): Promise<string> {
+  const [invoice] = await db()
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.id, invoiceId), eq(invoices.organizationId, org.id)));
+  if (!invoice) return "Invoice not found.";
   const [customer] = await db().select().from(customers).where(eq(customers.id, invoice.customerId));
   await db()
     .update(invoices)
-    .set({ sentAt: invoice.sentAt || nowISO(), status: invoice.status === "draft" ? "sent" : invoice.status })
-    .where(eq(invoices.id, id));
-  await addEvent(org.id, id, "sent", "Marked as sent");
-  await refreshInvoice(id, org.id);
+    .set({
+      sentAt: invoice.sentAt || nowISO(),
+      status: invoice.status === "draft" ? "sent" : invoice.status,
+    })
+    .where(eq(invoices.id, invoiceId));
+  await addEvent(org.id, invoiceId, "sent", "Marked as sent");
+  await refreshInvoice(invoiceId, org.id);
 
   const config = await emailConfig(org.id);
   let notice = "Marked as sent. Share the customer link below.";
-  const sync = await pushInvoiceToStripe(org.id, id, { finalize: true, send: true });
+  const sync = await pushInvoiceToStripe(org.id, invoiceId, { finalize: true, send: true });
   if (sync.ok && sync.sent) {
     notice = customer?.email
       ? `Invoice sent through Stripe to ${customer.email}.`
       : "Invoice sent through Stripe.";
     if (sync.hostedUrl) notice = `${notice} Also on the Stripe hosted invoice.`;
-    redirect(`/invoices/${id}?notice=${encodeURIComponent(notice)}`);
+    return notice;
   }
   if (!customer?.email) {
     notice = "Marked as sent. This customer has no email address on file.";
   } else if (!config) {
     notice = "Marked as sent. Connect email under Settings to deliver it automatically.";
   } else {
-    const paid = await amountPaidCents(id);
+    const paid = await amountPaidCents(invoiceId);
     const base = await absoluteBaseUrl();
     const body = invoiceEmail({
       shopName: org.name,
@@ -689,7 +770,7 @@ export async function sendInvoiceAction(form: FormData) {
     });
     try {
       await sendEmail(config, { to: customer.email, ...body });
-      await addEvent(org.id, id, "emailed", `Emailed to ${customer.email}`);
+      await addEvent(org.id, invoiceId, "emailed", `Emailed to ${customer.email}`);
       notice = `Invoice emailed to ${customer.email}.`;
     } catch (error) {
       notice = `Marked as sent, but the email did not go out. ${(error as Error).message}`;
@@ -700,7 +781,47 @@ export async function sendInvoiceAction(form: FormData) {
   } else if (sync.error) {
     notice = `${notice} Stripe did not take the invoice: ${sync.error}`;
   }
+  return notice;
+}
+
+export async function sendInvoiceAction(form: FormData) {
+  const { org } = await requireWritableContext("/invoices");
+  const id = Number(str(form, "id"));
+  const [invoice] = await db()
+    .select({ id: invoices.id })
+    .from(invoices)
+    .where(and(eq(invoices.id, id), eq(invoices.organizationId, org.id)));
+  if (!invoice) redirect("/invoices");
+  const notice = await deliverInvoice(org, id);
   redirect(`/invoices/${id}?notice=${encodeURIComponent(notice)}`);
+}
+
+export async function sendCollectInvoiceAction(form: FormData) {
+  const { org } = await requireWritableContext("/collect");
+  const id = Number(str(form, "id"));
+  const [invoice] = await db()
+    .select({ id: invoices.id })
+    .from(invoices)
+    .where(and(eq(invoices.id, id), eq(invoices.organizationId, org.id)));
+  if (!invoice) redirect("/collect");
+  const notice = await deliverInvoice(org, id);
+  redirect(`/collect?ok=${encodeURIComponent(notice)}&invoice=${id}`);
+}
+
+export async function billFinishedJobAction(form: FormData) {
+  const { org } = await requireWritableContext("/collect");
+  const jobId = Number(str(form, "job_id"));
+  const [job] = await db()
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
+  if (!job) redirect("/collect");
+  if (job.status !== "completed") {
+    redirect(`/jobs/${job.id}/finish`);
+  }
+  const result = await invoiceForJob(org, job, true);
+  const notice = await deliverInvoice(org, result.invoice.id);
+  redirect(`/collect?ok=${encodeURIComponent(notice)}&invoice=${result.invoice.id}`);
 }
 
 export async function voidInvoiceAction(form: FormData) {

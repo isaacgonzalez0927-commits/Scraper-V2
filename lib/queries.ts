@@ -11,6 +11,7 @@ import {
   jobs,
   notifications,
   payments,
+  properties,
 } from "./schema";
 
 export const OPEN_STATUSES = ["sent", "viewed", "partial", "overdue"] as const;
@@ -215,10 +216,37 @@ export async function searchOrg(organizationId: number, q: string) {
           like(customers.serviceCity, term),
           like(customers.billingLine1, term),
           like(customers.serviceLine1, term),
+          like(customers.notes, term),
+          like(customers.details, term),
         ),
       ),
     )
     .limit(8);
+  const hits = [...customerRows];
+  const propertyHits = await db()
+    .select({ customer: customers })
+    .from(properties)
+    .innerJoin(customers, eq(customers.id, properties.customerId))
+    .where(
+      and(
+        eq(properties.organizationId, organizationId),
+        or(
+          like(properties.line1, term),
+          like(properties.city, term),
+          like(properties.postal, term),
+          like(properties.notes, term),
+          like(properties.details, term),
+        ),
+      ),
+    )
+    .limit(8);
+  const seen = new Set(hits.map((row) => row.id));
+  for (const { customer } of propertyHits) {
+    if (seen.has(customer.id)) continue;
+    seen.add(customer.id);
+    hits.push(customer);
+    if (hits.length >= 8) break;
+  }
   const jobRows = await db()
     .select({ job: jobs, customer: customers })
     .from(jobs)
@@ -243,7 +271,7 @@ export async function searchOrg(organizationId: number, q: string) {
     )
     .limit(8);
   return {
-    customers: customerRows.map((c) => ({
+    customers: hits.map((c) => ({
       href: `/customers/${c.id}`,
       label: displayName(c),
       meta: [c.phone, c.email].filter(Boolean).join(" · "),
