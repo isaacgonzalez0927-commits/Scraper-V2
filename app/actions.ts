@@ -45,7 +45,9 @@ import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
 import { paypalAccountLabel } from "@/lib/paypal";
 import { quickBooksCompanyName } from "@/lib/quickbooks";
+import { syncQuickbooksBook } from "@/lib/quickbooks-invoices";
 import { listSquareLocations, squareAccountLabel } from "@/lib/square";
+import { syncSquareBook } from "@/lib/square-invoices";
 import { signConnectState, stripeConnectAuthorizeUrl, stripeConnectEnabled } from "@/lib/stripe";
 import { validateStripeKeyForSere, stripeKeyDeniedMessage } from "@/lib/stripe-keys";
 import {
@@ -54,8 +56,10 @@ import {
   syncCustomersWithStripe,
 } from "@/lib/stripe-customers";
 import {
+  describeBookSync,
   markStripePaidIfLinked,
   pushInvoiceToStripe,
+  syncStripeBook,
   voidStripeIfLinked,
 } from "@/lib/stripe-invoices";
 import { DEMO_EMAIL } from "@/lib/seed";
@@ -1033,7 +1037,14 @@ export async function connectStripeAction(form: FormData) {
   }, label);
   const env = stripeKeyEnv(secretKey) || "test";
   await promoteShopAfterProcessor(org.id, org.operatingMode, env);
-  connectRedirect(form, "ok", `Stripe connected to ${label}.`);
+  let message = `Stripe connected to ${label}.`;
+  try {
+    const pulled = await syncStripeBook(org.id, { limit: 40 });
+    if (pulled.ok) message = `${message} ${describeBookSync("Stripe", pulled)}`;
+  } catch {
+    // Connection is enough. The shop can tap Sync from Stripe.
+  }
+  connectRedirect(form, "ok", message);
 }
 
 export async function disconnectStripeAction() {
@@ -1083,7 +1094,14 @@ export async function connectSquareAction(form: FormData) {
     label,
   );
   await promoteShopAfterProcessor(org.id, org.operatingMode, sandbox ? "test" : "live");
-  connectRedirect(form, "ok", `Square connected to ${label}.`);
+  let message = `Square connected to ${label}.`;
+  try {
+    const pulled = await syncSquareBook(org.id, { limit: 40 });
+    if (pulled.ok) message = `${message} ${describeBookSync("Square", pulled)}`;
+  } catch {
+    // Connection is enough. The shop can tap Sync from Square.
+  }
+  connectRedirect(form, "ok", message);
 }
 
 export async function disconnectSquareAction() {
@@ -1159,13 +1177,41 @@ export async function connectQuickbooksAction(form: FormData) {
   }
   if (failure) redirect(`${INTEGRATIONS_TAB}&error=${encodeURIComponent(failure)}`);
   await saveIntegration(org.id, "quickbooks", { accessToken, realmId, sandbox }, label);
-  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(`QuickBooks connected to ${label}.`)}`);
+  let message = `QuickBooks connected to ${label}.`;
+  try {
+    const pulled = await syncQuickbooksBook(org.id, { limit: 40 });
+    if (pulled.ok) message = `${message} ${describeBookSync("QuickBooks", pulled)}`;
+  } catch {
+    // Connection is enough. The shop can tap Sync from QuickBooks.
+  }
+  redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent(message)}`);
 }
 
 export async function disconnectQuickbooksAction() {
   const { org } = await requireContext();
   await disconnectIntegration(org.id, "quickbooks");
   redirect(`${INTEGRATIONS_TAB}&ok=${encodeURIComponent("QuickBooks disconnected.")}`);
+}
+
+export async function syncStripeBookAction() {
+  const { org } = await requireWritableContext(INTEGRATIONS_TAB);
+  const result = await syncStripeBook(org.id);
+  const key = result.ok ? "ok" : "error";
+  redirect(`${INTEGRATIONS_TAB}&${key}=${encodeURIComponent(describeBookSync("Stripe", result))}`);
+}
+
+export async function syncSquareBookAction() {
+  const { org } = await requireWritableContext(INTEGRATIONS_TAB);
+  const result = await syncSquareBook(org.id);
+  const key = result.ok ? "ok" : "error";
+  redirect(`${INTEGRATIONS_TAB}&${key}=${encodeURIComponent(describeBookSync("Square", result))}`);
+}
+
+export async function syncQuickbooksBookAction() {
+  const { org } = await requireWritableContext(INTEGRATIONS_TAB);
+  const result = await syncQuickbooksBook(org.id);
+  const key = result.ok ? "ok" : "error";
+  redirect(`${INTEGRATIONS_TAB}&${key}=${encodeURIComponent(describeBookSync("QuickBooks", result))}`);
 }
 
 export async function connectEmailAction(form: FormData) {

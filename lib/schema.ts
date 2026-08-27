@@ -243,10 +243,14 @@ export const customers = sqliteTable(
     archivedAt: text("archived_at"),
     createdAt: text("created_at").notNull(),
     stripeCustomerId: text("stripe_customer_id").notNull().default(""),
+    squareCustomerId: text("square_customer_id").notNull().default(""),
+    qboCustomerId: text("qbo_customer_id").notNull().default(""),
   },
   (t) => [
     index("customers_org").on(t.organizationId),
     index("customers_stripe").on(t.stripeCustomerId),
+    index("customers_square").on(t.squareCustomerId),
+    index("customers_qbo").on(t.qboCustomerId),
   ],
 );
 
@@ -327,11 +331,15 @@ export const invoices = sqliteTable(
     createdAt: text("created_at").notNull(),
     stripeInvoiceId: text("stripe_invoice_id").notNull().default(""),
     stripeHostedUrl: text("stripe_hosted_url").notNull().default(""),
+    squareInvoiceId: text("square_invoice_id").notNull().default(""),
+    qboInvoiceId: text("qbo_invoice_id").notNull().default(""),
   },
   (t) => [
     uniqueIndex("invoices_org_number").on(t.organizationId, t.number),
     index("invoices_org").on(t.organizationId),
     index("invoices_stripe").on(t.stripeInvoiceId),
+    index("invoices_square").on(t.squareInvoiceId),
+    index("invoices_qbo").on(t.qboInvoiceId),
   ],
 );
 
