@@ -11,10 +11,13 @@ export default async function SearchPage({
   const { org, shell, voice } = await loadApp();
   const { q } = await searchParams;
   const term = (q || "").trim();
-  const results = term.length >= 2 ? await searchOrg(org.id, term) : { customers: [], jobs: [], invoices: [] };
+  const results = term.length >= 2
+    ? await searchOrg(org.id, term)
+    : { customers: [], jobs: [], estimates: [], invoices: [] };
   const groups = [
     { key: "customers" as const, name: voice.customers },
     { key: "jobs" as const, name: voice.jobs },
+    { key: "estimates" as const, name: "Estimates" },
     { key: "invoices" as const, name: "Invoices" },
   ];
   const total = groups.reduce((sum, g) => sum + results[g.key].length, 0);
@@ -34,7 +37,7 @@ export default async function SearchPage({
         <SearchField value={term} placeholder="Name, phone, invoice number, address" />
       </div>
       {!term ? <p className="muted">Type at least two characters.</p> : null}
-      <div className="grid grid-3">
+      <div className="grid grid-2">
         {groups.map((group) => (
           <Card key={group.key} title={group.name} note={`${results[group.key].length} found`}>
             {results[group.key].length ? (

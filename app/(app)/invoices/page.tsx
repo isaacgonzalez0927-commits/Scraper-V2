@@ -1,9 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { Badge, Empty, RecordTable, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
-import { balanceCents } from "@/lib/finance";
+import { balanceCents, deriveStatus } from "@/lib/finance";
 import { INVOICE_STATUSES, label, prettyDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
@@ -17,14 +17,25 @@ export default async function InvoicesPage({
 }) {
   const { org, shell, voice } = await loadApp();
   const { status } = await searchParams;
-  const filters = [eq(invoices.organizationId, org.id)];
-  if (status) filters.push(eq(invoices.status, status));
-  const rows = await db()
+  const allRows = await db()
     .select({ invoice: invoices, customer: customers })
     .from(invoices)
-    .innerJoin(customers, eq(customers.id, invoices.customerId))
-    .where(and(...filters));
-  const paid = await paidMap(org.id, rows.map((r) => r.invoice.id));
+    .innerJoin(
+      customers,
+      and(eq(customers.id, invoices.customerId), eq(customers.organizationId, org.id)),
+    )
+    .where(eq(invoices.organizationId, org.id))
+    .orderBy(asc(invoices.dueDate), desc(invoices.issueDate));
+  const paid = await paidMap(org.id, allRows.map((r) => r.invoice.id));
+  const rows = allRows
+    .map((row) => ({
+      ...row,
+      effectiveStatus: deriveStatus({
+        ...row.invoice,
+        paidCents: paid.get(row.invoice.id) || 0,
+      }),
+    }))
+    .filter((row) => !status || row.effectiveStatus === status);
 
   const tabs = [
     { key: "", name: "All", href: "/invoices" },
@@ -56,7 +67,7 @@ export default async function InvoicesPage({
             { label: "Total", align: "right" },
             { label: "Balance", align: "right" },
           ]}
-          records={rows.map(({ invoice, customer }) => {
+          records={rows.map(({ invoice, customer, effectiveStatus }) => {
             const balance = balanceCents(invoice.totalCents, paid.get(invoice.id) || 0, invoice.status);
             return {
               key: invoice.id,
@@ -66,14 +77,14 @@ export default async function InvoicesPage({
                 displayName(customer),
                 prettyDate(invoice.issueDate),
                 prettyDate(invoice.dueDate),
-                <Badge status={invoice.status} />,
+                <Badge status={effectiveStatus} />,
                 <span className="money">{formatMoney(invoice.totalCents)}</span>,
                 <span className="money">{formatMoney(balance)}</span>,
               ],
               phone: {
                 title: `${invoice.number} · ${displayName(customer)}`,
                 meta: `Due ${prettyDate(invoice.dueDate)}`,
-                badge: <Badge status={invoice.status} />,
+                badge: <Badge status={effectiveStatus} />,
                 amount: formatMoney(balance > 0 ? balance : invoice.totalCents),
                 amountNote: balance > 0 ? "due" : "paid",
               },

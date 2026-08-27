@@ -108,6 +108,7 @@ export function Shell({
     ["/serenity", "Serenity", "spark"],
     ["/jobs", jobsLabel, "briefcase"],
     ["/customers", customersLabel, "users"],
+    ["/estimates", "Estimates", "file"],
     ["/invoices", "Invoices", "file"],
     ["/payments", "Payments", "card"],
     ["/calendar", "Calendar", "calendar"],
@@ -139,7 +140,7 @@ export function Shell({
           {isDemo ? (
             <a className="demo-chip" href="/signup">
               <strong>Demo shop</strong>
-              <span>Change anything. Create your own when you are ready.</span>
+              <span>Change anything. Start your Shop trial when this feels useful.</span>
             </a>
           ) : null}
           <a className="org-chip" href="/settings">
@@ -196,7 +197,7 @@ export function Shell({
               href="/settings?tab=account"
             >
               <strong>{trialBanner}</strong>
-              <span>{frozen ? "Shop is $39/month when billing opens." : "Shop is $39/month after that."}</span>
+              <span>{frozen ? "Shop is $49/month when billing opens." : "Shop is $49/month after that."}</span>
             </a>
           ) : null}
           {modeNote ? (

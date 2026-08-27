@@ -1,5 +1,5 @@
-import { and, eq } from "drizzle-orm";
-import { Badge, Blank, Empty, RecordTable, Tabs } from "@/components/ui";
+import { and, asc, desc, eq, like, or, sql } from "drizzle-orm";
+import { Badge, Blank, Empty, RecordTable, SearchField, Tabs } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
@@ -11,17 +11,38 @@ import { customers, jobs } from "@/lib/schema";
 export default async function JobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const { org, shell, voice } = await loadApp();
-  const { status } = await searchParams;
+  const { status, q } = await searchParams;
+  const term = (q || "").trim();
   const filters = [eq(jobs.organizationId, org.id)];
-  if (status) filters.push(eq(jobs.status, status));
+  if (status && JOB_STATUSES.includes(status as (typeof JOB_STATUSES)[number])) {
+    filters.push(eq(jobs.status, status));
+  }
+  if (term) {
+    const likeTerm = `%${term.replace(/[%_]/g, "")}%`;
+    filters.push(
+      or(
+        like(jobs.title, likeTerm),
+        like(jobs.description, likeTerm),
+        like(jobs.technicianName, likeTerm),
+        like(customers.name, likeTerm),
+        like(customers.companyName, likeTerm),
+        like(customers.email, likeTerm),
+        like(customers.phone, likeTerm),
+      )!,
+    );
+  }
   const rows = await db()
     .select({ job: jobs, customer: customers })
     .from(jobs)
-    .innerJoin(customers, eq(customers.id, jobs.customerId))
-    .where(and(...filters));
+    .innerJoin(
+      customers,
+      and(eq(customers.id, jobs.customerId), eq(customers.organizationId, org.id)),
+    )
+    .where(and(...filters))
+    .orderBy(sql`${jobs.scheduledStart} IS NULL`, asc(jobs.scheduledStart), desc(jobs.createdAt));
 
   const tabs = [
     { key: "", name: "All", href: "/jobs" },
@@ -41,7 +62,14 @@ export default async function JobsPage({
         </>
       }
     >
-      <Tabs tabs={tabs} active={status || ""} />
+      <div className="toolbar">
+        <Tabs tabs={tabs} active={status || ""} />
+        <SearchField
+          value={term}
+          placeholder={`${voice.job}, ${voice.customer.toLowerCase()}, or ${voice.worker.toLowerCase()}`}
+          hidden={status ? { status } : undefined}
+        />
+      </div>
       {rows.length ? (
         <RecordTable
           columns={[
@@ -74,8 +102,8 @@ export default async function JobsPage({
         />
       ) : (
         <Empty
-          title={`No ${voice.jobs.toLowerCase()} on this list`}
-          body={voice.emptyJobs}
+          title={term ? `No ${voice.jobs.toLowerCase()} matched that search` : `No ${voice.jobs.toLowerCase()} on this list`}
+          body={term ? "Try a customer name, phone number, job, or worker." : voice.emptyJobs}
           href="/jobs/new"
           action={voice.newJob}
         />

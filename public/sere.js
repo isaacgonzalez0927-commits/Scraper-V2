@@ -56,6 +56,7 @@
         const groups = [
           ["Customers", data.customers],
           ["Jobs", data.jobs],
+          ["Estimates", data.estimates],
           ["Invoices", data.invoices],
         ];
         let html = "";

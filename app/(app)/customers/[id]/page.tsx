@@ -12,7 +12,7 @@ import { filledDetails, parseDetails, tradeFieldsFor } from "@/lib/business";
 import { loadApp } from "@/lib/page";
 import { customerBalanceCents, customerLifetimeCents } from "@/lib/queries";
 import { stripeDashboardCustomerUrl } from "@/lib/stripe-customers";
-import { customers, invoices, jobs, notes, payments } from "@/lib/schema";
+import { customers, estimates, invoices, jobs, notes, payments } from "@/lib/schema";
 
 export default async function CustomerDetailPage({
   params,
@@ -29,11 +29,12 @@ export default async function CustomerDetailPage({
     .from(customers)
     .where(and(eq(customers.id, Number(id)), eq(customers.organizationId, org.id)));
   if (!customer) notFound();
-  const [lifetime, balance, jobRows, invoiceRows, paymentRows, noteRows, integrations, stripe] =
+  const [lifetime, balance, jobRows, estimateRows, invoiceRows, paymentRows, noteRows, integrations, stripe] =
     await Promise.all([
     customerLifetimeCents(org.id, customer.id),
     customerBalanceCents(org.id, customer.id),
     db().select().from(jobs).where(and(eq(jobs.organizationId, org.id), eq(jobs.customerId, customer.id))),
+    db().select().from(estimates).where(and(eq(estimates.organizationId, org.id), eq(estimates.customerId, customer.id))),
     db().select().from(invoices).where(and(eq(invoices.organizationId, org.id), eq(invoices.customerId, customer.id))),
     db().select().from(payments).where(and(eq(payments.organizationId, org.id), eq(payments.customerId, customer.id))),
     db()
@@ -66,6 +67,7 @@ export default async function CustomerDetailPage({
       actions={
         <>
           <a className="btn btn-secondary" href={`/customers/${customer.id}/edit`}>Edit</a>
+          <a className="btn btn-secondary" href={`/estimates/new?customerId=${customer.id}`}>New estimate</a>
           <a className="btn btn-secondary" href={`/invoices/new?customerId=${customer.id}`}>New invoice</a>
           <a className="btn" href={`/jobs/new?customerId=${customer.id}`}>{voice.newJob}</a>
         </>
@@ -159,6 +161,25 @@ export default async function CustomerDetailPage({
             </Rows>
           ) : (
             <p className="muted">No invoices yet.</p>
+          )}
+        </Card>
+
+        <Card title="Estimates" action={<a className="btn btn-secondary btn-sm" href={`/estimates/new?customerId=${customer.id}`}>Add</a>} flush={estimateRows.length > 0}>
+          {estimateRows.length ? (
+            <Rows>
+              {estimateRows.map((estimate) => (
+                <RowLink
+                  key={estimate.id}
+                  href={`/estimates/${estimate.id}`}
+                  title={estimate.number}
+                  meta={`Valid until ${prettyDate(estimate.validUntil)}`}
+                  badge={<Badge status={estimate.status} />}
+                  amount={formatMoney(estimate.totalCents)}
+                />
+              ))}
+            </Rows>
+          ) : (
+            <p className="muted">No estimates yet.</p>
           )}
         </Card>
       </div>

@@ -33,7 +33,7 @@ export function StripeKeyTutorial({ defaultOpen = true }: { defaultOpen?: boolea
             </li>
             <li>
               <strong>Write:</strong> Customers, Invoices, Invoice Items, Checkout
-              Sessions
+              Sessions, Payment Intents
             </li>
           </ul>
         </li>

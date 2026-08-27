@@ -89,6 +89,44 @@ export function invoiceEmail(opts: {
   return { subject, text, html };
 }
 
+export function estimateEmail(opts: {
+  shopName: string;
+  estimateNumber: string;
+  total: string;
+  validUntil: string;
+  reviewUrl: string;
+  notes?: string;
+}): { subject: string; text: string; html: string } {
+  const subject = `${opts.shopName}: estimate ${opts.estimateNumber} for ${opts.total}`;
+  const lines = [
+    `Estimate ${opts.estimateNumber} from ${opts.shopName}`,
+    "",
+    `Estimate total: ${opts.total}`,
+    `Valid until: ${opts.validUntil}`,
+    "",
+    `Review and respond: ${opts.reviewUrl}`,
+  ];
+  if (opts.notes) lines.push("", opts.notes);
+  lines.push("", "No payment is due for this estimate.");
+  const text = lines.join("\n");
+  const html = `
+    <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f1b33;line-height:1.55">
+      <h2 style="margin:0 0 4px;font-size:18px">Estimate ${escapeHtml(opts.estimateNumber)}</h2>
+      <p style="margin:0 0 18px;color:#6b7688">from ${escapeHtml(opts.shopName)}</p>
+      <p style="margin:0 0 4px"><strong>Estimate total:</strong> ${escapeHtml(opts.total)}</p>
+      <p style="margin:0 0 18px"><strong>Valid until:</strong> ${escapeHtml(opts.validUntil)}</p>
+      <p style="margin:0 0 22px">
+        <a href="${escapeHtml(opts.reviewUrl)}"
+           style="background:#5b38d6;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block">
+          Review estimate
+        </a>
+      </p>
+      ${opts.notes ? `<p style="margin:0 0 18px;color:#3f4a60">${escapeHtml(opts.notes)}</p>` : ""}
+      <p style="margin:0;color:#6b7688;font-size:13px">No payment is due for this estimate.</p>
+    </div>`;
+  return { subject, text, html };
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,

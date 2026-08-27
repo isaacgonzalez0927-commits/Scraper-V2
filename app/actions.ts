@@ -12,7 +12,14 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { databaseRefusalMessage, db, isDurableDatabase, nowISO, token } from "@/lib/db";
-import { invoiceEmail, sendEmail } from "@/lib/email";
+import { estimateEmail, invoiceEmail, sendEmail } from "@/lib/email";
+import {
+  addEstimateEvent,
+  canEditEstimate,
+  convertApprovedEstimate,
+  estimateTotals,
+  nextEstimateNumber,
+} from "@/lib/estimates";
 import {
   addEvent,
   applyPayment,
@@ -58,6 +65,8 @@ import { requireWritableContext, trialEndsISO } from "@/lib/trial";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
   customers,
+  estimateLines,
+  estimates,
   invoiceLines,
   invoices,
   jobCosts,
@@ -651,6 +660,14 @@ export async function sendInvoiceAction(form: FormData) {
 
   const config = await emailConfig(org.id);
   let notice = "Marked as sent. Share the customer link below.";
+  const sync = await pushInvoiceToStripe(org.id, id, { finalize: true, send: true });
+  if (sync.ok && sync.sent) {
+    notice = customer?.email
+      ? `Invoice sent through Stripe to ${customer.email}.`
+      : "Invoice sent through Stripe.";
+    if (sync.hostedUrl) notice = `${notice} Also on the Stripe hosted invoice.`;
+    redirect(`/invoices/${id}?notice=${encodeURIComponent(notice)}`);
+  }
   if (!customer?.email) {
     notice = "Marked as sent. This customer has no email address on file.";
   } else if (!config) {
@@ -674,7 +691,6 @@ export async function sendInvoiceAction(form: FormData) {
       notice = `Marked as sent, but the email did not go out. ${(error as Error).message}`;
     }
   }
-  const sync = await pushInvoiceToStripe(org.id, id, { finalize: true });
   if (sync.ok && sync.hostedUrl) {
     notice = `${notice} Also in Stripe.`;
   } else if (sync.error) {
@@ -692,6 +708,183 @@ export async function voidInvoiceAction(form: FormData) {
   await addEvent(org.id, id, "voided", "Invoice voided");
   await voidStripeIfLinked(org.id, id);
   redirect(`/invoices/${id}`);
+}
+
+export async function saveEstimateAction(form: FormData) {
+  const { org } = await requireWritableContext("/estimates");
+  const id = Number(str(form, "id") || 0);
+  const back = id ? `/estimates/${id}/edit` : "/estimates/new";
+  const customerId = Number(str(form, "customer_id"));
+  const [customer] = customerId
+    ? await db()
+        .select({ id: customers.id })
+        .from(customers)
+        .where(and(eq(customers.id, customerId), eq(customers.organizationId, org.id)))
+    : [];
+  if (!customer) redirect(`${back}?error=${encodeURIComponent("Choose a customer.")}`);
+
+  const descriptions = form.getAll("line_description").map(String);
+  const quantities = form.getAll("line_quantity").map(String);
+  const prices = form.getAll("line_price").map(String);
+  const lines = descriptions
+    .map((description, i) => ({
+      description: description.trim(),
+      quantity: quantities[i] || "1",
+      unitPriceCents: dollarsToCents(prices[i]),
+    }))
+    .filter((line) => line.description);
+  if (!lines.length) redirect(`${back}?error=${encodeURIComponent("Add at least one line item.")}`);
+  const taxRate = Number(str(form, "tax_rate") || 0);
+  if (!Number.isFinite(taxRate) || taxRate < 0) {
+    redirect(`${back}?error=${encodeURIComponent("Enter a valid tax rate.")}`);
+  }
+  const issueDate = str(form, "issue_date") || new Date().toISOString().slice(0, 10);
+  const validUntil = str(form, "valid_until") || issueDate;
+  if (validUntil < issueDate) {
+    redirect(`${back}?error=${encodeURIComponent("Valid until cannot be before the issue date.")}`);
+  }
+  const taxBps = Math.round(taxRate * 100);
+  const calc = estimateTotals(lines, dollarsToCents(str(form, "discount")), taxBps);
+  const now = nowISO();
+  const payload = {
+    customerId,
+    issueDate,
+    validUntil,
+    notes: str(form, "notes"),
+    taxBps,
+    ...calc,
+    updatedAt: now,
+  };
+
+  let estimateId = id;
+  if (id) {
+    const [estimate] = await db()
+      .select()
+      .from(estimates)
+      .where(and(eq(estimates.id, id), eq(estimates.organizationId, org.id)));
+    if (!estimate || !canEditEstimate(estimate.status)) redirect(`/estimates/${id}`);
+    await db()
+      .update(estimates)
+      .set({
+        ...payload,
+        status: "draft",
+        sentAt: null,
+        viewedAt: null,
+      })
+      .where(and(eq(estimates.id, id), eq(estimates.organizationId, org.id)));
+    await db()
+      .delete(estimateLines)
+      .where(and(eq(estimateLines.estimateId, id), eq(estimateLines.organizationId, org.id)));
+    await addEstimateEvent(org.id, id, "edited", "Estimate updated and returned to draft");
+  } else {
+    const number = await nextEstimateNumber(org.id);
+    const [estimate] = await db()
+      .insert(estimates)
+      .values({
+        organizationId: org.id,
+        number,
+        status: "draft",
+        publicToken: token(),
+        createdAt: now,
+        ...payload,
+      })
+      .returning({ id: estimates.id });
+    estimateId = estimate.id;
+    await addEstimateEvent(org.id, estimateId, "created", `${number} created`);
+  }
+  for (const [position, line] of lines.entries()) {
+    await db().insert(estimateLines).values({
+      organizationId: org.id,
+      estimateId,
+      position,
+      ...line,
+      amountCents: Math.round(Number(line.quantity || 1) * line.unitPriceCents),
+    });
+  }
+  redirect(`/estimates/${estimateId}`);
+}
+
+export async function sendEstimateAction(form: FormData) {
+  const { org } = await requireWritableContext("/estimates");
+  const id = Number(str(form, "id"));
+  const [estimate] = await db()
+    .select()
+    .from(estimates)
+    .where(and(eq(estimates.id, id), eq(estimates.organizationId, org.id)));
+  if (!estimate) redirect("/estimates");
+  if (!canEditEstimate(estimate.status)) {
+    redirect(`/estimates/${id}?error=${encodeURIComponent("This estimate can no longer be sent.")}`);
+  }
+  const [customer] = await db()
+    .select()
+    .from(customers)
+    .where(and(eq(customers.id, estimate.customerId), eq(customers.organizationId, org.id)));
+  const sentAt = estimate.sentAt || nowISO();
+  await db()
+    .update(estimates)
+    .set({
+      sentAt,
+      status: estimate.status === "viewed" ? "viewed" : "sent",
+      updatedAt: nowISO(),
+    })
+    .where(and(eq(estimates.id, id), eq(estimates.organizationId, org.id)));
+  await addEstimateEvent(org.id, id, "sent", "Marked as sent");
+
+  const config = await emailConfig(org.id);
+  let notice = "Marked as sent. Share the customer link below.";
+  if (!customer?.email) {
+    notice = "Marked as sent. This customer has no email address on file.";
+  } else if (!config) {
+    notice = "Marked as sent. Connect email under Settings to deliver it automatically.";
+  } else {
+    const base = await absoluteBaseUrl();
+    const body = estimateEmail({
+      shopName: org.name,
+      estimateNumber: estimate.number,
+      total: formatMoney(estimate.totalCents),
+      validUntil: prettyDate(estimate.validUntil),
+      reviewUrl: `${base}/p/est/${estimate.publicToken}`,
+      notes: estimate.notes,
+    });
+    try {
+      await sendEmail(config, { to: customer.email, ...body });
+      await addEstimateEvent(org.id, id, "emailed", `Emailed to ${customer.email}`);
+      notice = `Estimate emailed to ${customer.email}.`;
+    } catch (error) {
+      notice = `Marked as sent, but the email did not go out. ${(error as Error).message}`;
+    }
+  }
+  redirect(`/estimates/${id}?notice=${encodeURIComponent(notice)}`);
+}
+
+export async function voidEstimateAction(form: FormData) {
+  const { org } = await requireWritableContext("/estimates");
+  const id = Number(str(form, "id"));
+  const [estimate] = await db()
+    .select()
+    .from(estimates)
+    .where(and(eq(estimates.id, id), eq(estimates.organizationId, org.id)));
+  if (!estimate) redirect("/estimates");
+  if (estimate.status === "converted" || estimate.status === "void") redirect(`/estimates/${id}`);
+  const now = nowISO();
+  await db()
+    .update(estimates)
+    .set({ status: "void", voidedAt: now, updatedAt: now })
+    .where(and(eq(estimates.id, id), eq(estimates.organizationId, org.id)));
+  await addEstimateEvent(org.id, id, "voided", "Estimate voided");
+  redirect(`/estimates/${id}`);
+}
+
+export async function convertEstimateToJobAction(form: FormData) {
+  const { org } = await requireWritableContext("/estimates");
+  const id = Number(str(form, "id"));
+  let result: { jobId: number; created: boolean };
+  try {
+    result = await convertApprovedEstimate(org.id, id);
+  } catch (error) {
+    redirect(`/estimates/${id}?error=${encodeURIComponent((error as Error).message)}`);
+  }
+  redirect(`/jobs/${result.jobId}?notice=${encodeURIComponent(result.created ? "Job created from approved estimate." : "This estimate was already converted.")}`);
 }
 
 export async function recordPaymentAction(form: FormData) {

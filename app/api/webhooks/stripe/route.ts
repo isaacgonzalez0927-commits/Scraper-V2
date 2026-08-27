@@ -4,14 +4,23 @@ import { db } from "@/lib/db";
 import { recordOnlinePayment } from "@/lib/finance";
 import { connectedStripeShops, stripeConfig } from "@/lib/integrations";
 import {
+  retrievePaymentIntent,
   retrieveStripeCustomer,
   retrieveStripeInvoice,
   verifyWebhookSignature,
   type StripeCustomer,
   type StripeInvoice,
+  type StripePaymentIntent,
 } from "@/lib/stripe";
 import { ingestStripeCustomer, stripeCustomerEventNames } from "@/lib/stripe-customers";
-import { ingestStripeInvoice, stripeInvoiceEventNames } from "@/lib/stripe-invoices";
+import {
+  ingestStripeInvoice,
+  ingestStripePaymentIntent,
+  markStripePaidIfLinked,
+  stripeInvoiceEventNames,
+  stripeInvoiceIdOf,
+  stripePaymentEventNames,
+} from "@/lib/stripe-invoices";
 import { customers, invoices } from "@/lib/schema";
 
 export const runtime = "nodejs";
@@ -26,9 +35,11 @@ type StripeEvent = {
       amount_total?: number;
       amount_received?: number;
       amount_paid?: number;
+      amount?: number;
       payment_status?: string;
       metadata?: Record<string, string>;
       customer?: string;
+      invoice?: string | { id?: string } | null;
       status?: string;
       hosted_invoice_url?: string;
       number?: string;
@@ -100,6 +111,25 @@ async function resolveOrganization(
       const matched = await orgFromSignature(payload, header, linkedCustomer.organizationId);
       if (matched) return matched;
     }
+    const stripeInvoiceId = stripeInvoiceIdOf(object);
+    if (stripeInvoiceId) {
+      const [linkedByInvoice] = await db()
+        .select()
+        .from(invoices)
+        .where(eq(invoices.stripeInvoiceId, stripeInvoiceId));
+      if (linkedByInvoice) {
+        const matched = await orgFromSignature(payload, header, linkedByInvoice.organizationId);
+        if (matched) return matched;
+      }
+    }
+    const sereInvoiceId = Number(object.metadata?.invoice_id || object.metadata?.sere_invoice_id || 0);
+    if (sereInvoiceId) {
+      const [namedInvoice] = await db().select().from(invoices).where(eq(invoices.id, sereInvoiceId));
+      if (namedInvoice) {
+        const matched = await orgFromSignature(payload, header, namedInvoice.organizationId);
+        if (matched) return matched;
+      }
+    }
   }
 
   const shops = await connectedStripeShops();
@@ -156,6 +186,9 @@ export async function POST(request: Request) {
       method: "card",
       notes: "Paid online through Stripe Checkout",
     });
+    if (!result.alreadyRecorded) {
+      await markStripePaidIfLinked(organizationId, invoiceId);
+    }
     return Response.json({ received: true, recorded: !result.alreadyRecorded });
   }
 
@@ -204,6 +237,33 @@ export async function POST(request: Request) {
       received: true,
       invoiceId: ingested?.invoiceId || null,
       created: ingested?.created || false,
+    });
+  }
+
+  if (stripePaymentEventNames().includes(event.type || "") && object.id) {
+    const config = await stripeConfig(organizationId);
+    let remote: StripePaymentIntent = {
+      id: object.id,
+      status: object.status || "succeeded",
+      amount: object.amount,
+      amount_received: object.amount_received || object.amount,
+      invoice: object.invoice,
+      metadata: object.metadata,
+    };
+    if (config?.secretKey && event.type === "payment_intent.succeeded") {
+      try {
+        remote = await retrievePaymentIntent(config.secretKey, object.id, {
+          stripeAccount: config.stripeAccount,
+        });
+      } catch {
+        // Use the event payload.
+      }
+    }
+    const ingested = await ingestStripePaymentIntent(organizationId, remote);
+    return Response.json({
+      received: true,
+      invoiceId: ingested?.invoiceId || null,
+      recorded: ingested ? !ingested.alreadyRecorded : false,
     });
   }
 

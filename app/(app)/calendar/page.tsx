@@ -134,16 +134,16 @@ export default async function CalendarPage({
                 </span>
                 <span className="cal-date-num">{day.getDate()}</span>
               </span>
-              {items.map(({ job }) => (
+              {items.map(({ job, customer }) => (
                 <a
                   key={job.id}
                   className="cal-event"
                   href={`/jobs/${job.id}`}
                   draggable
                   data-job={String(job.id)}
-                  aria-label={job.title}
+                  aria-label={`${displayName(customer)}: ${job.title}`}
                 >
-                  <span className="cal-event-title">{job.title}</span>
+                  <span className="cal-event-title">{displayName(customer)} · {job.title}</span>
                 </a>
               ))}
               <a className="cal-add" href={`/jobs/new?start=${key}T09:00`}>Add job</a>
@@ -186,7 +186,12 @@ export default async function CalendarPage({
                 {job.title}
                 <span className="tiny"> {displayName(customer)}</span>
               </a>
-              <input className="input" type="datetime-local" name="scheduled_start" />
+              <input
+                className="input"
+                type="datetime-local"
+                name="scheduled_start"
+                defaultValue={`${dateParam}T09:00`}
+              />
               <button className="btn btn-secondary btn-sm" type="submit">Schedule</button>
             </form>
           ))}

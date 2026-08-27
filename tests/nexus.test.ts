@@ -106,7 +106,7 @@ test("the draft prompt speaks the prospect's trade and forbids inventing", () =>
   const system = draftSystemPrompt(prospect({ trade: "plumbing" }));
   assert.ok(system.includes("calls"), "a plumber has calls, not jobs");
   assert.match(system, /never invent/i);
-  assert.match(system, /do not ask for a call/i);
+  assert.match(system, /do not ask for a reply, call/i);
   assert.ok(system.includes(String(MAX_WORDS)));
 
   const user = draftUserPrompt(prospect(), [
@@ -122,9 +122,9 @@ test("the validator rejects the slop a model reaches for", () => {
   const good = {
     subject: "phone-only service calls",
     body:
-      "Elena — your site only takes work by phone, no form. Sere keeps the jobs " +
-      "and invoices in one book so the number on screen matches the bank. Want a " +
-      "look at a real shop with work already in it?",
+      "Elena, your site only takes work by phone, no form. Sere keeps the jobs " +
+      "and invoices in one book so the number on screen matches the bank. The " +
+      "working shop below has sample calls already in it.",
   };
   assert.deepEqual(validateDraft(good, prospect()), []);
 
@@ -143,6 +143,12 @@ test("the validator rejects the slop a model reaches for", () => {
       { subject: "phone only", body: "Your site is phone only. Can we hop on a call?" },
       prospect(),
     ).some((p) => /asks for a call/i.test(p)),
+  );
+  assert.ok(
+    validateDraft(
+      { subject: "phone only", body: "Your site is phone only. Reply if you want details." },
+      prospect(),
+    ).some((p) => /asks for a reply/i.test(p)),
   );
   assert.ok(
     validateDraft(
