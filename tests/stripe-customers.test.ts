@@ -4,6 +4,7 @@ import {
   SERE_STRIPE_RAK_PERMISSIONS,
   stripeCreateRestrictedKeyUrl,
   stripeKeyDeniedMessage,
+  validateStripeKeyForSere,
 } from "../lib/stripe-keys";
 import {
   customerWriteHint,
@@ -86,8 +87,16 @@ test("a rejected key names the missing rows instead of dumping Stripe's error", 
   ]);
   assert.match(message, /Balance \(needs Read\)/);
   assert.match(message, /Charges \(needs Read\)/);
-  assert.match(message, /Customize permissions/);
+  assert.match(message, /Create the Sere key/);
   assert.equal(message.includes("rk_live_"), false);
+});
+
+test("a full secret key keeps the restricted-key warning, not a missing-permissions wrap", async () => {
+  const rejected = await validateStripeKeyForSere("sk_test_51NotARealKey");
+  const message = stripeKeyDeniedMessage(rejected.problems);
+  assert.match(message, /restricted keys/);
+  assert.match(message, /Create the Sere key/);
+  assert.equal(message.startsWith("That key is missing"), false);
 });
 
 test("Stripe customer dashboard URL follows test vs live keys", () => {
