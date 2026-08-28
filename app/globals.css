@@ -1162,19 +1162,34 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 .connect-paste .input {
   flex: 1 1 14rem;
   min-width: 0;
-  min-height: 28px;
-  font-size: 13px;
-}
-.key-guide-cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 4px 0 12px;
-}
-.key-guide-cta .btn {
-  min-height: 40px;
-  padding: 0 16px;
+  min-height: 36px;
   font-size: 14px;
+}
+.connect-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 4px;
+}
+.connect-flow-compact {
+  gap: 12px;
+}
+.connect-flow .connect-paste {
+  margin-top: 0;
+  max-width: none;
+}
+.connect-flow > .disclosure {
+  margin-top: 6px;
+}
+.btn-connect-hero {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  justify-content: center;
 }
 .nav-count {
   margin-left: auto;
@@ -1235,32 +1250,13 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
   border-top: 1px solid var(--line);
 }
 
-.connect-paste .btn { flex-shrink: 0; }
+.connect-paste .btn {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+}
 
-.key-guide {
-  margin: 8px 0 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--bg);
-}
-.key-guide-lede {
-  margin: 0 0 8px;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.45;
-  max-width: 36rem;
-}
-.key-steps {
-  margin: 0;
-  padding: 0 0 0 1.15rem;
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.45;
-}
-.key-steps li + li { margin-top: 8px; }
-.key-steps a { font-weight: 600; }
 .key-perms {
   margin: 6px 0 0;
   padding: 0;
@@ -2542,12 +2538,11 @@ a.btn-quickbooks, a.btn-quickbooks:hover { color: #fff; }
   }
   .connect-paste .input {
     width: 100%;
-    min-height: 32px;
+    min-height: 48px;
     font-size: 16px;
   }
   .connect-cta .btn,
   .connect-paste .btn,
-  .key-guide .key-guide-cta .btn,
   .btn-connect-lg {
     width: auto;
     min-height: 26px;
@@ -2567,11 +2562,25 @@ a.btn-quickbooks, a.btn-quickbooks:hover { color: #fff; }
     align-self: flex-start;
     flex: 0 0 auto;
   }
-  .key-guide .key-guide-cta .btn {
-    min-height: 40px;
+  .connect-flow {
+    max-width: none;
+  }
+  .connect-flow .btn-connect-hero,
+  .btn-connect-hero {
+    width: 100%;
+    min-height: 48px;
     padding: 0 16px;
-    font-size: 14px;
-    border-radius: 8px;
+    font-size: 16px;
+    border-radius: 12px;
+    align-self: stretch;
+  }
+  .connect-paste .btn {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 16px;
+    font-size: 16px;
+    border-radius: 12px;
+    align-self: stretch;
   }
   .help { font-size: 13px; }
   .checkbox { min-height: 44px; font-size: 16px; }

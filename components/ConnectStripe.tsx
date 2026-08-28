@@ -71,30 +71,21 @@ export function SquareKeyLink() {
   );
 }
 
-export function SquareKeyTutorial() {
+export function SquareKeyTutorial({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="key-guide">
-      <p className="key-guide-lede">
-        Open Square Developers, copy the production access token, paste it below.
+    <div className="connect-flow">
+      <a
+        className="btn btn-connect btn-square btn-connect-hero"
+        href={SQUARE_KEYS_URL}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Open Square Developers
+      </a>
+      <p className="help">
+        Pick your app, open Credentials, copy the production access token.
       </p>
-      <div className="key-guide-cta">
-        <a
-          className="btn btn-connect btn-square btn-connect-lg"
-          href={SQUARE_KEYS_URL}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Open Square Developers
-        </a>
-      </div>
-      <ol className="key-steps">
-        <li>Pick your app, or create one.</li>
-        <li>
-          Credentials, then Production. Copy the access token. Use Sandbox only
-          for a test app.
-        </li>
-        <li>Paste it below and tap Connect Square.</li>
-      </ol>
+      {children}
     </div>
   );
 }

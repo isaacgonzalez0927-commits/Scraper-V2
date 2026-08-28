@@ -180,52 +180,9 @@ export default async function SettingsPage({
       {tab === "integrations" ? (
         <div className="grid narrow">
           <Card
-            id="mode"
-            title="How the shop runs"
-            note={
-              shopMode === "sandbox"
-                ? "Sandbox mode. Changes and payments are not live."
-                : shopMode === "desk"
-                  ? `${DESK_MODE_NAME} is live with no Stripe or Square. Overview will not show cash that actually landed. Less useful until you connect.`
-                  : "Live. Connect Stripe or Square so Overview can show cash that actually landed."
-            }
-            action={<span className="badge badge-viewed">{shopModeLabel(shopMode)}</span>}
-          >
-            {demoShop ? (
-              <p className="muted">Harbor Air is the demo. It stays Live.</p>
-            ) : shopMode === "sandbox" ? (
-              <p className="help">
-                Finish the corner list, then connect a payment platform on{" "}
-                <a href="/mode">Go live</a>.
-              </p>
-            ) : (
-              <div className="row mt-2">
-                {shopMode !== "live" ? (
-                  <form action={chooseShopModeAction}>
-                    <input type="hidden" name="mode" value="live" />
-                    <button className="btn btn-sm" type="submit">
-                      Switch to Live
-                    </button>
-                  </form>
-                ) : null}
-                {shopMode !== "desk" ? (
-                  <form action={chooseShopModeAction}>
-                    <input type="hidden" name="mode" value="desk" />
-                    <button className="btn btn-secondary btn-sm" type="submit">
-                      Switch to {DESK_MODE_NAME}
-                    </button>
-                  </form>
-                ) : null}
-                <a className="btn btn-ghost btn-sm" href="/mode">
-                  See both choices
-                </a>
-              </div>
-            )}
-          </Card>
-          <Card
             id="stripe"
             title="Stripe"
-            note="Read the shop's Stripe so Overview shows cash that actually landed, not just invoices you typed in."
+            note="Restricted key. Overview reads cash that landed."
             action={
               <span
                 className={`badge badge-${
@@ -299,33 +256,31 @@ export default async function SettingsPage({
               </>
             ) : !demoShop ? (
               <>
-                <StripeKeyTutorial live={shopMode !== "sandbox"} />
-                <form id="stripe-keys-form" action={connectStripeAction} className="connect-paste mt-2">
-                  <input
-                    className="input"
-                    name="stripe_secret_key"
-                    type="password"
-                    placeholder="rk_test_..."
-                    autoComplete="off"
-                    required
-                  />
-                  <button className="btn btn-connect btn-stripe" type="submit">
-                    Connect Stripe
-                  </button>
-                </form>
+                <StripeKeyTutorial live={shopMode !== "sandbox"}>
+                  <form
+                    id="stripe-keys-form"
+                    action={connectStripeAction}
+                    className="connect-paste"
+                  >
+                    <input
+                      className="input"
+                      name="stripe_secret_key"
+                      type="password"
+                      placeholder="rk_test_..."
+                      autoComplete="off"
+                      required
+                    />
+                    <button className="btn btn-connect btn-stripe" type="submit">
+                      Connect Stripe
+                    </button>
+                  </form>
+                </StripeKeyTutorial>
                 <details className="disclosure">
-                  <summary>Webhook, so Stripe customers, invoices, and payments come back into Sere</summary>
+                  <summary>Webhook (optional)</summary>
                   <p className="help mt-1">
-                    In Stripe, Developers → Webhooks → Add endpoint. Events:{" "}
-                    <code>customer.created</code>, <code>customer.updated</code>,{" "}
-                    <code>customer.deleted</code>, <code>invoice.created</code>,{" "}
-                    <code>invoice.paid</code>, <code>invoice.payment_succeeded</code>,{" "}
-                    <code>invoice.voided</code>,{" "}
-                    <code>payment_intent.succeeded</code>,{" "}
-                    <code>charge.succeeded</code>,{" "}
-                    <code>checkout.session.completed</code>.
-                    Paste the <code>whsec_...</code> it gives you, then reconnect the key above
-                    with this field filled in.
+                    Stripe Developers → Webhooks → Add endpoint. Paste this URL.
+                    Then paste the <code>whsec_</code> secret and tap Connect
+                    Stripe again.
                   </p>
                   <div className="copy-row mt-1">
                     <span className="copy-value">{webhookUrl}</span>
@@ -343,13 +298,23 @@ export default async function SettingsPage({
                       form="stripe-keys-form"
                     />
                   </div>
+                  <p className="help mt-1">
+                    Events: <code>customer.created</code>,{" "}
+                    <code>customer.updated</code>, <code>customer.deleted</code>,{" "}
+                    <code>invoice.created</code>, <code>invoice.paid</code>,{" "}
+                    <code>invoice.payment_succeeded</code>,{" "}
+                    <code>invoice.voided</code>,{" "}
+                    <code>payment_intent.succeeded</code>,{" "}
+                    <code>charge.succeeded</code>,{" "}
+                    <code>checkout.session.completed</code>.
+                  </p>
                 </details>
                 {oneClick ? (
                   <details className="disclosure mt-2">
                     <summary>One-click Connect (optional)</summary>
                     <p className="help mt-1">
-                      Needs a verified Stripe platform account. Restricted keys above work
-                      without that.
+                      Needs a verified Stripe platform account. The Sere key
+                      above works without that.
                     </p>
                     <form action={startStripeConnectAction} className="mt-2">
                       <button className="btn btn-sm btn-secondary" type="submit">
@@ -364,32 +329,33 @@ export default async function SettingsPage({
             {!demoShop && integrations.stripe.connected ? (
               <details className="disclosure" open={false}>
                 <summary>Update restricted key</summary>
-                <StripeKeyTutorial defaultOpen={false} live={shopMode !== "sandbox"} />
-                <form id="stripe-keys-update-form" action={connectStripeAction} className="form-grid mt-2">
-                  <div className="field full">
-                    <label>Restricted key</label>
-                    <input
-                      name="stripe_secret_key"
-                      type="password"
-                      placeholder="rk_test_... or rk_live_..."
-                      autoComplete="off"
-                    />
-                    <p className="help">Stored encrypted. Sere shows it back to nobody, including us.</p>
-                  </div>
-                  <div className="field">
-                    <label>Publishable key (optional)</label>
-                    <input name="stripe_publishable_key" placeholder="pk_live_..." autoComplete="off" />
-                  </div>
-                  <div className="field">
-                    <label>Webhook signing secret (optional)</label>
-                    <input name="stripe_webhook_secret" type="password" placeholder="whsec_..." autoComplete="off" />
-                  </div>
-                  <div className="form-actions">
-                    <button className="btn btn-sm" type="submit">
-                      Update Stripe key
-                    </button>
-                  </div>
-                </form>
+                <StripeKeyTutorial compact live={shopMode !== "sandbox"}>
+                  <form id="stripe-keys-update-form" action={connectStripeAction} className="form-grid mt-2">
+                    <div className="field full">
+                      <label>Restricted key</label>
+                      <input
+                        name="stripe_secret_key"
+                        type="password"
+                        placeholder="rk_test_... or rk_live_..."
+                        autoComplete="off"
+                      />
+                      <p className="help">Stored encrypted. Sere shows it back to nobody, including us.</p>
+                    </div>
+                    <div className="field">
+                      <label>Publishable key (optional)</label>
+                      <input name="stripe_publishable_key" placeholder="pk_live_..." autoComplete="off" />
+                    </div>
+                    <div className="field">
+                      <label>Webhook signing secret (optional)</label>
+                      <input name="stripe_webhook_secret" type="password" placeholder="whsec_..." autoComplete="off" />
+                    </div>
+                    <div className="form-actions">
+                      <button className="btn btn-sm" type="submit">
+                        Update Stripe key
+                      </button>
+                    </div>
+                  </form>
+                </StripeKeyTutorial>
               </details>
             ) : null}
 
@@ -408,16 +374,10 @@ export default async function SettingsPage({
             ) : null}
           </Card>
 
-          <p className="section-label mt-1">Also works with</p>
-          <p className="muted">
-            Square is the same idea: create the token, paste it, tap Connect Square.
-            QuickBooks pulls invoices and payments the same way. PayPal stays optional.
-          </p>
-
           <Card
             id="square"
             title="Square"
-              note="Read Square payments and invoices into the shop book. Overview also shows cash that landed there."
+              note="Access token. Overview reads cash that landed."
               action={
                 <span
                   className={`badge badge-${
@@ -478,25 +438,23 @@ export default async function SettingsPage({
               ) : demoShop ? (
                 <p className="muted">Create your shop to connect Square.</p>
               ) : (
-                <>
-                  <SquareKeyTutorial />
-                  <form action={connectSquareAction} className="form-grid mt-2">
-                    <div className="field full">
-                      <label>Access token</label>
+                <form action={connectSquareAction}>
+                  <SquareKeyTutorial>
+                    <div className="connect-paste">
                       <input
+                        className="input"
                         name="square_access_token"
                         type="password"
                         autoComplete="off"
                         required
                         placeholder="EAAA..."
                       />
-                      <p className="help">
-                        Stored encrypted. Sere never shows it again. Used to read
-                        invoices, payments, and payouts.
-                      </p>
+                      <button className="btn btn-connect btn-square" type="submit">
+                        Connect Square
+                      </button>
                     </div>
                     <details className="disclosure">
-                      <summary>Optional: location, sandbox, webhook</summary>
+                      <summary>Location, sandbox, webhook</summary>
                       <div className="form-grid mt-2">
                         <div className="field">
                           <label>Location ID (optional)</label>
@@ -513,14 +471,53 @@ export default async function SettingsPage({
                         </label>
                       </div>
                     </details>
-                    <div className="form-actions">
-                      <button className="btn btn-connect btn-square" type="submit">
-                        Connect Square
-                      </button>
-                    </div>
-                  </form>
-                </>
+                  </SquareKeyTutorial>
+                </form>
               )}
+          </Card>
+
+          <Card
+            id="mode"
+            title="How the shop runs"
+            note={
+              shopMode === "sandbox"
+                ? "Sandbox mode. Changes and payments are not live."
+                : shopMode === "desk"
+                  ? `${DESK_MODE_NAME} is live with no Stripe or Square. Overview will not show cash that actually landed. Less useful until you connect.`
+                  : "Live. Connect Stripe or Square so Overview can show cash that actually landed."
+            }
+            action={<span className="badge badge-viewed">{shopModeLabel(shopMode)}</span>}
+          >
+            {demoShop ? (
+              <p className="muted">Harbor Air is the demo. It stays Live.</p>
+            ) : shopMode === "sandbox" ? (
+              <p className="help">
+                Finish the corner list, then connect a payment platform on{" "}
+                <a href="/mode">Go live</a>.
+              </p>
+            ) : (
+              <div className="row mt-2">
+                {shopMode !== "live" ? (
+                  <form action={chooseShopModeAction}>
+                    <input type="hidden" name="mode" value="live" />
+                    <button className="btn btn-sm" type="submit">
+                      Switch to Live
+                    </button>
+                  </form>
+                ) : null}
+                {shopMode !== "desk" ? (
+                  <form action={chooseShopModeAction}>
+                    <input type="hidden" name="mode" value="desk" />
+                    <button className="btn btn-secondary btn-sm" type="submit">
+                      Switch to {DESK_MODE_NAME}
+                    </button>
+                  </form>
+                ) : null}
+                <a className="btn btn-ghost btn-sm" href="/mode">
+                  See both choices
+                </a>
+              </div>
+            )}
           </Card>
 
           <Card
