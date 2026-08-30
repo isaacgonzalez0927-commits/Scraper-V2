@@ -20,9 +20,17 @@ export function smsHref(phone: string, body: string): string {
   return `sms:${n}?body=${encodeURIComponent(body)}`;
 }
 
+export function invoicePagePath(token: string): string {
+  return `/p/inv/${token}`;
+}
+
+export function invoicePayPath(token: string): string {
+  return `/p/inv/${token}/pay`;
+}
+
 export function invoicePayUrl(base: string, publicToken: string): string {
   const origin = (base || "").replace(/\/$/, "");
-  return `${origin}/p/inv/${publicToken}`;
+  return `${origin}${invoicePayPath(publicToken)}`;
 }
 
 export function customerHubUrl(base: string, publicToken: string): string {

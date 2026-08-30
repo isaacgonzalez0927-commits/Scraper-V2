@@ -1633,10 +1633,28 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 }
 .sheet-pay {
   margin-top: 24px;
-  padding: 18px;
+  padding: 20px 18px;
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
+  text-align: center;
+}
+.sheet-pay-amount {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.sheet-pay .tiny { margin-top: 4px; }
+.sheet-pay .pay-btn {
+  display: inline-flex;
+  margin-top: 14px;
+  min-width: 10rem;
+  min-height: 44px;
+  padding: 0 22px;
+  font-size: 15px;
+  justify-content: center;
 }
 
 /* On a phone the pay action rides at the bottom of the screen, thumb height. */
