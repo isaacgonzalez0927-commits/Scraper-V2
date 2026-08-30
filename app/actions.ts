@@ -67,6 +67,7 @@ import { DEMO_EMAIL } from "@/lib/seed";
 import { isSafeAppPath, withQuery } from "@/lib/sere-setup";
 import { parseModeChoice, promoteShopAfterProcessor, stripeKeyEnv, writeShopMode } from "@/lib/shop-mode";
 import { requireWritableContext, trialEndsISO } from "@/lib/trial";
+import { invoicePayUrl } from "@/lib/phone";
 import { absoluteBaseUrl } from "@/lib/url";
 import {
   customers,
@@ -765,7 +766,7 @@ async function deliverInvoice(
       invoiceNumber: invoice.number,
       amountDue: formatMoney(balanceCents(invoice.totalCents, paid, invoice.status)),
       dueDate: prettyDate(invoice.dueDate),
-      payUrl: `${base}/p/inv/${invoice.publicToken}`,
+      payUrl: invoicePayUrl(base, invoice.publicToken),
       notes: invoice.notes,
     });
     try {

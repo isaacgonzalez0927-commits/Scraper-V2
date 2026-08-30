@@ -10,6 +10,7 @@ import { integrationStatus } from "@/lib/integrations";
 import { prettyDate, prettyWhen } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
+import { invoicePayUrl } from "@/lib/phone";
 import { absoluteBaseUrl } from "@/lib/url";
 import { customers, invoiceEvents, invoiceLines, invoices, jobs } from "@/lib/schema";
 
@@ -40,8 +41,8 @@ export default async function InvoiceDetailPage({
   ]);
   const paid = await amountPaidCents(invoice.id);
   const balance = balanceCents(invoice.totalCents, paid, invoice.status);
-  const publicPath = `/p/inv/${invoice.publicToken}`;
-  const publicUrl = `${base}${publicPath}`;
+  const publicUrl = invoicePayUrl(base, invoice.publicToken);
+  const publicPath = `/p/inv/${invoice.publicToken}/pay`;
   const locked = invoice.status === "paid" || invoice.status === "void";
 
   return (
@@ -127,7 +128,7 @@ export default async function InvoiceDetailPage({
         </Card>
 
         <div className="col">
-          <Card title="Customer link" note="Anyone with this link can view and pay the invoice.">
+          <Card title="Customer link" note="Anyone with this link goes straight to pay.">
             <div className="copy-row">
               <a className="copy-value" href={publicPath} target="_blank" rel="noreferrer">
                 {publicUrl || publicPath}

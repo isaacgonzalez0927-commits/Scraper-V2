@@ -103,9 +103,9 @@ test("pay links use the phone's SMS composer, not a carrier", () => {
     invoicePaySmsBody({
       shopName: "Harbor Air",
       number: "INV-1001",
-      payUrl: "https://www.sere.cash/p/inv/abc",
+      payUrl: "https://www.sere.cash/p/inv/abc/pay",
     }),
-    "Invoice INV-1001 from Harbor Air. Pay here: https://www.sere.cash/p/inv/abc",
+    "Invoice INV-1001 from Harbor Air. Pay here: https://www.sere.cash/p/inv/abc/pay",
   );
-  assert.equal(invoicePayUrl("https://www.sere.cash/", "abc"), "https://www.sere.cash/p/inv/abc");
+  assert.equal(invoicePayUrl("https://www.sere.cash/", "abc"), "https://www.sere.cash/p/inv/abc/pay");
 });
