@@ -44,6 +44,8 @@ test("assistant intents cover brief, cash, overdue, and reschedule", () => {
   assert.equal(due.kind, "invoices");
   if (due.kind === "invoices") assert.equal(due.filter, "due_soon");
   assert.equal(parseAssistant("what's on tomorrow", now).kind, "jobs");
+  assert.equal(parseAssistant("anything finished I never billed", now).kind, "collect");
+  assert.equal(parseAssistant("collect", now).kind, "collect");
 });
 
 test("OpenAI JSON plans map onto existing assistant intents", () => {

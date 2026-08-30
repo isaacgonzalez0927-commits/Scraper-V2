@@ -71,24 +71,21 @@ export function SquareKeyLink() {
   );
 }
 
-export function SquareKeyTutorial() {
+export function SquareKeyTutorial({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="key-guide">
-      <p className="key-guide-lede">Three steps. Same idea as Stripe.</p>
-      <ol className="key-steps">
-        <li>
-          Open{" "}
-          <a href={SQUARE_KEYS_URL} target="_blank" rel="noreferrer">
-            Square Developers
-          </a>
-          . Pick your app, or create one.
-        </li>
-        <li>
-          Credentials → Production. Copy the access token. Use Sandbox only if
-          that is a test app.
-        </li>
-        <li>Paste it below. Tap Connect Square.</li>
-      </ol>
+    <div className="connect-flow">
+      <a
+        className="btn btn-connect btn-square btn-connect-hero"
+        href={SQUARE_KEYS_URL}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Open Square Developers
+      </a>
+      <p className="help">
+        Pick your app, open Credentials, copy the production access token.
+      </p>
+      {children}
     </div>
   );
 }

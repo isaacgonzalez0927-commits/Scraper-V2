@@ -74,9 +74,7 @@ export function isStripeFullSecretKey(key: string): boolean {
 export function restrictedKeyRequiredMessage(): string {
   return (
     "Sere only accepts restricted keys (rk_live_ or rk_test_). Full secret keys " +
-    "can move money and change payout accounts. Too risky to paste into any app. " +
-    "Create a restricted key in Stripe Developers (sandbox). Settings → Integrations " +
-    "has the steps."
+    "can move money. Use Create the Sere key, then paste the rk_ key it shows you."
   );
 }
 
@@ -138,15 +136,17 @@ export async function validateStripeKeyForSere(key: string): Promise<StripeKeyCh
 }
 
 export function stripeKeyDeniedMessage(problems: string[]): string {
-  const missing = problems
+  const permissionRows = problems.filter((row) => /\(needs (Read|Write)\)/.test(row));
+  if (!permissionRows.length) {
+    return problems[0] || restrictedKeyRequiredMessage();
+  }
+  const missing = permissionRows
     .map((row) => row.replace(/:[\s\S]*$/, "").trim())
     .filter(Boolean);
   const list = missing.join(", ") || "the permissions Sere needs";
   return (
-    `That key is missing ${list}. The key Stripe named Sere with its default ` +
-    `set will keep failing. Open Stripe Developers (sandbox), create a new ` +
-    `restricted key, tick Customize permissions, set those rows, and paste ` +
-    `the new rk_test_ key.`
+    `That key is missing ${list}. Use Create the Sere key so the permissions ` +
+    `are already ticked, then paste the new rk_test_ key.`
   );
 }
 

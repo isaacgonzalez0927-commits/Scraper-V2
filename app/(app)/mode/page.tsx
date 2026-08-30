@@ -35,7 +35,7 @@ export default async function ModePage({
         </p>
 
         <div className="mode-live-primary">
-          <CreateSereKeyButton live className="btn btn-connect btn-stripe btn-connect-lg" />
+          <CreateSereKeyButton live className="btn btn-connect btn-stripe btn-connect-hero" />
           <a className="mode-live-next" href={CONNECT_STRIPE_HREF}>
             Then paste the key in Sere
           </a>

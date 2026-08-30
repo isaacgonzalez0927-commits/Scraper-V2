@@ -70,7 +70,7 @@ export default async function JobDetailPage({
           <Badge status={job.status} />
           <a className="btn btn-secondary" href={`/jobs/${job.id}/edit`}>Edit</a>
           {job.status !== "completed" ? (
-            <a className="btn" href={`/jobs/${job.id}/finish`}>Finish & invoice</a>
+            <a className="btn" href={`/jobs/${job.id}/finish`}>Finish and collect</a>
           ) : !openInvoice ? (
             <form action={invoiceFromJobAction}>
               <input type="hidden" name="job_id" value={job.id} />
@@ -105,9 +105,9 @@ export default async function JobDetailPage({
         <a className="closeout-callout mt-2" href={`/jobs/${job.id}/finish`}>
           <span>
             <strong>Finish this {voice.job.toLowerCase()} at the truck</strong>
-            <small>Save what was done, the final amount, and make the invoice in one pass.</small>
+            <small>Save what was done, collect now, or bill later from Collect.</small>
           </span>
-          <b>Finish & invoice</b>
+          <b>Finish and collect</b>
         </a>
       ) : null}
 

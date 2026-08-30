@@ -1162,35 +1162,101 @@ a.btn-openai, a.btn-openai:hover { color: #fff; }
 .connect-paste .input {
   flex: 1 1 14rem;
   min-width: 0;
-  min-height: 28px;
-  font-size: 13px;
+  min-height: 36px;
+  font-size: 14px;
 }
-.connect-paste .btn { flex-shrink: 0; }
-
-.key-guide {
-  margin: 8px 0 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--bg);
+.connect-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 4px;
 }
-.key-guide-lede {
-  margin: 0 0 8px;
-  color: var(--ink);
-  font-size: 13px;
+.connect-flow-compact {
+  gap: 12px;
+}
+.connect-flow .connect-paste {
+  margin-top: 0;
+  max-width: none;
+}
+.connect-flow > .disclosure {
+  margin-top: 6px;
+}
+.btn-connect-hero {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 1.45;
-  max-width: 36rem;
+  border-radius: 8px;
+  justify-content: center;
 }
-.key-steps {
-  margin: 0;
-  padding: 0 0 0 1.15rem;
-  color: var(--ink-2);
+.nav-count {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.nav a.active .nav-count {
+  background: var(--accent-strong);
+}
+.bottom-icon {
+  position: relative;
+  display: inline-flex;
+}
+.nav-dot {
+  position: absolute;
+  top: -5px;
+  right: -9px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+.house-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.house-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.collect-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.collect-item + .collect-item {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.connect-paste .btn {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 14px;
   font-size: 13px;
-  line-height: 1.45;
 }
-.key-steps li + li { margin-top: 8px; }
-.key-steps a { font-weight: 600; }
+
 .key-perms {
   margin: 6px 0 0;
   padding: 0;
@@ -2472,13 +2538,12 @@ a.btn-quickbooks, a.btn-quickbooks:hover { color: #fff; }
   }
   .connect-paste .input {
     width: 100%;
-    min-height: 32px;
+    min-height: 48px;
     font-size: 16px;
   }
   .connect-cta .btn,
   .connect-paste .btn,
-  .key-guide .btn,
-  .btn-connect {
+  .btn-connect-lg {
     width: auto;
     min-height: 26px;
     padding: 0 8px;
@@ -2496,6 +2561,26 @@ a.btn-quickbooks, a.btn-quickbooks:hover { color: #fff; }
     border-radius: 8px;
     align-self: flex-start;
     flex: 0 0 auto;
+  }
+  .connect-flow {
+    max-width: none;
+  }
+  .connect-flow .btn-connect-hero,
+  .btn-connect-hero {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 16px;
+    font-size: 16px;
+    border-radius: 12px;
+    align-self: stretch;
+  }
+  .connect-paste .btn {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 16px;
+    font-size: 16px;
+    border-radius: 12px;
+    align-self: stretch;
   }
   .help { font-size: 13px; }
   .checkbox { min-height: 44px; font-size: 16px; }

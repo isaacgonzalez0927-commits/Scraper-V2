@@ -207,6 +207,27 @@ test("OpenAI keys are recognised and Stripe secrets are rejected", () => {
   assert.equal(looksLikeOpenAIKey(""), false);
 });
 
+test("Stripe connect is Create the Sere key, then paste", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const tutorial = await readFile(
+    new URL("../components/StripeKeyTutorial.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(tutorial, /CreateSereKeyButton/);
+  assert.match(tutorial, /btn-connect-hero/);
+  assert.match(tutorial, /Never paste/);
+  assert.match(tutorial, /sk_/);
+  assert.equal(tutorial.includes("key-steps"), false);
+  assert.equal(tutorial.includes("key-guide-lede"), false);
+  const square = await readFile(
+    new URL("../components/ConnectStripe.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(square, /Open Square Developers/);
+  assert.match(square, /production access token/);
+  assert.equal(square.includes("key-steps"), false);
+});
+
 test("shops do not paste an OpenAI key on Integrations", async () => {
   const { readFile } = await import("node:fs/promises");
   const page = await readFile(new URL("../app/(app)/settings/page.tsx", import.meta.url), "utf8");

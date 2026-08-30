@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { finishJobAction } from "@/app/actions";
-import { Banner, Card, KeyValue, Stat } from "@/components/ui";
+import { PayLinkActions } from "@/components/PayLinkActions";
+import { Banner, Card, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
 import { db } from "@/lib/db";
 import { displayName, formatAddress } from "@/lib/display";
@@ -10,13 +11,15 @@ import { centsToInput, formatMoney } from "@/lib/money";
 import { loadApp } from "@/lib/page";
 import { jobCostTotal } from "@/lib/queries";
 import { customers, invoices, jobs } from "@/lib/schema";
+import { invoicePayUrl, telHref } from "@/lib/phone";
+import { absoluteBaseUrl } from "@/lib/url";
 
 export default async function FinishJobPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string; invoice?: string }>;
 }) {
   const { org, shell, voice } = await loadApp();
   const { id } = await params;
@@ -33,14 +36,17 @@ export default async function FinishJobPage({
     .where(and(eq(customers.id, job.customerId), eq(customers.organizationId, org.id)));
   if (!customer) notFound();
 
-  const [invoiceRows, costTotal] = await Promise.all([
+  const [invoiceRows, costTotal, base] = await Promise.all([
     db()
       .select()
       .from(invoices)
       .where(and(eq(invoices.jobId, job.id), eq(invoices.organizationId, org.id))),
     jobCostTotal(org.id, job.id, job.estimatedCostCents),
+    absoluteBaseUrl(),
   ]);
   const openInvoice = invoiceRows.find((invoice) => invoice.status !== "void");
+  const sentInvoice = invoiceRows.find((invoice) => invoice.id === Number(q.invoice || 0));
+  const payUrl = sentInvoice ? invoicePayUrl(base, sentInvoice.publicToken) : "";
   const amount = job.actualRevenueCents || job.estimatedRevenueCents;
   const address = formatAddress(
     job.serviceLine1,
@@ -68,7 +74,25 @@ export default async function FinishJobPage({
         </a>
       }
     >
-      <Banner error={q.error} />
+      <Banner error={q.error} ok={q.ok} />
+      {sentInvoice && payUrl ? (
+        <Card
+          title="Collect in the driveway"
+          note="Text the pay link from this phone. Sere does not send the SMS for you."
+        >
+          <PayLinkActions
+            phone={customer.phone}
+            shopName={org.name}
+            number={sentInvoice.number}
+            payUrl={payUrl}
+            invoiceId={sentInvoice.id}
+            resend
+          />
+          <p className="help mt-1">
+            <a href="/collect">See everything still sitting out</a>
+          </p>
+        </Card>
+      ) : null}
       {openInvoice ? (
         <Banner
           info={
@@ -90,7 +114,7 @@ export default async function FinishJobPage({
         </div>
         <div className="row">
           {customer.phone ? (
-            <a className="btn btn-secondary btn-sm" href={`tel:${customer.phone}`}>
+            <a className="btn btn-secondary btn-sm" href={telHref(customer.phone) || `tel:${customer.phone}`}>
               Call
             </a>
           ) : null}
@@ -143,7 +167,6 @@ export default async function FinishJobPage({
                 inputMode="decimal"
                 defaultValue={centsToInput(amount)}
                 placeholder="0.00"
-                required
               />
             </div>
             <div className="field">
@@ -180,15 +203,23 @@ export default async function FinishJobPage({
         ) : null}
 
         <div className="closeout-actions">
-          <button className="btn" type="submit" name="next" value="invoice">
-            {openInvoice ? `Finish & open ${openInvoice.number}` : "Finish & create invoice"}
+          <button className="btn" type="submit" name="next" value="collect">
+            Finish and collect
           </button>
-          <button className="btn btn-secondary" type="submit" name="next" value="job">
-            Finish without invoice
+          <button className="btn btn-secondary" type="submit" name="next" value="draft">
+            Finish, bill later
           </button>
-          <p>
-            Creates a draft. You review it before the customer sees anything.
-          </p>
+          <p>Collect sends the invoice now. Bill later puts a draft on Collect.</p>
+          <details className="disclosure">
+            <summary>No charge</summary>
+            <div className="field mt-1">
+              <label>Why this visit is no charge</label>
+              <input name="no_charge_reason" placeholder="Warranty, neighbor, quote only" />
+            </div>
+            <button className="btn btn-ghost btn-sm mt-1" type="submit" name="next" value="nocharge">
+              Finish with no charge
+            </button>
+          </details>
         </div>
       </form>
     </Shell>

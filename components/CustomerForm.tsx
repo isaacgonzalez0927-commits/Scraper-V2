@@ -52,6 +52,14 @@ export function CustomerForm({
             placeholder={voice.notesPlaceholder}
           />
         </div>
+        <div className="field">
+          <label>Follow up on</label>
+          <input name="follow_up_on" type="date" defaultValue={customer?.followUpOn || ""} />
+        </div>
+        <div className="field">
+          <label>Follow-up note</label>
+          <input name="follow_up_note" defaultValue={customer?.followUpNote || ""} />
+        </div>
       </section>
 
       <TradeFields
