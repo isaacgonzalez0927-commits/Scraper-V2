@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { loadApp } from "@/lib/page";
 import { listProperties } from "@/lib/properties";
 import { customers } from "@/lib/schema";
+import { getCrew } from "@/lib/operations";
 
 export default async function NewJobPage({
   searchParams,
@@ -14,10 +15,10 @@ export default async function NewJobPage({
 }) {
   const { org, shell, voice } = await loadApp();
   const q = await searchParams;
-  const customerRows = await db()
+  const [customerRows,crewRows] = await Promise.all([db()
     .select()
     .from(customers)
-    .where(and(eq(customers.organizationId, org.id), isNull(customers.archivedAt)));
+    .where(and(eq(customers.organizationId, org.id), isNull(customers.archivedAt))),getCrew(org.id)]);
   const selectedCustomer = q.customerId
     ? customerRows.find((customer) => customer.id === Number(q.customerId))
     : undefined;
@@ -46,6 +47,7 @@ export default async function NewJobPage({
           servicePostal: selectedCustomer?.servicePostal,
         }}
         propertyRows={propertyRows}
+        crewRows={crewRows}
       />
     </Shell>
   );

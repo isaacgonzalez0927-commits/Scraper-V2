@@ -10,6 +10,7 @@ import { prettyDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/money";
 import { paidMap } from "@/lib/queries";
 import { customers, estimates, invoices, organizations } from "@/lib/schema";
+import { rows } from "@/lib/operations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export default async function CustomerHubPage({
     .where(eq(organizations.id, customer.organizationId));
   if (!org) notFound();
 
-  const [estimateRows, invoiceRows] = await Promise.all([
+  const [estimateRows, invoiceRows, upcomingJobs, agreements, equipment, booking] = await Promise.all([
     db()
       .select()
       .from(estimates)
@@ -54,6 +55,10 @@ export default async function CustomerHubPage({
           ne(invoices.status, "paid"),
         ),
       ),
+    rows<{id:number;title:string;scheduledStart:string;status:string}>("SELECT id,title,scheduled_start,status FROM jobs WHERE organization_id=? AND customer_id=? AND scheduled_start>=? AND status IN ('scheduled','in_progress') ORDER BY scheduled_start LIMIT 10",[org.id,customer.id,new Date().toISOString().slice(0,10)]),
+    rows<{id:number;name:string;nextVisit:string;status:string}>("SELECT id,name,next_visit,status FROM service_agreements WHERE organization_id=? AND customer_id=? AND status='active' ORDER BY next_visit",[org.id,customer.id]),
+    rows<{id:number;name:string;model:string;warrantyUntil:string;nextService:string}>("SELECT id,name,model,warranty_until,next_service FROM equipment_assets WHERE organization_id=? AND customer_id=? ORDER BY name",[org.id,customer.id]),
+    rows<{bookingEnabled:number}>("SELECT booking_enabled FROM operations_settings WHERE organization_id=?",[org.id]),
   ]);
   const paid = await paidMap(
     org.id,
@@ -78,9 +83,15 @@ export default async function CustomerHubPage({
             <p className="tiny">For {displayName(customer)}</p>
           </div>
         </div>
-        <p className="muted">
-          Open estimates and unpaid invoices. This is not a booking page.
-        </p>
+        <p className="muted">Your appointments, service plans, estimates, and invoices with {org.name}.</p>
+
+        <h2 className="card-title mt-2">Upcoming appointments</h2>
+        {upcomingJobs.length?<ul className="rows">{upcomingJobs.map(job=><li key={job.id}><div className="row-item"><span className="row-main"><span className="row-title">{job.title}</span><span className="row-meta">{prettyDate(job.scheduledStart.slice(0,10))} · {job.scheduledStart.slice(11,16)}</span></span><Badge status={job.status}/></div></li>)}</ul>:<p className="muted">No upcoming appointments.</p>}
+        {booking[0]?.bookingEnabled?<p className="mt-1"><a className="btn btn-secondary btn-sm" href={`/book/${org.slug}`}>Request service</a></p>:null}
+
+        {agreements.length?<><h2 className="card-title mt-2">Service plans</h2><ul className="rows">{agreements.map(plan=><li key={plan.id}><div className="row-item"><span className="row-main"><span className="row-title">{plan.name}</span><span className="row-meta">Next service due {prettyDate(plan.nextVisit)}</span></span><Badge status={plan.status}/></div></li>)}</ul></>:null}
+
+        {equipment.length?<><h2 className="card-title mt-2">Equipment on file</h2><ul className="rows">{equipment.map(item=><li key={item.id}><div className="row-item"><span className="row-main"><span className="row-title">{item.name}</span><span className="row-meta">{item.model||'Model not recorded'}{item.nextService?` · Next service ${prettyDate(item.nextService)}`:''}</span></span></div></li>)}</ul></>:null}
 
         <h2 className="card-title mt-2">Estimates</h2>
         {estimateRows.length ? (

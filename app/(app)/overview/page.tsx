@@ -21,6 +21,7 @@ import {
   weekBounds,
 } from "@/lib/queries";
 import { activities, customers, invoices, jobs } from "@/lib/schema";
+import { operationsSnapshot } from "@/lib/operations";
 
 export default async function OverviewPage({
   searchParams,
@@ -70,6 +71,11 @@ export default async function OverviewPage({
   const awaiting = jobRows
     .filter((r) => r.job.status === "scheduled" || r.job.status === "in_progress")
     .slice(0, 6);
+  const operations = await operationsSnapshot(org.id);
+  const newRequests = operations.requests.filter((request) => request.status === "new");
+  const unassigned = operations.dispatch.filter((job) => !job.teamMemberId && !["completed", "cancelled"].includes(job.status));
+  const duePlans = operations.agreements.filter((plan) => plan.status === "active" && plan.nextVisit <= today);
+  const lowStock = operations.inventory.filter((item) => item.quantity <= item.reorderAt);
 
   let profit = 0;
   for (const { job } of jobRows) {
@@ -94,6 +100,16 @@ export default async function OverviewPage({
       actions={<a className="btn" href="/jobs/new">{voice.newJob}</a>}
     >
       <Banner error={q.error} ok={q.ok} />
+      <section className="ops-command">
+        <div className="ops-command-head"><div><span className="ops-eyebrow">TODAY’S CONTROL CENTER</span><h2>What needs you next.</h2></div><a className="btn btn-secondary btn-sm" href="/dispatch">Open dispatch</a></div>
+        <div className="ops-action-grid">
+          <a href="/requests"><strong>{newRequests.length}</strong><span>new requests</span><small>{newRequests.length ? `${newRequests[0].name} needs a first response` : "Inbox is handled"}</small></a>
+          <a href="/dispatch"><strong>{unassigned.length}</strong><span>jobs need a crew</span><small>{unassigned.length ? "Put work on the board" : "Schedule is assigned"}</small></a>
+          <a href="/agreements"><strong>{duePlans.length}</strong><span>plan visits due</span><small>{duePlans.length ? "Create the next visits" : "Recurring work is current"}</small></a>
+          <a href="/inventory"><strong>{lowStock.length}</strong><span>parts at reorder level</span><small>{lowStock.length ? lowStock.slice(0,2).map(item=>item.name).join(", ") : "Stock levels look good"}</small></a>
+        </div>
+        <div className="ops-today-strip"><div><strong>{jobsToday.length}</strong><span>jobs today</span></div>{jobsToday.slice(0,5).map(({job,customer})=><a href={`/field?job=${job.id}`} key={job.id}><time>{job.scheduledStart?.slice(11,16)||"—"}</time><span><strong>{job.title}</strong><small>{displayName(customer)} · {job.technicianName||"Unassigned"}</small></span></a>)}{!jobsToday.length?<p>No work scheduled today. <a href="/dispatch">Open the board →</a></p>:null}</div>
+      </section>
       {!shell.isDemo ? (
         <>
           <ConnectCashCallout

@@ -1,0 +1,7 @@
+/** Device-local pending edits. The server remains the authority after synchronization. */
+export type PendingFieldUpdate={mutationId:string;organizationId:number;userId:number;jobId:number;kind:string;body:string;minutes:number;capturedAt:string;checklistId?:number;done?:boolean;version?:number;error?:string};
+function openQueue():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const req=indexedDB.open('sere-field-work',1);req.onupgradeneeded=()=>{req.result.createObjectStore('updates',{keyPath:'mutationId'});};req.onerror=()=>reject(req.error);req.onsuccess=()=>resolve(req.result);});}
+async function access<T>(mode:IDBTransactionMode,action:(store:IDBObjectStore)=>IDBRequest<T>):Promise<T>{const db=await openQueue();return new Promise((resolve,reject)=>{const tx=db.transaction('updates',mode);const req=action(tx.objectStore('updates'));let result:T;req.onsuccess=()=>{result=req.result;};tx.oncomplete=()=>{db.close();resolve(result);};tx.onerror=()=>{db.close();reject(tx.error);};tx.onabort=()=>{db.close();reject(tx.error);};});}
+export async function queuedUpdates(org:number,user:number){const all=await access<PendingFieldUpdate[]>('readonly',s=>s.getAll());return all.filter(r=>r.organizationId===org&&r.userId===user).sort((a,b)=>a.capturedAt.localeCompare(b.capturedAt));}
+export async function putUpdate(update:PendingFieldUpdate){await access('readwrite',s=>s.put(update));}
+export async function removeUpdate(key:string){await access('readwrite',s=>s.delete(key));}

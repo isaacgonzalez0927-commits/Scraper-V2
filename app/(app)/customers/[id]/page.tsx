@@ -39,6 +39,7 @@ import { customerBalanceCents, customerLifetimeCents } from "@/lib/queries";
 import { stripeDashboardCustomerUrl } from "@/lib/stripe-customers";
 import { customers, estimates, invoices, jobs, notes, payments } from "@/lib/schema";
 import { absoluteBaseUrl } from "@/lib/url";
+import { getAgreements, getEquipment } from "@/lib/operations";
 
 export default async function CustomerDetailPage({
   params,
@@ -91,6 +92,7 @@ export default async function CustomerDetailPage({
     listContacts(org.id, customer.id),
     ensureCustomerPublicToken(org.id, customer),
   ]);
+  const [equipmentRows,agreementRows]=await Promise.all([getEquipment(org.id,customer.id),getAgreements(org.id).then(rows=>rows.filter(row=>row.customerId===customer.id))]);
 
   const billing = formatAddress(
     customer.billingLine1,
@@ -221,6 +223,15 @@ export default async function CustomerDetailPage({
           <KeyValue rows={siteRows} />
         </Card>
       ) : null}
+
+      <div className="grid grid-2 mt-2">
+        <Card title="Equipment" note="Models, warranties, and next service" action={<a className="btn btn-secondary btn-sm" href={`/equipment?customer=${customer.id}`}>Manage</a>}>
+          {equipmentRows.length?<Rows>{equipmentRows.map(item=><RowLink key={item.id} href={`/equipment?edit=${item.id}`} title={item.name} meta={`${item.model||'Model not recorded'}${item.nextService?` · service ${prettyDate(item.nextService)}`:''}`}/>)}</Rows>:<div className="empty"><h3>No equipment recorded</h3><p>Add the systems you service so every visit starts with the right details.</p><a className="btn btn-secondary btn-sm" href={`/equipment?new=1&customer=${customer.id}`}>Add equipment</a></div>}
+        </Card>
+        <Card title="Service plans" note="Recurring visits and renewal dates" action={<a className="btn btn-secondary btn-sm" href={`/agreements?new=1`}>Add plan</a>}>
+          {agreementRows.length?<Rows>{agreementRows.map(plan=><RowLink key={plan.id} href={`/agreements?edit=${plan.id}`} title={plan.name} meta={`Next visit ${prettyDate(plan.nextVisit)}`} badge={<Badge status={plan.status}/>}/>)}</Rows>:<p className="muted">No service plan on this customer.</p>}
+        </Card>
+      </div>
 
       <Card title="Timeline" className="mt-2" flush={timeline.length > 0}>
         {timeline.length ? (

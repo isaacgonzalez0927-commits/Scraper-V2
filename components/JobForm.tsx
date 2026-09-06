@@ -7,6 +7,7 @@ import { JOB_STATUSES, label } from "@/lib/labels";
 import { centsToInput } from "@/lib/money";
 import { propertyLabel } from "@/lib/properties";
 import type { customers, jobs, properties } from "@/lib/schema";
+import type { CrewMember } from "@/lib/operations";
 
 type Customer = typeof customers.$inferSelect;
 type Job = typeof jobs.$inferSelect;
@@ -19,6 +20,7 @@ export function JobForm({
   error,
   voice,
   fields,
+  crewRows = [],
 }: {
   job?: Partial<Job>;
   customerRows: Customer[];
@@ -26,11 +28,13 @@ export function JobForm({
   error?: string;
   voice: TradeProfile;
   fields: readonly TradeField[];
+  crewRows?: CrewMember[];
 }) {
   const details = parseDetails(job?.details);
   return (
     <form action={saveJobAction} className="grid narrow">
       {job?.id ? <input type="hidden" name="id" value={job.id} /> : null}
+      {job?.id ? <input type="hidden" name="schedule_version" value={job.scheduleVersion || 0} /> : null}
       <Banner error={error} />
 
       <section className="card form-grid">
@@ -83,8 +87,10 @@ export function JobForm({
         </div>
         <div className="field">
           <label>{voice.worker}</label>
-          <input name="technician_name" defaultValue={job?.technicianName || ""} />
+          {crewRows.length ? <select name="team_member_id" defaultValue={job?.teamMemberId||""}><option value="">Unassigned</option>{crewRows.filter(m=>m.active||m.id===job?.teamMemberId).map(m=><option key={m.id} value={m.id}>{m.name}{m.active?'':' · inactive'}</option>)}</select>:<input name="technician_name" defaultValue={job?.technicianName || ""} />}
         </div>
+        <div className="field"><label>Duration</label><select name="duration_minutes" defaultValue={job?.durationMinutes||60}><option value="30">30 minutes</option><option value="60">1 hour</option><option value="90">1½ hours</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option><option value="480">Full day</option></select></div>
+        <div className="field"><label>Priority</label><select name="priority" defaultValue={job?.priority||"normal"}><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
         <div className="field">
           <label>Notes</label>
           <input
