@@ -11,6 +11,7 @@ import {
   envVercel,
 } from "./db-env";
 import * as schema from "./schema";
+import { migrateOperations } from "./operations-migrations";
 
 export { cleanEnv } from "./db-clean";
 export { configuredRemoteUrl, databaseAuthToken } from "./db-env";
@@ -601,6 +602,7 @@ export async function ensureSchema(): Promise<void> {
   await getClient().execute(
     "CREATE INDEX IF NOT EXISTS customers_public_token ON customers (public_token)",
   );
+  await migrateOperations(client);
 }
 
 async function addColumnIfMissing(table: string, column: string, definition: string): Promise<void> {

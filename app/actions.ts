@@ -42,6 +42,7 @@ import {
 } from "@/lib/business";
 import { closeoutDueDate, parseCloseout, parseNoCharge } from "@/lib/closeout";
 import { ensureDefaultProperty } from "@/lib/properties";
+import { rows as operationRows, saveJobWithDispatch, scheduleJob } from "@/lib/operations";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
 import { paypalAccountLabel } from "@/lib/paypal";
@@ -384,6 +385,9 @@ export async function saveJobAction(form: FormData) {
     scheduledStart,
     status: scheduledStart && status === "unscheduled" ? "scheduled" : status,
     technicianName: str(form, "technician_name"),
+    teamMemberId: Number(str(form, "team_member_id") || 0) || null,
+    durationMinutes: Number(str(form, "duration_minutes") || 60),
+    priority: str(form, "priority") || "normal",
     estimatedRevenueCents: dollarsToCents(str(form, "estimated_revenue")),
     actualRevenueCents: dollarsToCents(str(form, "actual_revenue")),
     estimatedCostCents: dollarsToCents(str(form, "estimated_cost")),
@@ -400,26 +404,35 @@ export async function saveJobAction(form: FormData) {
         : "/jobs/new?error=Customer+and+title+are+required.",
     );
   }
-  if (id) {
-    await db().update(jobs).set(row).where(and(eq(jobs.id, id), eq(jobs.organizationId, org.id)));
-    redirect(`/jobs/${id}`);
+  let savedId = 0;
+  try {
+    savedId = await saveJobWithDispatch(org.id, id, row, form.has("schedule_version") ? Number(str(form, "schedule_version")) : undefined);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "This job could not be saved.";
+    redirect(withQuery(id ? `/jobs/${id}/edit` : "/jobs/new", "error", message));
   }
-  const [job] = await db().insert(jobs).values({ ...row, organizationId: org.id, createdAt: nowISO() }).returning();
-  await logActivity(org.id, "job_created", `New job: ${job.title}`, job.estimatedRevenueCents, `/jobs/${job.id}`);
+  if (id) redirect(`/jobs/${savedId}`);
+  await logActivity(org.id, "job_created", `New job: ${row.title}`, row.estimatedRevenueCents, `/jobs/${savedId}`);
   if (fromSetup) redirect(back);
-  redirect(`/jobs/${job.id}`);
+  redirect(`/jobs/${savedId}`);
 }
 
 export async function updateJobStatusAction(form: FormData) {
   const { org } = await requireWritableContext("/jobs");
   const id = Number(str(form, "id"));
   const status = str(form, "status");
+  if (!["unscheduled", "scheduled", "in_progress", "completed", "cancelled"].includes(status)) redirect(`/jobs/${id}?error=Choose+a+valid+status.`);
+  const [ownedJob] = await db().select().from(jobs).where(and(eq(jobs.id, id), eq(jobs.organizationId, org.id)));
+  if (!ownedJob) redirect("/jobs?error=Job+not+found.");
+  if (status === "completed") {
+    const incomplete = await operationRows<{total:number}>("SELECT count(*) AS total FROM job_checklist WHERE organization_id=? AND job_id=? AND done=0", [org.id,id]);
+    if (incomplete[0]?.total) redirect(`/jobs/${id}?error=Complete+the+field+checklist+before+closing+this+job.`);
+  }
   const patch: Record<string, string | null> = { status };
   if (status === "completed") patch.completedAt = nowISO();
   await db().update(jobs).set(patch).where(and(eq(jobs.id, id), eq(jobs.organizationId, org.id)));
   if (status === "completed") {
-    const [job] = await db().select().from(jobs).where(eq(jobs.id, id));
-    await logActivity(org.id, "job_completed", `Job completed: ${job.title}`, job.estimatedRevenueCents, `/jobs/${id}`);
+    await logActivity(org.id, "job_completed", `Job completed: ${ownedJob.title}`, ownedJob.estimatedRevenueCents, `/jobs/${id}`);
   }
   redirect(`/jobs/${id}`);
 }
@@ -428,6 +441,8 @@ export async function addJobCostAction(form: FormData) {
   const { org } = await requireWritableContext("/jobs");
   const jobId = Number(str(form, "job_id"));
   const amount = dollarsToCents(str(form, "amount"));
+  const owned = await operationRows<{id:number}>("SELECT id FROM jobs WHERE organization_id=? AND id=?", [org.id,jobId]);
+  if (!owned.length) redirect("/jobs?error=Job+not+found.");
   if (amount > 0) {
     await db().insert(jobCosts).values({
       organizationId: org.id,
@@ -445,11 +460,13 @@ export async function rescheduleJobAction(form: FormData) {
   const { org } = await requireWritableContext("/jobs");
   const id = Number(str(form, "id"));
   const scheduledStart = str(form, "scheduled_start");
-  await db()
-    .update(jobs)
-    .set({ scheduledStart, status: "scheduled" })
-    .where(and(eq(jobs.id, id), eq(jobs.organizationId, org.id)));
-  redirect(str(form, "next") || `/jobs/${id}`);
+  const next = safeAppPath(str(form, "next"), `/jobs/${id}`);
+  try {
+    await scheduleJob(org.id, id, { start: scheduledStart });
+  } catch (error) {
+    redirect(withQuery(next, "error", error instanceof Error ? error.message : "This job could not be scheduled."));
+  }
+  redirect(next);
 }
 
 async function invoiceForJob(

@@ -42,14 +42,22 @@ npm run build
 | Screen | What it is for |
 | ------ | -------------- |
 | Overview | Collected cash against invoiced revenue, overdue balances, today's jobs, recent activity |
+| Requests | Phone and website leads moving from first response to estimate or job |
+| Dispatch | Crew lanes, assignment conflicts, durations, priorities, and a mobile agenda |
+| Field work | Checklists, notes, time, and photos with an on-device sync queue |
 | Customers | Contact details, jobs, invoices, payments, notes, lifetime value |
 | Jobs | Schedule work, log costs, see profit, bill it in one click |
+| Service plans | Recurring visit cadence kept separate from billing cadence |
+| Equipment | Customer equipment, model/serial, warranty, and next-service dates |
+| Inventory | Shop/truck stock with parts used written into job costs |
+| Follow-ups | Reviewable invoice, estimate, and maintenance email drafts |
 | Invoices | Line items, tax, discounts, printable PDF, customer payment link, timeline |
 | Payments | A ledger that supports partial payments |
 | Reports | Money in, outstanding, overdue, expected cash, job profitability |
 | Calendar | Day, week, or month of scheduled jobs, with drag to reschedule |
 | Search | Names, phones, emails, addresses, invoice numbers, on `⌘K` |
 | Settings | Company details, trade type, invoice defaults, integrations, account |
+| Team | Dispatch profiles, skills, availability, color, and loaded hourly cost |
 | Serenity | Shop intelligence. Board, books, jobs, cash. Not outreach. |
 | Assistant | Star in the top bar. Surfaces overdue cash and today's jobs, and can move a date or mark a job complete |
 
@@ -59,6 +67,9 @@ Two rules the code keeps:
   another.
 - Money is stored as integer cents, and an invoice's paid amount is summed from valid
   payments rather than incremented. An invoice is paid only when the balance is zero.
+
+Implementation notes and safety boundaries for service operations are in
+[docs/SERVICE-OPERATIONS.md](docs/SERVICE-OPERATIONS.md).
 
 ## Deploy on Vercel
 

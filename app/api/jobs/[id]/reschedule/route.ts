@@ -1,9 +1,7 @@
-import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { boot } from "@/lib/boot";
 import { requireWritableContext } from "@/lib/trial";
-import { db } from "@/lib/db";
-import { jobs } from "@/lib/schema";
+import { scheduleJob } from "@/lib/operations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,10 +16,12 @@ export async function POST(
   const form = await req.formData();
   const scheduledStart = String(form.get("scheduled_start") || "");
   if (scheduledStart) {
-    await db()
-      .update(jobs)
-      .set({ scheduledStart, status: "scheduled" })
-      .where(and(eq(jobs.id, Number(id)), eq(jobs.organizationId, org.id)));
+    try { await scheduleJob(org.id, Number(id), { start: scheduledStart }); }
+    catch (error) {
+      const url=new URL("/calendar",req.url);
+      url.searchParams.set("error",error instanceof Error?error.message:"This job could not be scheduled.");
+      return NextResponse.redirect(url,303);
+    }
   }
   return NextResponse.redirect(new URL("/calendar", req.url), 303);
 }

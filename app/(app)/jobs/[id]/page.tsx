@@ -70,7 +70,7 @@ export default async function JobDetailPage({
           <Badge status={job.status} />
           <a className="btn btn-secondary" href={`/jobs/${job.id}/edit`}>Edit</a>
           {job.status !== "completed" ? (
-            <a className="btn" href={`/jobs/${job.id}/finish`}>Finish and collect</a>
+            <><a className="btn btn-secondary" href={`/field?job=${job.id}`}>Field workspace</a><a className="btn" href={`/jobs/${job.id}/finish`}>Finish and collect</a></>
           ) : !openInvoice ? (
             <form action={invoiceFromJobAction}>
               <input type="hidden" name="job_id" value={job.id} />

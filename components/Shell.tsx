@@ -107,23 +107,15 @@ export function Shell({
   const active = (href: string) => path === href || path.startsWith(`${href}/`);
   const modeNote = !isDemo && shopMode ? shopModeBanner(shopMode) : null;
   const collectBadge = collectCount > 0 ? (collectCount > 9 ? "9+" : String(collectCount)) : "";
-  const nav: [string, string, string, string?][] = [
-    ["/overview", "Overview", "grid"],
-    ["/serenity", "Serenity", "spark"],
-    ["/jobs", jobsLabel, "briefcase"],
-    ["/customers", customersLabel, "users"],
-    ["/estimates", "Estimates", "file"],
-    ["/collect", "Collect", "cash", collectBadge],
-    ["/invoices", "Invoices", "file"],
-    ["/payments", "Payments", "card"],
-    ["/calendar", "Calendar", "calendar"],
-    ["/reports", "Reports", "chart"],
-    ["/settings", "Settings", "settings"],
+  const nav: [string, [string, string, string, string?][]][] = [
+    ["Today", [["/overview", "Overview", "grid"],["/requests", "Requests", "file"],["/dispatch", "Dispatch", "calendar"],["/field", "Field work", "briefcase"],["/serenity", "Serenity", "spark"]]],
+    ["Customers & work", [["/jobs", jobsLabel, "briefcase"],["/customers", customersLabel, "users"],["/estimates", "Estimates", "file"],["/agreements", "Service plans", "calendar"],["/equipment", "Equipment", "settings"]]],
+    ["Money & business", [["/collect", "Collect", "cash", collectBadge],["/invoices", "Invoices", "file"],["/payments", "Payments", "card"],["/inventory", "Inventory", "grid"],["/automations", "Follow-ups", "spark"],["/reports", "Reports", "chart"],["/team", "Team", "users"],["/settings", "Settings", "settings"]]],
   ];
   const bottom: [string, string, string, string?][] = [
     ["/overview", "Home", "grid"],
-    ["/jobs", jobsLabel, "briefcase"],
-    ["/serenity", "Serenity", "spark"],
+    ["/field", "Field", "briefcase"],
+    ["/dispatch", "Dispatch", "calendar"],
     ["/collect", "Collect", "cash", collectBadge],
     ["/settings", "Settings", "settings"],
   ];
@@ -134,13 +126,7 @@ export function Shell({
           <BrandLogo className="brand-lockup" />
         </a>
         <nav className="nav">
-          {nav.map(([href, name, icon, count]) => (
-            <a key={href} href={href} className={active(href) ? "active" : ""}>
-              <Icon name={icon} />
-              {name}
-              {count ? <span className="nav-count">{count}</span> : null}
-            </a>
-          ))}
+          {nav.map(([group,items]) => <div className="nav-group" key={group}><span className="nav-group-label">{group}</span>{items.map(([href,name,icon,count])=><a key={href} href={href} className={active(href)?"active":""}><Icon name={icon}/>{name}{count?<span className="nav-count">{count}</span>:null}</a>)}</div>)}
         </nav>
         <div className="sidebar-foot">
           {isDemo ? (
@@ -187,6 +173,7 @@ export function Shell({
             <kbd>⌘K</kbd>
           </button>
           <div className="topbar-right">
+            <details className="quick-create"><summary className="btn btn-sm">+ Create</summary><div><a href="/requests?new=1">Service request</a><a href="/jobs/new">Job</a><a href="/estimates/new">Estimate</a><a href="/invoices/new">Invoice</a><a href="/customers/new">Customer</a></div></details>
             <ThemeToggle />
             {brief ? <AssistantDock brief={brief} tradeName={tradeName || "shop"} /> : null}
             <a className="icon-btn" href="/notifications" aria-label="Alerts">
