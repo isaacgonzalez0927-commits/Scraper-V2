@@ -46,6 +46,10 @@ dialog.palette::backdrop { background: transparent; }
   .mobile-customer-shortcut { display: flex; align-items: center; gap: 14px; padding: 17px; border-radius: 17px; background: var(--accent-soft); color: var(--accent-strong); }
   .mobile-customer-shortcut > span { display: grid; flex: 1; gap: 4px; }
   .mobile-customer-shortcut small { font-size: .875rem; }
+  .mobile-setup-shortcut { display: flex; align-items: center; gap: 14px; min-height: 64px; margin-top: 10px; padding: 13px 17px; border: 1px solid var(--line); border-radius: 17px; color: var(--ink); }
+  .mobile-setup-shortcut > span { display: grid; flex: 1; gap: 3px; }
+  .mobile-setup-shortcut > span small { color: var(--ink-3); font-size: .875rem; }
+  .mobile-setup-shortcut > .nav-icon:last-child { width: 14px; height: 14px; color: var(--ink-3); }
   .mobile-account { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 16px; }
   .mobile-account p { color: var(--ink-3); font-size: .875rem; }
   .mobile-account > div { display: flex; align-items: center; justify-content: space-between; }
@@ -73,7 +77,12 @@ dialog.palette::backdrop { background: transparent; }
   .app .form-actions { flex-wrap: wrap; gap: 10px; }
   .app .form-actions > .btn { flex: 1 1 130px; }
   .app :is(.trial-banner,.mode-banner) { margin-bottom: 18px; }
-  .app .setup-guide { bottom: calc(var(--mobile-nav-height) + 12px); }
+  .app .setup-guide { right: 12px; left: 12px; bottom: calc(var(--mobile-nav-height) + 12px); width: auto; max-height: min(68dvh,600px); border-radius: 22px; }
+  .app .setup-guide.is-collapsed { display: none; }
+  .app .setup-guide:not(.is-collapsed) .setup-guide-head { padding: 16px 18px 10px; }
+  .app .setup-guide:not(.is-collapsed) .setup-guide-icon { min-height: 40px; padding: 0 10px; font-size: .875rem; }
+  .app .setup-guide:not(.is-collapsed) .setup-guide-next { padding: 2px 18px 14px; font-size: .875rem; }
+  .app .setup-guide:not(.is-collapsed) .setup-guide-list { overscroll-behavior: contain; }
   .app .form-actions > .btn { flex-basis: auto; }
 
   /* Today is a phone-sized operating view over the same records. */
@@ -164,8 +173,9 @@ dialog.palette::backdrop { background: transparent; }
   .dispatch-summary { order: 3; padding: 20px; margin-top: 22px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
   .app .dispatch-summary > .card { border: 0; padding: 0; border-radius: 0; box-shadow: none; background: transparent; }
   .app .ops-board-controls { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; margin: 0 0 18px; padding: 0; border: 0; background: transparent; }
-  .ops-board-controls label { min-width: 0; font-size: .875rem; }
-  .ops-board-controls input, .ops-board-controls select { width: 100%; min-width: 0; }
+  .app .ops-board-controls label { grid-column: 1 / -1; display: grid; width: 100%; min-width: 0; max-width: 100%; gap: 7px; font-size: .875rem; overflow: hidden; }
+  .app .ops-board-controls input, .app .ops-board-controls select { display: block; inline-size: 100%; width: 100%; min-width: 0; max-width: 100%; margin: 0; box-sizing: border-box; }
+  .app .ops-board-controls > :is(button,a) { width: 100%; min-width: 0; }
   .app .ops-dispatch-layout { display: flex; flex-direction: column; gap: 20px; }
   .app .ops-dispatch-main { order: 0; padding: 0; border: 0; background: transparent; min-width: 0; }
   .app .ops-board-top { display: none; }

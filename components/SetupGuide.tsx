@@ -30,23 +30,29 @@ function saveStore(next: Store) {
 }
 
 export function SetupGuide({ guide }: { guide: SetupGuideView }) {
-  const [store, setStore] = useState<Store>({ collapsed: false, dismissed: false });
+  // Start compact so the guide never flashes over a phone action before hydration.
+  const [store, setStore] = useState<Store>({ collapsed: true, dismissed: false });
+  const [ready, setReady] = useState(false);
   const [openId, setOpenId] = useState<SetupMilestoneId | null>(guide.nextId);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const wantsOpen = params.get("guide") === "open";
     const saved = loadStore();
+    const mobile = window.matchMedia("(max-width: 900px)").matches;
     setStore({
-      collapsed: wantsOpen ? false : saved.collapsed,
+      // Mobile keeps setup in More. An explicit guide link still opens the
+      // checklist for the person who asked to see it.
+      collapsed: wantsOpen ? false : mobile ? true : saved.collapsed,
       dismissed: wantsOpen ? false : guide.complete ? saved.dismissed : false,
     });
     if (wantsOpen && guide.nextId) setOpenId(guide.nextId);
+    setReady(true);
   }, [guide.complete, guide.nextId]);
 
   useEffect(() => {
-    saveStore(store);
-  }, [store]);
+    if (ready) saveStore(store);
+  }, [ready, store]);
 
   if (guide.complete && store.dismissed) return null;
 
@@ -62,7 +68,7 @@ export function SetupGuide({ guide }: { guide: SetupGuideView }) {
       aria-label="Still open"
     >
       <header className="setup-guide-head">
-        <strong>Still open</strong>
+        <strong>Still open{store.collapsed && !guide.complete ? ` · ${guide.total - guide.done} left` : ""}</strong>
         <button
           className="setup-guide-icon"
           type="button"
