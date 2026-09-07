@@ -107,7 +107,7 @@ export function NovaConsole({
   }, [statusUrl]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (lines.length) endRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "end" });
   }, [lines, phase]);
 
   const speak = useCallback(
@@ -260,9 +260,11 @@ export function NovaConsole({
           <h1 className="nova-title">{name}</h1>
           <p className="nova-sub">{subtitle}</p>
           <p className="nova-meta">
-            {status?.online
-              ? `${status.model}${status.writable === false ? " · read only" : ""}`
-              : `No model key on the server. ${name} cannot answer yet.`}
+            {kind === "serenity"
+              ? !status ? "Connecting…" : status.online ? status.writable === false ? "Ready · view only" : "Ready to help" : "Connect Serenity in Settings to start."
+              : status?.online
+                ? `${status.model}${status.writable === false ? " · read only" : ""}`
+                : `No model key on the server. ${name} cannot answer yet.`}
             {kind === "serenity" && status?.credit
               ? ` · ${status.credit.remaining} left`
               : ""}
@@ -272,7 +274,7 @@ export function NovaConsole({
       </header>
 
       {kind === "serenity" && finished > 0 ? (
-        <a className="nova-flag" href="/jobs?status=completed">
+        <a className="nova-flag" href="/collect">
           <strong>
             {finished} finished, never invoiced
           </strong>
@@ -282,7 +284,7 @@ export function NovaConsole({
 
       {error ? <p className="nova-error">{error}</p> : null}
 
-      <div className="nova-thread">
+      <div className="nova-thread" role="log" aria-label={`${name} conversation`}>
         {lines.length === 0 ? (
           <div className="nova-empty">
             {kind === "nova" ? (
@@ -293,9 +295,8 @@ export function NovaConsole({
               </p>
             ) : (
               <p>
-                Ask me anything about {status?.shop || "the shop"}, {ownerName}. I
-                read the board and the books before I answer, and I will tell you
-                when I do not know. I do not do cold outreach. That is {NOVA_NAME}.
+                Ask about today’s schedule, unpaid invoices, or your next follow-up, {ownerName}.
+                I’ll check the shop’s records before I answer.
               </p>
             )}
             {status?.followUps?.length ? (
@@ -310,7 +311,7 @@ export function NovaConsole({
           lines.map((line, i) => (
             <div key={`${line.role}-${i}`} className={`nova-line nova-line-${line.role === "you" ? "you" : "nova"}`}>
               <p>{line.text || (line.role === "bot" ? "…" : "")}</p>
-              {line.tools?.length ? (
+              {kind === "nova" && line.tools?.length ? (
                 <span className="nova-tools">read: {line.tools.join(", ")}</span>
               ) : null}
             </div>

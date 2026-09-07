@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { ConnectCashCallout } from "@/components/ConnectStripe";
 import { Badge, Banner, Card, RowLink, Rows, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
+import { MobileToday } from "@/components/MobileToday";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/display";
 import { formatMoney } from "@/lib/money";
@@ -100,6 +101,13 @@ export default async function OverviewPage({
       actions={<a className="btn" href="/jobs/new">{voice.newJob}</a>}
     >
       <Banner error={q.error} ok={q.ok} />
+      <MobileToday
+        today={today} greeting={brief.greeting}
+        visits={jobsToday.map(({job,customer})=>({id:job.id,title:job.title,customer:displayName(customer),address:[job.serviceLine1,job.serviceCity].filter(Boolean).join(", "),crew:job.technicianName,status:job.status,start:job.scheduledStart}))}
+        tomorrow={jobsTomorrow.filter(({job})=>job.status!=="completed").map(({job,customer})=>({id:job.id,title:job.title,customer:displayName(customer),address:[job.serviceLine1,job.serviceCity].filter(Boolean).join(", "),crew:job.technicianName,status:job.status,start:job.scheduledStart}))}
+        requests={newRequests.length} unassigned={unassigned.length} plans={duePlans.length} stock={lowStock.length}
+        collected={collected} outstanding={outstanding} overdue={overdue} invoiced={revenue} profit={profit}
+      />
       <section className="ops-command">
         <div className="ops-command-head"><div><span className="ops-eyebrow">TODAY’S CONTROL CENTER</span><h2>What needs you next.</h2></div><a className="btn btn-secondary btn-sm" href="/dispatch">Open dispatch</a></div>
         <div className="ops-action-grid">
@@ -129,7 +137,7 @@ export default async function OverviewPage({
         </div>
       ) : null}
 
-      <section className="grid grid-5">
+      <section className="grid grid-5 overview-desktop-stats">
         <Stat
           label="Collected this month"
           value={formatMoney(collected)}
