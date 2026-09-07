@@ -19,9 +19,9 @@ const create: MenuItem[] = [
   { href: "/invoices/new", label: "Invoice", icon: "card" },
 ];
 
-export function MobileNavigation({path,orgName,userName,unread,collectCount,frozen,setup,groups,account}: {
+export function MobileNavigation({path,orgName,userName,unread,collectCount,frozen,groups,account}: {
   path:string; orgName:string; userName:string; unread:number; collectCount:number; frozen?:boolean;
-  setup?:{href:string;remaining:number}|null; groups:{name:string;items:MenuItem[]}[]; account:ReactNode;
+  groups:{name:string;items:MenuItem[]}[]; account:ReactNode;
 }) {
   const [panel,setPanel]=useState<"more"|"create"|null>(null);
   const dialog=useRef<HTMLDialogElement>(null);
@@ -81,7 +81,6 @@ export function MobileNavigation({path,orgName,userName,unread,collectCount,froz
         <div className="mobile-sheet-head"><div><p>{panel==="create"?"ADD TO YOUR BUSINESS":orgName}</p><h2 id="mobile-menu-title">{panel==="create"?"Create something new":"Your business"}</h2></div><button className="mobile-icon-button" type="button" onClick={()=>setPanel(null)} aria-label="Close menu" autoFocus><Icon name="close"/></button></div>
         {panel==="create"?<nav className="mobile-menu-group" aria-label="Create a record">{create.map(menuLink)}</nav>:<>
           <a className="mobile-customer-shortcut" href="/customers" onClick={()=>setPanel(null)}><Icon name="users"/><span><strong>Customers</strong><small>Contacts, properties and history</small></span><Icon name="chevron"/></a>
-          {setup?<a className="mobile-setup-shortcut" href={setup.href} onClick={()=>setPanel(null)}><Icon name="settings"/><span><strong>Finish setting up Sere</strong><small>{setup.remaining} {setup.remaining===1?"step":"steps"} left</small></span><Icon name="chevron"/></a>:null}
           {groups.map(group=><nav className="mobile-menu-group" key={group.name} aria-label={group.name}><h3>{group.name}</h3>{group.items.map(menuLink)}</nav>)}
           <footer className="mobile-account"><p>Signed in as <strong>{userName}</strong></p><div>{account}</div></footer>
         </>}

@@ -41,8 +41,8 @@ export function SetupGuide({ guide }: { guide: SetupGuideView }) {
     const saved = loadStore();
     const mobile = window.matchMedia("(max-width: 900px)").matches;
     setStore({
-      // Mobile keeps setup in More. An explicit guide link still opens the
-      // checklist for the person who asked to see it.
+      // Mobile starts as a small corner pill. Explicit setup links still open
+      // the full checklist for the person who asked to see it.
       collapsed: wantsOpen ? false : mobile ? true : saved.collapsed,
       dismissed: wantsOpen ? false : guide.complete ? saved.dismissed : false,
     });
