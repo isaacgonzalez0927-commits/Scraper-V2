@@ -1,0 +1,79 @@
+/* Short, optional motion for the workspace. No delays on navigation or actions. */
+@keyframes sere-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sere-settle {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes sere-sheet-enter {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app {
+    --motion-quick: 140ms;
+    --motion-enter: 220ms;
+    --motion-ease: cubic-bezier(.2,.7,.2,1);
+  }
+
+  /* Opacity only: a transform on main would move its fixed descendants. */
+  .app .main { animation: sere-reveal 180ms ease-out; }
+
+  .app :is(.btn,.icon-btn,.mobile-icon-button,.mobile-create,.setup-guide-icon) {
+    transition: background-color var(--motion-quick) ease-out,
+      border-color var(--motion-quick) ease-out,
+      color var(--motion-quick) ease-out,
+      box-shadow var(--motion-quick) ease-out,
+      transform var(--motion-quick) var(--motion-ease);
+  }
+
+  .app :is(.btn,.icon-btn,.mobile-icon-button,.mobile-create,.setup-guide-icon):active:not(:disabled):not([aria-disabled="true"]) {
+    transform: scale(.98);
+  }
+
+  .app :is(.mobile-tabbar > a,.mobile-tabbar > button,.mobile-tab-icon,.mobile-menu-group a,.tabs a) {
+    transition: background-color var(--motion-quick) ease-out,
+      color var(--motion-quick) ease-out,
+      transform var(--motion-quick) var(--motion-ease);
+  }
+  .app .mobile-tabbar > :active .mobile-tab-icon { transform: scale(.94); }
+
+  .app :is(a.card,button.ops-agenda-row,.mobile-customer-shortcut) {
+    transition: border-color var(--motion-quick) ease-out,
+      background-color var(--motion-quick) ease-out,
+      box-shadow var(--motion-quick) ease-out,
+      transform var(--motion-quick) var(--motion-ease);
+  }
+
+  .app .mobile-sheet[open] {
+    animation: sere-sheet-enter var(--motion-enter) var(--motion-ease);
+  }
+  .app .ops-dialog[open] {
+    animation: sere-settle var(--motion-enter) var(--motion-ease);
+  }
+  .app :is(.mobile-sheet,.ops-dialog)[open]::backdrop {
+    animation: sere-reveal 180ms ease-out;
+  }
+
+  /* Animate the revealed content without resizing or moving the corner pill. */
+  .app .setup-guide:not(.is-collapsed) .setup-guide-list,
+  .app .setup-guide-body {
+    animation: sere-settle 180ms var(--motion-ease);
+  }
+  .app .setup-guide-bar span {
+    transition: width 280ms var(--motion-ease);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .app :is(a.card,button.ops-agenda-row,.mobile-customer-shortcut):hover:not(:disabled):not([aria-disabled="true"]) {
+      transform: translateY(-2px);
+      border-color: var(--accent-line);
+      box-shadow: var(--shadow-sm);
+    }
+  }
+}

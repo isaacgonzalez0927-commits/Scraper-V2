@@ -4,6 +4,7 @@ import { THEME_BOOT, THEME_DARK_COLOR, THEME_LIGHT_COLOR } from "@/lib/theme";
 import "./globals.css";
 import "./operations.css";
 import "./mobile.css";
+import "./motion.css";
 
 export const metadata: Metadata = {
   title: "Sere",
