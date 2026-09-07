@@ -121,7 +121,6 @@ export function Shell({
         <MobileNavigation
           path={path} orgName={orgName} userName={userName} unread={unread}
           collectCount={collectCount} frozen={frozen}
-          setup={!isDemo && setup && !setup.guide.complete ? {href:`${path}?guide=open`,remaining:setup.guide.total-setup.guide.done} : null}
           groups={[...nav.map(([name, items]) => ({ name, items: items.map(([href, label, icon, count]) => ({href, label, icon, count})) })), {name:"Manage business",items:business.map(([href,label,icon])=>({href,label,icon}))}]}
           account={<><ThemeToggle /><form action={logoutAction}><button className="btn btn-ghost" type="submit">{isDemo ? "Leave demo" : "Sign out"}</button></form></>}
         />

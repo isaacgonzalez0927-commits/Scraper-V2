@@ -46,10 +46,6 @@ dialog.palette::backdrop { background: transparent; }
   .mobile-customer-shortcut { display: flex; align-items: center; gap: 14px; padding: 17px; border-radius: 17px; background: var(--accent-soft); color: var(--accent-strong); }
   .mobile-customer-shortcut > span { display: grid; flex: 1; gap: 4px; }
   .mobile-customer-shortcut small { font-size: .875rem; }
-  .mobile-setup-shortcut { display: flex; align-items: center; gap: 14px; min-height: 64px; margin-top: 10px; padding: 13px 17px; border: 1px solid var(--line); border-radius: 17px; color: var(--ink); }
-  .mobile-setup-shortcut > span { display: grid; flex: 1; gap: 3px; }
-  .mobile-setup-shortcut > span small { color: var(--ink-3); font-size: .875rem; }
-  .mobile-setup-shortcut > .nav-icon:last-child { width: 14px; height: 14px; color: var(--ink-3); }
   .mobile-account { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 16px; }
   .mobile-account p { color: var(--ink-3); font-size: .875rem; }
   .mobile-account > div { display: flex; align-items: center; justify-content: space-between; }
@@ -77,8 +73,12 @@ dialog.palette::backdrop { background: transparent; }
   .app .form-actions { flex-wrap: wrap; gap: 10px; }
   .app .form-actions > .btn { flex: 1 1 130px; }
   .app :is(.trial-banner,.mode-banner) { margin-bottom: 18px; }
-  .app .setup-guide { right: 12px; left: 12px; bottom: calc(var(--mobile-nav-height) + 12px); width: auto; max-height: min(68dvh,600px); border-radius: 22px; }
-  .app .setup-guide.is-collapsed { display: none; }
+  .app .setup-guide { right: 12px; left: auto; bottom: calc(var(--mobile-nav-height) + 10px); width: min(340px,calc(100vw - 24px)); max-height: min(68dvh,600px); border-radius: 20px; }
+  .app .setup-guide.is-collapsed { width: auto; max-width: calc(100vw - 24px); max-height: none; border-radius: 999px; }
+  .app .setup-guide.is-collapsed .setup-guide-head { min-height: 44px; gap: 8px; padding: 6px 7px 6px 14px; }
+  .app .setup-guide.is-collapsed .setup-guide-head strong { font-size: .8125rem; white-space: nowrap; }
+  .app .setup-guide.is-collapsed .setup-guide-icon { min-height: 32px; padding: 0 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: .75rem; }
+  .app .setup-guide.is-collapsed :is(.setup-guide-bar,.setup-guide-next) { display: none; }
   .app .setup-guide:not(.is-collapsed) .setup-guide-head { padding: 16px 18px 10px; }
   .app .setup-guide:not(.is-collapsed) .setup-guide-icon { min-height: 40px; padding: 0 10px; font-size: .875rem; }
   .app .setup-guide:not(.is-collapsed) .setup-guide-next { padding: 2px 18px 14px; font-size: .875rem; }
