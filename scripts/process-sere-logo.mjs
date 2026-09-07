@@ -85,8 +85,11 @@ if (!existsSync(APP_ICON)) {
   process.exit(1);
 }
 
-async function appIcon(size, out) {
-  const buf = await sharp(APP_ICON).resize(size, size, { fit: "cover" }).png().toBuffer();
+async function appIcon(size, out, palette = false) {
+  const buf = await sharp(APP_ICON)
+    .resize(size, size, { fit: "cover" })
+    .png(palette ? { palette: true, colours: 256, quality: 100, dither: 1 } : {})
+    .toBuffer();
   await writeFile(out, buf);
 }
 
@@ -96,5 +99,5 @@ await appIcon(192, "public/icon-192.png");
 await appIcon(512, "public/icon-512.png");
 await appIcon(192, "public/apple-touch-icon.png");
 await appIcon(192, "public/apple-touch-icon-precomposed.png");
-await appIcon(1024, "ios/Sere/Assets.xcassets/AppIcon.appiconset/AppIcon.png");
+await appIcon(1024, "ios/Sere/Assets.xcassets/AppIcon.appiconset/AppIcon.png", true);
 console.log("Built favicon, web home-screen icons, and the iOS AppIcon from sere-app-icon.png");
