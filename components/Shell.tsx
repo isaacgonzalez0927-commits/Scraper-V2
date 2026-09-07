@@ -1,3 +1,5 @@
+import { Icon } from "@/components/Icon";
+import { MobileNavigation } from "@/components/MobileNavigation";
 import { logoutAction } from "@/app/actions";
 import { AssistantDock } from "@/components/Assistant";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -8,56 +10,7 @@ import type { AssistantBrief } from "@/lib/assistant";
 import type { SetupGuideView } from "@/lib/sere-setup";
 import { shopModeBanner, type ShopMode } from "@/lib/shop-mode";
 
-const PATHS: Record<string, React.ReactNode> = {
-  grid: <><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" /></>,
-  briefcase: <><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M8.5 7V5.5A2 2 0 0 1 10.5 3.5h3a2 2 0 0 1 2 2V7M3 12h18" /></>,
-  users: <><circle cx="9.5" cy="8" r="3.2" /><path d="M3.5 20v-1a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v1M16.5 11a3 3 0 0 0 0-6M17 15h.5a4 4 0 0 1 4 4v1" /></>,
-  file: <><path d="M6 3.5h7.5L18 8v12.5H6z" /><path d="M13.5 3.5V8H18M9 13h6M9 16.5h4" /></>,
-  card: <><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3 10h18M6.5 14.5h3.5" /></>,
-  calendar: <><rect x="3.5" y="5.5" width="17" height="15" rx="2.5" /><path d="M8 3.5v4M16 3.5v4M3.5 10.5h17" /></>,
-  chart: <><path d="M4 20V4M4 20h16" /><path d="m7.5 15.5 3.5-4 3 2 4.5-6" /></>,
-  settings: <><circle cx="12" cy="12" r="3.2" /><path d="M12 3.5v2.2M12 18.3v2.2M4.9 7.8l1.9 1.1M17.2 15.1l1.9 1.1M4.9 16.2l1.9-1.1M17.2 8.9l1.9-1.1" /></>,
-  bell: <><path d="M18 15.5V11a6 6 0 1 0-12 0v4.5L4.5 18h15z" /><path d="M9.5 18a2.5 2.5 0 0 0 5 0" /></>,
-  menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
-  spark: <><path d="M12 3.2 13.9 9l5.8 2-5.8 2-1.9 5.8L10.1 13 4.3 11l5.8-2z" /><path d="M18.5 4v3M17 5.5h3" /></>,
-  cash: <><rect x="3" y="6" width="18" height="12" rx="2" /><circle cx="12" cy="12" r="2.3" /><path d="M7 9.5h.01M17 14.5h.01" /></>,
-};
-
-/* Solid silhouettes for the selected tab, the way SF Symbols fill on iOS. */
-const FILL: Record<string, React.ReactNode> = {
-  grid: PATHS.grid,
-  briefcase: <><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M8.5 7V5.5A2 2 0 0 1 10.5 3.5h3a2 2 0 0 1 2 2V7" fill="none" stroke="currentColor" strokeWidth="1.7" /></>,
-  file: <path d="M6 3.5h7.5L18 8v12.5H6z" />,
-  card: <rect x="3" y="5" width="18" height="14" rx="2.5" />,
-  calendar: <><rect x="3.5" y="5.5" width="17" height="15" rx="2.5" /><path d="M8 3.5v4M16 3.5v4" fill="none" stroke="currentColor" strokeWidth="1.7" /></>,
-  settings: <><circle cx="12" cy="12" r="8.2" opacity="0.22" /><circle cx="12" cy="12" r="3.2" /><path d="M12 3.5v2.2M12 18.3v2.2M4.9 7.8l1.9 1.1M17.2 15.1l1.9 1.1M4.9 16.2l1.9-1.1M17.2 8.9l1.9-1.1" fill="none" stroke="currentColor" strokeWidth="1.8" /></>,
-};
-
-export function Icon({
-  name,
-  className = "nav-icon",
-  filled,
-}: {
-  name: string;
-  className?: string;
-  filled?: boolean;
-}) {
-  const solid = Boolean(filled && FILL[name]);
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill={solid ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth={solid ? "0" : "1.7"}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {solid ? FILL[name] : PATHS[name]}
-    </svg>
-  );
-}
+export { Icon } from "@/components/Icon";
 
 export function Shell({
   orgName,
@@ -113,15 +66,8 @@ export function Shell({
     ["Money", [["/collect", "Collect", "cash", collectBadge],["/invoices", "Invoices", "file"],["/payments", "Payments", "card"],["/reports", "Reports", "chart"]]],
   ];
   const business: [string,string,string][] = [["/team","Team","users"],["/agreements","Service plans","calendar"],["/equipment","Equipment","settings"],["/inventory","Inventory","grid"],["/automations","Follow-ups","spark"],["/calendar","Calendar","calendar"],["/settings","Settings","settings"]];
-  const bottom: [string, string, string, string?][] = [
-    ["/overview", "Home", "grid"],
-    ["/field", "Field", "briefcase"],
-    ["/dispatch", "Dispatch", "calendar"],
-    ["/collect", "Collect", "cash", collectBadge],
-    ["/settings", "Settings", "settings"],
-  ];
   return (
-    <div className={`app${native ? " app-native" : ""}`}>
+    <div className={`app${native ? " app-native" : ""}`} data-page={path.split("/")[1]}>
       <aside className="sidebar" id="sidebar">
         <a className="brand" href="/overview">
           <BrandLogo className="brand-lockup" />
@@ -156,19 +102,6 @@ export function Shell({
 
       <div className="content">
         <header className="topbar">
-          <button
-            className="icon-btn menu-toggle"
-            type="button"
-            data-toggle-nav
-            aria-label="Open menu"
-            aria-controls="sidebar"
-            aria-expanded="false"
-          >
-            <Icon name="menu" className="" />
-          </button>
-          <a className="brand" href="/overview">
-            <BrandLogo className="brand-lockup" />
-          </a>
           <button className="search-btn" type="button" data-open-search aria-label="Search">
             <SearchIcon />
             <span>{searchHint}</span>
@@ -185,7 +118,14 @@ export function Shell({
           </div>
         </header>
 
-        <main className="main">
+        <MobileNavigation
+          path={path} orgName={orgName} userName={userName} unread={unread}
+          collectCount={collectCount} frozen={frozen}
+          groups={[...nav.map(([name, items]) => ({ name, items: items.map(([href, label, icon, count]) => ({href, label, icon, count})) })), {name:"Manage business",items:business.map(([href,label,icon])=>({href,label,icon}))}]}
+          account={<><ThemeToggle /><form action={logoutAction}><button className="btn btn-ghost" type="submit">{isDemo ? "Leave demo" : "Sign out"}</button></form></>}
+        />
+
+        <main className="main" id="main-content">
           {trialBanner && !isDemo ? (
             <a
               className={`trial-banner${frozen ? " trial-banner-ended" : ""}`}
@@ -224,28 +164,12 @@ export function Shell({
 
       {setup && !isDemo ? <SetupGuide guide={setup.guide} /> : null}
 
-      <div className="scrim" data-close-nav />
-
-      <nav className="bottom-nav" aria-label="Primary">
-        {bottom.map(([href, name, icon, count]) => {
-          const on = active(href);
-          return (
-            <a key={href} href={href} className={on ? "active" : ""} aria-current={on ? "page" : undefined}>
-              <span className="bottom-icon">
-                <Icon name={icon} className="" filled={on} />
-                {count ? <span className="nav-dot">{count}</span> : null}
-              </span>
-              {name}
-            </a>
-          );
-        })}
-      </nav>
-
-      <div className="palette" id="search-palette">
+      <dialog className="palette" id="search-palette" aria-label="Search your business">
         <div className="palette-panel">
           <div className="palette-bar">
             <input
               id="palette-input"
+              aria-label={searchHint}
               type="search"
               placeholder={searchHint}
               autoComplete="off"
@@ -255,9 +179,9 @@ export function Shell({
               Cancel
             </button>
           </div>
-          <div className="palette-results" id="palette-results" />
+          <div className="palette-results" id="palette-results" aria-live="polite" />
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

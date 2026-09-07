@@ -236,7 +236,7 @@ export function RecordTable({ columns, records }: { columns: Column[]; records: 
         </table>
       </div>
 
-      <div className="card card-flush phone-only">
+      <div className="card card-flush phone-only mobile-record-list">
         <Rows>
           {records.map((record) => (
             <RowLink key={record.key} href={record.href} dim={record.dim} {...record.phone} />

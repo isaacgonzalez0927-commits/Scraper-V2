@@ -70,7 +70,7 @@ export default async function CollectPage({
         </Card>
       ) : null}
 
-      <div className="grid grid-3 mt-2">
+      <div className="grid grid-3 mt-2 collect-summary">
         <Stat label="Sitting out" value={formatMoney(totals.amountCents)} tone={totals.amountCents ? "bad" : "good"} />
         <Stat label="Never billed" value={String(totals.unbilled)} />
         <Stat label="Unpaid invoices" value={String(totals.unpaid)} />
@@ -78,7 +78,7 @@ export default async function CollectPage({
 
       {groups.length ? (
         groups.map(({ group, rows }) => (
-          <Card key={group} title={group} className="mt-2">
+          <Card key={group} title={group} className="mt-2 collect-group">
             {rows.map((row) => {
               const rowPay = row.publicToken ? invoicePayUrl(base, row.publicToken) : "";
               return (
@@ -88,8 +88,8 @@ export default async function CollectPage({
                   </a>
                   <div className="tiny">
                     {row.title}
-                    {row.amountCents ? ` · ${formatMoney(row.amountCents)}` : ""}
                   </div>
+                  {row.amountCents ? <strong className="collect-amount">{formatMoney(row.amountCents)}</strong> : null}
                   <div className="collect-row-actions">
                     {row.kind === "unbilled" ? (
                       <form action={billFinishedJobAction}>

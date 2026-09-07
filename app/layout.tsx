@@ -3,6 +3,7 @@ import Script from "next/script";
 import { THEME_BOOT, THEME_DARK_COLOR, THEME_LIGHT_COLOR } from "@/lib/theme";
 import "./globals.css";
 import "./operations.css";
+import "./mobile.css";
 
 export const metadata: Metadata = {
   title: "Sere",

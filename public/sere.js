@@ -2,9 +2,7 @@
   const palette = document.getElementById("search-palette");
   const input = document.getElementById("palette-input");
   const results = document.getElementById("palette-results");
-  const sidebar = document.getElementById("sidebar");
-  const scrim = document.querySelector("[data-close-nav]");
-  const menuToggle = document.querySelector("[data-toggle-nav]");
+  let searchTrigger = null;
 
   function lockPage(locked) {
     document.documentElement.classList.toggle("locked", locked);
@@ -15,6 +13,10 @@
 
   function openPalette() {
     if (!palette) return;
+    if (palette.open) { input?.focus(); return; }
+    if (document.querySelector("dialog[open]:not(#search-palette)")) return;
+    searchTrigger = document.activeElement;
+    if (!palette.open) palette.showModal();
     palette.classList.add("open");
     lockPage(true);
     if (input) {
@@ -25,8 +27,13 @@
   }
 
   function closePalette() {
-    if (palette) palette.classList.remove("open");
-    if (!sidebar || !sidebar.classList.contains("open")) lockPage(false);
+    if (!palette?.open) return;
+    palette.classList.remove("open");
+    palette.close();
+    clearTimeout(timer);
+    searchRequest?.abort();
+    lockPage(false);
+    searchTrigger?.focus();
   }
 
   document.querySelectorAll("[data-open-search]").forEach((el) => {
@@ -37,22 +44,35 @@
   });
 
   if (palette) {
+    palette.addEventListener("cancel", (event) => { event.preventDefault(); closePalette(); });
     palette.addEventListener("click", (e) => {
       if (e.target === palette) closePalette();
     });
   }
 
   let timer = null;
+  let searchRequest = null;
   if (input) {
     input.addEventListener("input", () => {
       clearTimeout(timer);
+      searchRequest?.abort();
       const q = input.value.trim();
-      if (q.length < 2) return;
+      if (q.length < 2) {
+        results.innerHTML = '<div class="palette-group">Type at least two characters to search</div>';
+        return;
+      }
+      const request = new AbortController();
+      searchRequest = request;
+      results.innerHTML = '<div class="palette-group">Searching…</div>';
       timer = setTimeout(async () => {
+        try {
         const res = await fetch("/api/search?q=" + encodeURIComponent(q), {
           headers: { "X-Requested-With": "fetch" },
+          signal: request.signal,
         });
+        if (!res.ok) throw new Error("Search unavailable");
         const data = await res.json();
+        if (request.signal.aborted) return;
         const groups = [
           ["Customers", data.customers],
           ["Jobs", data.jobs],
@@ -70,54 +90,10 @@
           });
         });
         results.innerHTML = html || '<div class="palette-group">No matches</div>';
+        } catch {
+          if (!request.signal.aborted) results.innerHTML = '<div class="palette-group">Search is unavailable. Try again in a moment.</div>';
+        }
       }, 120);
-    });
-  }
-
-  /* Mobile navigation drawer */
-
-  function setNav(open) {
-    if (!sidebar) return;
-    sidebar.classList.toggle("open", open);
-    if (scrim) scrim.classList.toggle("open", open);
-    if (menuToggle) menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
-    if (menuToggle) menuToggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
-    lockPage(open || Boolean(palette && palette.classList.contains("open")));
-    if (!open) sidebar.style.transform = "";
-  }
-
-  document.querySelectorAll("[data-toggle-nav]").forEach((el) => {
-    el.addEventListener("click", () => setNav(!sidebar.classList.contains("open")));
-  });
-  if (scrim) scrim.addEventListener("click", () => setNav(false));
-  if (sidebar) {
-    sidebar.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", () => setNav(false));
-    });
-  }
-
-  /* Swipe the drawer shut, the way an iPhone sheet works. */
-  let touchStartX = 0;
-  let dragging = false;
-  if (sidebar) {
-    sidebar.addEventListener("touchstart", (e) => {
-      if (!sidebar.classList.contains("open")) return;
-      touchStartX = e.touches[0].clientX;
-      dragging = true;
-      sidebar.style.transition = "none";
-    }, { passive: true });
-    sidebar.addEventListener("touchmove", (e) => {
-      if (!dragging) return;
-      const dx = Math.min(0, e.touches[0].clientX - touchStartX);
-      sidebar.style.transform = "translateX(" + dx + "px)";
-    }, { passive: true });
-    sidebar.addEventListener("touchend", (e) => {
-      if (!dragging) return;
-      dragging = false;
-      sidebar.style.transition = "";
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      if (dx < -56) setNav(false);
-      else sidebar.style.transform = "";
     });
   }
 
@@ -128,7 +104,6 @@
     }
     if (e.key === "Escape") {
       closePalette();
-      setNav(false);
     }
   });
 
