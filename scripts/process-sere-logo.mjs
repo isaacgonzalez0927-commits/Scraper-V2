@@ -1,9 +1,13 @@
 /**
- * Build icon-only assets for favicon / home screen from the lockup PNG.
- * UI uses public/sere-logo.png (icon + wordmark). PWA uses icon mark only.
+ * Build brand assets.
+ * UI lockup: public/sere-logo.png (icon + wordmark); in-app icon mark:
+ * public/sere-icon.png, both derived from the uploaded lockup.
+ * Home screen / PWA / favicon: the finished full-bleed app-icon tile at
+ * public/sere-app-icon.png (purple background, white mark).
  */
 import sharp from "sharp";
 import { existsSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 
 const UPLOAD = "public/sere.logo.PNG";
 const LOCKUP = "public/sere-logo.png";
@@ -69,28 +73,27 @@ await sharp({
 
 console.log(`Icon mark: ${extractW}px wide → ${ICON_OUT} (${side}×${side})`);
 
-/** Home screen and PWA icon framing: slightly larger mark, centered on the tile. */
-const MARK_SCALE = 0.8;
-const MARK_LEFT_BIAS = 0.025;
+/**
+ * Home screen / PWA / favicon assets come from the finished full-bleed app-icon
+ * tile (purple background, white mark with safe padding for maskable icons).
+ * Resize the tile directly rather than re-framing the extracted mark.
+ */
+const APP_ICON = "public/sere-app-icon.png";
 
-async function onLavender(size, out) {
-  const bg = Buffer.from(
-    `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"><rect width="${size}" height="${size}" rx="${size * 0.23}" fill="#F5F1FF"/></svg>`
-  );
-  const markMax = Math.round(size * MARK_SCALE);
-  const mark = await sharp(ICON_OUT)
-    .trim({ threshold: 1 })
-    .resize(markMax, markMax, { fit: "inside" })
-    .png()
-    .toBuffer();
-  const m = await sharp(mark).metadata();
-  let left = Math.round((size - m.width) / 2 - size * MARK_LEFT_BIAS);
-  left = Math.max(0, Math.min(left, size - m.width));
-  const top = Math.max(0, Math.round((size - m.height) / 2));
-  await sharp(bg).composite([{ input: mark, left, top }]).png().toFile(out);
+if (!existsSync(APP_ICON)) {
+  console.error(`Missing ${APP_ICON}`);
+  process.exit(1);
 }
 
-await onLavender(32, "public/favicon.png");
-await onLavender(192, "public/icon-192.png");
-await onLavender(512, "public/icon-512.png");
-console.log("Built favicon.png, icon-192.png, icon-512.png (icon mark only)");
+async function appIcon(size, out) {
+  const buf = await sharp(APP_ICON).resize(size, size, { fit: "cover" }).png().toBuffer();
+  await writeFile(out, buf);
+}
+
+await appIcon(32, "public/favicon.png");
+await appIcon(32, "public/favicon.ico");
+await appIcon(192, "public/icon-192.png");
+await appIcon(512, "public/icon-512.png");
+await appIcon(192, "public/apple-touch-icon.png");
+await appIcon(192, "public/apple-touch-icon-precomposed.png");
+console.log("Built favicon, icon-192, icon-512, apple-touch-icon from sere-app-icon.png");
