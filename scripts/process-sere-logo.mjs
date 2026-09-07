@@ -96,4 +96,5 @@ await appIcon(192, "public/icon-192.png");
 await appIcon(512, "public/icon-512.png");
 await appIcon(192, "public/apple-touch-icon.png");
 await appIcon(192, "public/apple-touch-icon-precomposed.png");
-console.log("Built favicon, icon-192, icon-512, apple-touch-icon from sere-app-icon.png");
+await appIcon(1024, "ios/Sere/Assets.xcassets/AppIcon.appiconset/AppIcon.png");
+console.log("Built favicon, web home-screen icons, and the iOS AppIcon from sere-app-icon.png");
