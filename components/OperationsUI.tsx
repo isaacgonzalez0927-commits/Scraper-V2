@@ -1,17 +1,19 @@
 import type { InputHTMLAttributes, ReactNode } from 'react';
 
-const sections=[['/requests','Requests'],['/dispatch','Dispatch'],['/field','Field work'],['/team','Team'],['/agreements','Service plans'],['/equipment','Equipment'],['/inventory','Inventory'],['/automations','Follow-ups']];
+const daily=[['/requests','Requests'],['/dispatch','Dispatch'],['/field','Field work']];
+const business=[['/team','Team'],['/agreements','Service plans'],['/equipment','Equipment'],['/inventory','Inventory'],['/automations','Follow-ups']];
 export function OperationsNav({active}:{active:string}) {
+  const sections=daily.some(([href])=>href===active)?daily:business;
   return <nav className="ops-tabs" aria-label="Service operations">{sections.map(([href,name])=><a key={href} href={href} aria-current={href===active?'page':undefined} className={href===active?'active':''}>{name}</a>)}</nav>;
 }
 export function Field({label,name,...props}:InputHTMLAttributes<HTMLInputElement>&{label:string;name:string}) {
-  return <div className="field"><label htmlFor={`ops-${name}`}>{label}</label><input id={`ops-${name}`} name={name} {...props}/></div>;
+  return <label className="field ops-input-label"><span>{label}</span><input name={name} {...props}/></label>;
 }
 export function SelectField({label,name,children,defaultValue,required}:{label:string;name:string;children:ReactNode;defaultValue?:string|number;required?:boolean}) {
-  return <div className="field"><label htmlFor={`ops-${name}`}>{label}</label><select id={`ops-${name}`} name={name} defaultValue={defaultValue} required={required}>{children}</select></div>;
+  return <label className="field ops-input-label"><span>{label}</span><select name={name} defaultValue={defaultValue} required={required}>{children}</select></label>;
 }
 export function TextField({label,name,defaultValue,placeholder}:{label:string;name:string;defaultValue?:string;placeholder?:string}) {
-  return <div className="field full"><label htmlFor={`ops-${name}`}>{label}</label><textarea id={`ops-${name}`} name={name} defaultValue={defaultValue} placeholder={placeholder} maxLength={4000} rows={3}/></div>;
+  return <label className="field full ops-input-label"><span>{label}</span><textarea name={name} defaultValue={defaultValue} placeholder={placeholder} maxLength={4000} rows={3}/></label>;
 }
 export function FormPanel({title,children,open=false}:{title:string;children:ReactNode;open?:boolean}) {
   return <details className="ops-form-panel" open={open}><summary><span className="ops-plus" aria-hidden="true">+</span>{title}<span className="muted">Open form</span></summary><div className="ops-form-body">{children}</div></details>;

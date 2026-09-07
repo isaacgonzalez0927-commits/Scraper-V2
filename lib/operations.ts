@@ -1,5 +1,6 @@
 import type { Client, InValue, Transaction } from '@libsql/client';
 import { getClient, nowISO, token } from './db';
+import { addDaysISO } from './labels';
 import { advanceMonths, integer, localStart, overlaps, PRIORITIES, REQUEST_STATUSES, requiredText, safeEmail, validDate } from './operations-validation';
 
 type Executor = Pick<Client, 'execute'>;
@@ -24,7 +25,7 @@ async function owned(tx: Executor, table: string, organizationId: number, id: nu
 }
 
 export type CrewMember = { id: number; organizationId: number; name: string; email: string; phone: string; skills: string; color: string; hourlyCostCents: number; active: number };
-export type ServiceRequest = { id: number; organizationId: number; name: string; email: string; phone: string; address: string; service: string; description: string; priority: string; status: string; source: string; preferredDate: string; customerId: number | null; jobId: number | null; createdAt: string; updatedAt: string };
+export type ServiceRequest = { id: number; organizationId: number; name: string; email: string; phone: string; address: string; service: string; description: string; priority: string; status: string; source: string; preferredDate: string; customerId: number | null; jobId: number | null; estimateId: number | null; createdAt: string; updatedAt: string };
 export type Agreement = { id: number; customerId: number; customerName: string; name: string; status: string; amountCents: number; billingMonths: number; visitMonths: number; nextVisit: string; renewsOn: string; notes: string };
 export type Equipment = { id: number; customerId: number; customerName: string; propertyId: number | null; name: string; model: string; serial: string; installedOn: string; warrantyUntil: string; nextService: string; notes: string };
 export type InventoryItem = { id: number; name: string; sku: string; location: string; supplier: string; quantity: number; reorderAt: number; unitCostCents: number };
@@ -101,6 +102,9 @@ export async function saveJobWithDispatch(org: number, id: number, data: Record<
     if (!(PRIORITIES as readonly string[]).includes(priority)) throw new Error('Choose a valid priority.');
     const allowed = ['customerId','propertyId','description','serviceLine1','serviceCity','serviceState','servicePostal','status','estimatedRevenueCents','actualRevenueCents','estimatedCostCents','notes','details','completedAt'];
     const clean: Record<string, InValue> = Object.fromEntries(allowed.filter(key => key in data).map(key => [key, data[key]]));
+    if (data.status === 'completed' && previous?.status !== 'completed') throw new Error('Use Finish and collect to record the work and final charge.');
+    if (previous?.noCharge && data.status === 'completed' && Number(data.actualRevenueCents)) throw new Error('Reopen this no-charge job before changing its charge.');
+    if (previous?.noCharge && data.status !== 'completed') clean.noCharge = 0;
     Object.assign(clean, { title, scheduledStart: start, durationMinutes: duration, teamMemberId: memberId, technicianName: name, priority });
     for (const key of ['estimatedRevenueCents','actualRevenueCents','estimatedCostCents']) integer(clean[key] ?? 0, 'Amount', 0, 1_000_000_000);
     const entries = Object.entries(clean);
@@ -126,6 +130,17 @@ export async function scheduleJob(org: number, id: number, input: { start: strin
     if (!(PRIORITIES as readonly string[]).includes(priority)) throw new Error('Choose a valid priority.');
     await tx.execute({ sql: 'UPDATE jobs SET scheduled_start=?,duration_minutes=?,team_member_id=?,technician_name=?,priority=?,status=CASE WHEN status=\'in_progress\' THEN status ELSE \'scheduled\' END,schedule_version=schedule_version+1 WHERE organization_id=? AND id=?', args: [start, duration, memberId, name, priority, org, id] });
     return id;
+  });
+}
+
+export async function setJobStatus(org:number,id:number,status:string) {
+  if (!['unscheduled','scheduled','in_progress','cancelled'].includes(status)) throw new Error('Use Finish and collect to complete a job.');
+  return write(async tx=>{
+    const job=await owned(tx,'jobs',org,id);
+    if(status==='scheduled'||status==='in_progress') {
+      await validateDispatch(tx,org,id,job.scheduledStart?String(job.scheduledStart):null,Number(job.durationMinutes),job.teamMemberId?Number(job.teamMemberId):null,String(job.technicianName));
+    }
+    await tx.execute({sql:'UPDATE jobs SET status=?,completed_at=NULL,no_charge=0,schedule_version=schedule_version+1 WHERE organization_id=? AND id=?',args:[status,org,id]});
   });
 }
 
@@ -163,20 +178,32 @@ export async function updateRequest(org: number, id: number, status: string) {
 export async function convertRequest(org: number, id: number, target: 'job' | 'estimate') {
   return write(async tx => {
     const request = await owned(tx, 'service_requests', org, id);
-    if (request.jobId) return { customerId: Number(request.customerId), jobId: Number(request.jobId) };
+    if (request.jobId) return { customerId: Number(request.customerId), jobId: Number(request.jobId), estimateId: request.estimateId ? Number(request.estimateId) : null };
+    if (request.estimateId) return { customerId: Number(request.customerId), jobId: null, estimateId: Number(request.estimateId) };
+    if (request.status === 'lost') throw new Error('Reopen the request before creating work.');
     let customerId = Number(request.customerId || 0);
     if (!customerId) {
       const matches = request.email ? await rows<{ id: number }>('SELECT id FROM customers WHERE organization_id=? AND lower(email)=lower(?) AND archived_at IS NULL', [org,String(request.email)],tx) : [];
       if (matches.length > 1) throw new Error('More than one customer uses that email. Resolve the duplicate customer records first.');
       customerId = matches[0]?.id || Number((await tx.execute({ sql: 'INSERT INTO customers (organization_id,name,email,phone,service_line1,billing_line1,customer_since,public_token,created_at) VALUES (?,?,?,?,?,?,?,?,?)', args: [org,String(request.name),String(request.email),String(request.phone),String(request.address),String(request.address),nowISO().slice(0,10),token(),nowISO()] })).lastInsertRowid);
     }
-    await owned(tx, 'customers', org, customerId);
+    const customer = await owned(tx, 'customers', org, customerId);
+    if (customer.archivedAt) throw new Error('Restore this customer before creating work.');
     let jobId: number | null = null;
+    let estimateId: number | null = null;
     if (target === 'job') {
-      jobId = Number((await tx.execute({ sql: 'INSERT INTO jobs (organization_id,customer_id,title,description,service_line1,priority,status,created_at) VALUES (?,?,?,?,?,?,\'unscheduled\',?)', args: [org,customerId,String(request.service),String(request.description),String(request.address),String(request.priority),nowISO()] })).lastInsertRowid);
+      jobId = Number((await tx.execute({ sql: 'INSERT INTO jobs (organization_id,customer_id,title,description,service_line1,service_city,service_state,service_postal,priority,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,\'unscheduled\',?)', args: [org,customerId,String(request.service),String(request.description),String(request.address||customer.serviceLine1),request.address?'':String(customer.serviceCity),request.address?'':String(customer.serviceState),request.address?'':String(customer.servicePostal),String(request.priority),nowISO()] })).lastInsertRowid);
+    } else {
+      const [shop] = await rows<{estimatePrefix:string;nextEstimateNumber:number;defaultTaxBps:number}>('SELECT estimate_prefix,next_estimate_number,default_tax_bps FROM organizations WHERE id=?',[org],tx);
+      if (!shop) throw new Error('Business not found.');
+      const number = `${shop.estimatePrefix}${shop.nextEstimateNumber}`, now = nowISO();
+      await tx.execute({sql:'UPDATE organizations SET next_estimate_number=next_estimate_number+1 WHERE id=?',args:[org]});
+      estimateId = Number((await tx.execute({sql:'INSERT INTO estimates (organization_id,customer_id,number,status,issue_date,valid_until,notes,tax_bps,public_token,created_at,updated_at) VALUES (?,?,?,\'draft\',?,?,?,?,?,?,?)',args:[org,customerId,number,now.slice(0,10),addDaysISO(now.slice(0,10),30),String(request.description),shop.defaultTaxBps,token(),now,now]})).lastInsertRowid);
+      await tx.execute({sql:'INSERT INTO estimate_lines (organization_id,estimate_id,description,quantity,unit_price_cents,amount_cents) VALUES (?,?,?,\'1\',0,0)',args:[org,estimateId,String(request.service)]});
+      await tx.execute({sql:'INSERT INTO estimate_events (organization_id,estimate_id,kind,message,created_at) VALUES (?,?,\'created\',?,?)',args:[org,estimateId,`Draft created from request #${id}; pricing required.`,now]});
     }
-    await tx.execute({ sql: 'UPDATE service_requests SET customer_id=?,job_id=?,status=?,updated_at=? WHERE organization_id=? AND id=?', args: [customerId,jobId,jobId ? 'booked' : 'qualified',nowISO(),org,id] });
-    return { customerId, jobId };
+    await tx.execute({ sql: 'UPDATE service_requests SET customer_id=?,job_id=?,estimate_id=?,status=?,updated_at=? WHERE organization_id=? AND id=?', args: [customerId,jobId,estimateId,jobId ? 'booked' : 'qualified',nowISO(),org,id] });
+    return { customerId, jobId, estimateId };
   });
 }
 

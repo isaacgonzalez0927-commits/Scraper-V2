@@ -6,9 +6,10 @@ import { db } from "@/lib/db";
 import { loadApp } from "@/lib/page";
 import { customers, invoiceLines, invoices, jobs, serviceItems } from "@/lib/schema";
 
-export default async function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditInvoicePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const { org, shell } = await loadApp();
   const { id } = await params;
+  const q = await searchParams;
   const [invoice] = await db()
     .select()
     .from(invoices)
@@ -35,6 +36,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         customerRows={customerRows}
         jobRows={jobRows}
         services={services}
+        error={q.error}
         defaultTaxBps={org.defaultTaxBps}
         defaultNotes={org.defaultInvoiceNotes}
         termsDays={org.paymentTermsDays}

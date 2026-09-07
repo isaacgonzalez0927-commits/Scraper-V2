@@ -12,6 +12,8 @@ export async function seedOperationsDemo() {
  const exists=await client.execute({sql:'SELECT 1 FROM operation_seed_markers WHERE organization_id=? AND name=?',args:[org,'service-os-v1']});if(exists.rows.length)return;
  const tx=await client.transaction('write');
  try {
+  const claimed=await tx.execute({sql:'SELECT 1 FROM operation_seed_markers WHERE organization_id=? AND name=?',args:[org,'service-os-v1']});
+  if(claimed.rows.length){await tx.commit();return;}
   const customers=await tx.execute({sql:'SELECT id,name FROM customers WHERE organization_id=? ORDER BY id LIMIT 5',args:[org]});if(customers.rows.length<3){await tx.rollback();return;}
   const now=nowISO();
   const crew=[['Marcus Reed','(239) 555-0171','Diagnostics, EPA 608','#5b38d6',3200],['Andre Collins','(239) 555-0133','Installations, heat pumps','#18866b',3600],['Nina Patel','(239) 555-0188','Maintenance, indoor air quality','#d66a38',2900]] as const;

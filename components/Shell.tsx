@@ -109,9 +109,10 @@ export function Shell({
   const collectBadge = collectCount > 0 ? (collectCount > 9 ? "9+" : String(collectCount)) : "";
   const nav: [string, [string, string, string, string?][]][] = [
     ["Today", [["/overview", "Overview", "grid"],["/requests", "Requests", "file"],["/dispatch", "Dispatch", "calendar"],["/field", "Field work", "briefcase"],["/serenity", "Serenity", "spark"]]],
-    ["Customers & work", [["/jobs", jobsLabel, "briefcase"],["/customers", customersLabel, "users"],["/estimates", "Estimates", "file"],["/agreements", "Service plans", "calendar"],["/equipment", "Equipment", "settings"]]],
-    ["Money & business", [["/collect", "Collect", "cash", collectBadge],["/invoices", "Invoices", "file"],["/payments", "Payments", "card"],["/inventory", "Inventory", "grid"],["/automations", "Follow-ups", "spark"],["/reports", "Reports", "chart"],["/team", "Team", "users"],["/settings", "Settings", "settings"]]],
+    ["Customers & work", [["/jobs", jobsLabel, "briefcase"],["/customers", customersLabel, "users"],["/estimates", "Estimates", "file"]]],
+    ["Money", [["/collect", "Collect", "cash", collectBadge],["/invoices", "Invoices", "file"],["/payments", "Payments", "card"],["/reports", "Reports", "chart"]]],
   ];
+  const business: [string,string,string][] = [["/team","Team","users"],["/agreements","Service plans","calendar"],["/equipment","Equipment","settings"],["/inventory","Inventory","grid"],["/automations","Follow-ups","spark"],["/calendar","Calendar","calendar"],["/settings","Settings","settings"]];
   const bottom: [string, string, string, string?][] = [
     ["/overview", "Home", "grid"],
     ["/field", "Field", "briefcase"],
@@ -126,7 +127,8 @@ export function Shell({
           <BrandLogo className="brand-lockup" />
         </a>
         <nav className="nav">
-          {nav.map(([group,items]) => <div className="nav-group" key={group}><span className="nav-group-label">{group}</span>{items.map(([href,name,icon,count])=><a key={href} href={href} className={active(href)?"active":""}><Icon name={icon}/>{name}{count?<span className="nav-count">{count}</span>:null}</a>)}</div>)}
+          {nav.map(([group,items]) => <div className="nav-group" key={group}><span className="nav-group-label">{group}</span>{items.map(([href,name,icon,count])=><a key={href} href={href} aria-current={active(href)?'page':undefined} className={active(href)?"active":""}><Icon name={icon}/>{name}{count?<span className="nav-count">{count}</span>:null}</a>)}</div>)}
+          <details className="nav-business" open={business.some(([href])=>active(href))}><summary><Icon name="settings"/>Manage business</summary><div className="nav-group">{business.map(([href,name,icon])=><a key={href} href={href} aria-current={active(href)?'page':undefined} className={active(href)?'active':''}><Icon name={icon}/>{name}</a>)}</div></details>
         </nav>
         <div className="sidebar-foot">
           {isDemo ? (

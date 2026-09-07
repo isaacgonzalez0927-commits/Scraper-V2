@@ -89,6 +89,11 @@ export async function migrateOperations(client: Client) {
       organization_id INTEGER NOT NULL, name TEXT NOT NULL, created_at TEXT NOT NULL,
       PRIMARY KEY(organization_id, name)
     );
+    CREATE TABLE IF NOT EXISTS job_closeouts (
+      organization_id INTEGER NOT NULL, mutation_id TEXT NOT NULL,
+      job_id INTEGER NOT NULL, fingerprint TEXT NOT NULL, invoice_id INTEGER,
+      created_at TEXT NOT NULL, PRIMARY KEY(organization_id, mutation_id)
+    );
   `);
   const columns = new Set((await client.execute('PRAGMA table_info(jobs)')).rows.map(r => String(r.name)));
   for (const [name, definition] of [
@@ -96,6 +101,8 @@ export async function migrateOperations(client: Client) {
     ['team_member_id', 'INTEGER'],
     ['priority', "TEXT NOT NULL DEFAULT 'normal'"],
     ['schedule_version', 'INTEGER NOT NULL DEFAULT 0'],
+    ['no_charge', 'INTEGER NOT NULL DEFAULT 0'],
+    ['completion_summary', "TEXT NOT NULL DEFAULT ''"],
   ]) {
     if (!columns.has(name)) {
       try { await client.execute(`ALTER TABLE jobs ADD COLUMN ${name} ${definition}`); }
@@ -107,4 +114,9 @@ export async function migrateOperations(client: Client) {
     }
   }
   await client.execute('CREATE INDEX IF NOT EXISTS jobs_dispatch ON jobs(organization_id, team_member_id, scheduled_start)');
+  const requestColumns = await client.execute('PRAGMA table_info(service_requests)');
+  if (!requestColumns.rows.some(row => row.name === 'estimate_id')) {
+    try { await client.execute('ALTER TABLE service_requests ADD COLUMN estimate_id INTEGER'); }
+    catch (error) { if (!(await client.execute('PRAGMA table_info(service_requests)')).rows.some(row => row.name === 'estimate_id')) throw error; }
+  }
 }

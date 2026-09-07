@@ -40,9 +40,10 @@ import {
   tradeCopy,
   tradeFieldsFor,
 } from "@/lib/business";
-import { closeoutDueDate, parseCloseout, parseNoCharge } from "@/lib/closeout";
+import { parseCloseout, parseNoCharge } from "@/lib/closeout";
+import { closeJob, invoiceJob } from "@/lib/job-closeout";
 import { ensureDefaultProperty } from "@/lib/properties";
-import { rows as operationRows, saveJobWithDispatch, scheduleJob } from "@/lib/operations";
+import { rows as operationRows, saveJobWithDispatch, scheduleJob, setJobStatus } from "@/lib/operations";
 import { dollarsToCents, formatMoney } from "@/lib/money";
 import { prettyDate } from "@/lib/labels";
 import { paypalAccountLabel } from "@/lib/paypal";
@@ -419,21 +420,10 @@ export async function saveJobAction(form: FormData) {
 
 export async function updateJobStatusAction(form: FormData) {
   const { org } = await requireWritableContext("/jobs");
-  const id = Number(str(form, "id"));
-  const status = str(form, "status");
-  if (!["unscheduled", "scheduled", "in_progress", "completed", "cancelled"].includes(status)) redirect(`/jobs/${id}?error=Choose+a+valid+status.`);
-  const [ownedJob] = await db().select().from(jobs).where(and(eq(jobs.id, id), eq(jobs.organizationId, org.id)));
-  if (!ownedJob) redirect("/jobs?error=Job+not+found.");
-  if (status === "completed") {
-    const incomplete = await operationRows<{total:number}>("SELECT count(*) AS total FROM job_checklist WHERE organization_id=? AND job_id=? AND done=0", [org.id,id]);
-    if (incomplete[0]?.total) redirect(`/jobs/${id}?error=Complete+the+field+checklist+before+closing+this+job.`);
-  }
-  const patch: Record<string, string | null> = { status };
-  if (status === "completed") patch.completedAt = nowISO();
-  await db().update(jobs).set(patch).where(and(eq(jobs.id, id), eq(jobs.organizationId, org.id)));
-  if (status === "completed") {
-    await logActivity(org.id, "job_completed", `Job completed: ${ownedJob.title}`, ownedJob.estimatedRevenueCents, `/jobs/${id}`);
-  }
+  const id = Number(str(form,"id")), status = str(form,"status");
+  if (status === "completed") redirect(`/jobs/${id}/finish`);
+  try { await setJobStatus(org.id,id,status); }
+  catch (error) { redirect(`/jobs/${id}?error=${encodeURIComponent(error instanceof Error?error.message:"Could not update job.")}`); }
   redirect(`/jobs/${id}`);
 }
 
@@ -469,78 +459,8 @@ export async function rescheduleJobAction(form: FormData) {
   redirect(next);
 }
 
-async function invoiceForJob(
-  org: typeof organizations.$inferSelect,
-  job: typeof jobs.$inferSelect,
-  syncDraft = false,
-) {
-  const existing = await db()
-    .select()
-    .from(invoices)
-    .where(and(eq(invoices.jobId, job.id), eq(invoices.organizationId, org.id)));
-  const open = existing.find((i) => i.status !== "void");
-  if (open) {
-    if (syncDraft && open.status === "draft") {
-      const lines = await db()
-        .select()
-        .from(invoiceLines)
-        .where(eq(invoiceLines.invoiceId, open.id));
-      if (lines.length === 1) {
-        const price = job.actualRevenueCents || job.estimatedRevenueCents;
-        await db()
-          .update(invoiceLines)
-          .set({
-            description: job.title,
-            quantity: "1",
-            unitPriceCents: price,
-            amountCents: price,
-          })
-          .where(eq(invoiceLines.id, lines[0].id));
-        await refreshInvoice(open.id, org.id);
-        const [synced] = await db()
-          .select()
-          .from(invoices)
-          .where(eq(invoices.id, open.id));
-        return { invoice: synced, created: false };
-      }
-    }
-    return { invoice: open, created: false };
-  }
-
-  const issue = new Date().toISOString().slice(0, 10);
-  const due = closeoutDueDate(issue, org.paymentTermsDays);
-  const price = job.actualRevenueCents || job.estimatedRevenueCents;
-  const calc = totalsFromLines([{ quantity: "1", unitPriceCents: price }], 0, org.defaultTaxBps);
-  const number = await nextInvoiceNumber(org.id);
-  const [invoice] = await db()
-    .insert(invoices)
-    .values({
-      organizationId: org.id,
-      customerId: job.customerId,
-      jobId: job.id,
-      number,
-      status: "draft",
-      issueDate: issue,
-      dueDate: due,
-      notes: org.defaultInvoiceNotes,
-      taxBps: org.defaultTaxBps,
-      publicToken: token(),
-      createdAt: nowISO(),
-      ...calc,
-    })
-    .returning();
-  await db().insert(invoiceLines).values({
-    organizationId: org.id,
-    invoiceId: invoice.id,
-    position: 0,
-    description: job.title,
-    quantity: "1",
-    unitPriceCents: price,
-    amountCents: price,
-  });
-  await addEvent(org.id, invoice.id, "created", `${number} created from job`);
-  await logActivity(org.id, "invoice_created", `${number} created`, invoice.totalCents, `/invoices/${invoice.id}`);
-  return { invoice, created: true };
+async function invoiceForJob(org: typeof organizations.$inferSelect, job: typeof jobs.$inferSelect, syncDraft = false) {
+  return invoiceJob(org.id, job.id, syncDraft);
 }
 
 export async function invoiceFromJobAction(form: FormData) {
@@ -551,99 +471,40 @@ export async function invoiceFromJobAction(form: FormData) {
     .from(jobs)
     .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
   if (!job) redirect("/jobs");
-  const result = await invoiceForJob(org, job);
+  let result: Awaited<ReturnType<typeof invoiceForJob>>;
+  try { result = await invoiceForJob(org, job); }
+  catch (error) { redirect(withQuery(`/jobs/${job.id}`, "error", error instanceof Error ? error.message : "Could not create the invoice.")); }
   redirect(`/invoices/${result.invoice.id}`);
 }
 
 export async function finishJobAction(form: FormData) {
   const { org } = await requireWritableContext("/jobs");
   const jobId = Number(str(form, "job_id"));
-  const [job] = await db()
-    .select()
-    .from(jobs)
-    .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
+  const [job] = await db().select().from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.organizationId, org.id)));
   if (!job) redirect("/jobs");
   const next = str(form, "next") || "collect";
-
-  if (next === "nocharge") {
-    const draft = parseNoCharge({
-      workCompleted: str(form, "work_completed"),
-      reason: str(form, "no_charge_reason"),
+  const noCharge = next === "nocharge";
+  const parsed = noCharge
+    ? parseNoCharge({workCompleted:str(form,"work_completed"),reason:str(form,"no_charge_reason")})
+    : parseCloseout({workCompleted:str(form,"work_completed"),finalAmount:str(form,"final_amount"),fallbackAmountCents:job.actualRevenueCents||job.estimatedRevenueCents,extraCost:str(form,"extra_cost"),costDescription:str(form,"cost_description"),costCategory:str(form,"cost_category")});
+  if (!parsed.ok) redirect(`/jobs/${jobId}/finish?error=${encodeURIComponent(parsed.error)}`);
+  let closed: {invoiceId:number|null;duplicate:boolean};
+  try {
+    closed = await closeJob(org.id,jobId,{
+      mutationId:str(form,"mutation_id"),version:Number(str(form,"schedule_version")),
+      workCompleted:parsed.workCompleted,noCharge,reason:noCharge?str(form,"no_charge_reason"):"",
+      finalAmountCents:"finalAmountCents" in parsed?parsed.finalAmountCents:0,
+      extraCostCents:"extraCostCents" in parsed?parsed.extraCostCents:0,
+      costDescription:"costDescription" in parsed?parsed.costDescription:"",
+      costCategory:"costCategory" in parsed?parsed.costCategory:"miscellaneous",
     });
-    if (!draft.ok) {
-      redirect(`/jobs/${job.id}/finish?error=${encodeURIComponent(draft.error)}`);
-    }
-    const completedAt = job.completedAt || nowISO();
-    await db()
-      .update(jobs)
-      .set({
-        description: draft.workCompleted,
-        actualRevenueCents: 0,
-        status: "completed",
-        completedAt,
-      })
-      .where(and(eq(jobs.id, job.id), eq(jobs.organizationId, org.id)));
-    await db().insert(notes).values({
-      organizationId: org.id,
-      customerId: job.customerId,
-      jobId: job.id,
-      body: `No charge. ${draft.reason}`,
-      createdAt: nowISO(),
-    });
-    if (job.status !== "completed") {
-      await logActivity(org.id, "job_completed", `Job completed: ${job.title}`, 0, `/jobs/${job.id}`);
-    }
-    redirect(`/jobs/${job.id}?notice=${encodeURIComponent("Job finished. No charge.")}`);
+  } catch(error) {
+    redirect(`/jobs/${jobId}/finish?error=${encodeURIComponent(error instanceof Error?error.message:"Could not finish this job.")}`);
   }
-
-  const draft = parseCloseout({
-    workCompleted: str(form, "work_completed"),
-    finalAmount: str(form, "final_amount"),
-    fallbackAmountCents: job.actualRevenueCents || job.estimatedRevenueCents,
-    extraCost: str(form, "extra_cost"),
-    costDescription: str(form, "cost_description"),
-    costCategory: str(form, "cost_category"),
-  });
-  if (!draft.ok) {
-    redirect(`/jobs/${job.id}/finish?error=${encodeURIComponent(draft.error)}`);
-  }
-
-  const completedAt = job.completedAt || nowISO();
-  await db()
-    .update(jobs)
-    .set({
-      description: draft.workCompleted,
-      actualRevenueCents: draft.finalAmountCents,
-      status: "completed",
-      completedAt,
-    })
-    .where(and(eq(jobs.id, job.id), eq(jobs.organizationId, org.id)));
-
-  if (draft.extraCostCents > 0 && job.status !== "completed") {
-    await db().insert(jobCosts).values({
-      organizationId: org.id,
-      jobId: job.id,
-      category: draft.costCategory,
-      description: draft.costDescription,
-      amountCents: draft.extraCostCents,
-      createdAt: nowISO(),
-    });
-  }
-  if (job.status !== "completed") {
-    await logActivity(
-      org.id,
-      "job_completed",
-      `Job completed: ${job.title}`,
-      draft.finalAmountCents,
-      `/jobs/${job.id}`,
-    );
-  }
-
-  const [fresh] = await db()
-    .select()
-    .from(jobs)
-    .where(and(eq(jobs.id, job.id), eq(jobs.organizationId, org.id)));
-  const result = await invoiceForJob(org, fresh, true);
+  if (!closed.invoiceId) redirect(`/jobs/${jobId}?notice=Job+finished.+No+charge.`);
+  // Repeated submission returns the existing invoice without sending again.
+  if (closed.duplicate) redirect(`/invoices/${closed.invoiceId}`);
+  const result = {invoice:{id:closed.invoiceId}};
 
   if (next === "draft" || next === "job") {
     redirect(
@@ -658,17 +519,23 @@ export async function finishJobAction(form: FormData) {
     );
   }
 
-  const notice = result.created
-    ? "Job finished. Review the invoice, then send it."
-    : "Job finished. This invoice was already linked to it.";
+  const notice = "Job finished. Review the linked invoice, then send it.";
   redirect(`/invoices/${result.invoice.id}?notice=${encodeURIComponent(notice)}`);
 }
 
 export async function saveInvoiceAction(form: FormData) {
   const { org } = await requireWritableContext("/invoices");
   const id = Number(str(form, "id") || 0);
+  const back = id ? `/invoices/${id}/edit` : "/invoices/new";
   const customerId = Number(str(form, "customer_id"));
-  if (!customerId) redirect("/invoices/new?error=Choose+a+customer.");
+  const [customer] = await db().select({id:customers.id}).from(customers).where(and(eq(customers.id,customerId),eq(customers.organizationId,org.id)));
+  if (!customer) redirect(withQuery(back,"error","Choose a customer in this business."));
+  const jobId = Number(str(form, "job_id") || 0) || null;
+  if (jobId) {
+    const [job] = await db().select().from(jobs).where(and(eq(jobs.id,jobId),eq(jobs.organizationId,org.id)));
+    if (!job || job.customerId !== customerId) redirect(withQuery(back,"error","Choose a job belonging to this customer."));
+    if (job.noCharge) redirect(withQuery(back,"error","This job is marked no charge. Reopen it before billing."));
+  }
   const descriptions = form.getAll("line_description").map(String);
   const quantities = form.getAll("line_quantity").map(String);
   const prices = form.getAll("line_price").map(String);
@@ -683,7 +550,7 @@ export async function saveInvoiceAction(form: FormData) {
   const calc = totalsFromLines(lines, dollarsToCents(str(form, "discount")), Math.round(Number(str(form, "tax_rate") || 0) * 100));
   const payload = {
     customerId,
-    jobId: Number(str(form, "job_id") || 0) || null,
+    jobId,
     issueDate: str(form, "issue_date") || new Date().toISOString().slice(0, 10),
     dueDate: str(form, "due_date") || new Date().toISOString().slice(0, 10),
     notes: str(form, "notes"),
@@ -837,7 +704,9 @@ export async function billFinishedJobAction(form: FormData) {
   if (job.status !== "completed") {
     redirect(`/jobs/${job.id}/finish`);
   }
-  const result = await invoiceForJob(org, job, true);
+  let result: Awaited<ReturnType<typeof invoiceForJob>>;
+  try { result = await invoiceForJob(org, job, true); }
+  catch (error) { redirect(withQuery(`/jobs/${job.id}`, "error", error instanceof Error ? error.message : "Could not create the invoice.")); }
   const notice = await deliverInvoice(org, result.invoice.id);
   redirect(`/collect?ok=${encodeURIComponent(notice)}&invoice=${result.invoice.id}`);
 }

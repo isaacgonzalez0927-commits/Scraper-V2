@@ -4,7 +4,8 @@ import { finishJobAction } from "@/app/actions";
 import { PayLinkActions } from "@/components/PayLinkActions";
 import { Banner, Card, Stat } from "@/components/ui";
 import { Shell } from "@/components/Shell";
-import { db } from "@/lib/db";
+import { db, token } from "@/lib/db";
+import { getChecklist, rows } from "@/lib/operations";
 import { displayName, formatAddress } from "@/lib/display";
 import { label } from "@/lib/labels";
 import { centsToInput, formatMoney } from "@/lib/money";
@@ -45,9 +46,13 @@ export default async function FinishJobPage({
     absoluteBaseUrl(),
   ]);
   const openInvoice = invoiceRows.find((invoice) => invoice.status !== "void");
+  const checklist = await getChecklist(org.id,job.id);
+  const incomplete = checklist.filter(item=>!item.done);
+  const [approved]=await rows<{taxBps:number}>('SELECT tax_bps FROM estimates WHERE organization_id=? AND converted_job_id=? ORDER BY id LIMIT 1',[org.id,job.id]);
+  const taxBps=openInvoice?.taxBps??approved?.taxBps??org.defaultTaxBps;
   const sentInvoice = invoiceRows.find((invoice) => invoice.id === Number(q.invoice || 0));
   const payUrl = sentInvoice ? invoicePayUrl(base, sentInvoice.publicToken) : "";
-  const amount = job.actualRevenueCents || job.estimatedRevenueCents;
+  const amount = openInvoice ? Math.max(0,openInvoice.subtotalCents-openInvoice.discountCents) : job.actualRevenueCents || job.estimatedRevenueCents;
   const address = formatAddress(
     job.serviceLine1,
     job.serviceCity,
@@ -75,6 +80,7 @@ export default async function FinishJobPage({
       }
     >
       <Banner error={q.error} ok={q.ok} />
+      {incomplete.length ? <Card title={`${incomplete.length} checklist items need attention`} note="Finish and sync these before closing the visit."><ul>{incomplete.map(item=><li key={item.id}>{item.label}</li>)}</ul><a className="btn btn-secondary" href={`/field?job=${job.id}`}>Open field checklist</a></Card> : null}
       {sentInvoice && payUrl ? (
         <Card
           title="Collect in the driveway"
@@ -97,7 +103,7 @@ export default async function FinishJobPage({
         <Banner
           info={
             openInvoice.status === "draft"
-              ? `${openInvoice.number} is already linked. The final amount will update its single line.`
+              ? `${openInvoice.number} is already linked. A changed final charge can update a single-line draft; edit itemized charges on the invoice.`
               : `${openInvoice.number} was already sent. Finishing will not change that invoice.`
           }
         />
@@ -139,15 +145,17 @@ export default async function FinishJobPage({
 
       <form action={finishJobAction} className="grid narrow mt-2">
         <input type="hidden" name="job_id" value={job.id} />
+        <input type="hidden" name="mutation_id" value={token()} />
+        <input type="hidden" name="schedule_version" value={job.scheduleVersion} />
         <Card
           title="What happened"
-          note="This replaces the original problem with the final record of the work."
+          note="Your completion record stays alongside the original work scope."
         >
           <div className="field mt-1">
             <label>Work completed</label>
             <textarea
               name="work_completed"
-              defaultValue={job.description}
+              defaultValue={job.completionSummary || job.description}
               placeholder={voice.jobNotesPlaceholder}
               required
               autoFocus
@@ -157,11 +165,11 @@ export default async function FinishJobPage({
 
         <Card
           title="Close the money"
-          note={`The invoice uses this final amount. ${org.defaultTaxBps / 100}% tax is added when it is created.`}
+          note={`This is the pre-tax charge after any discount. The invoice uses ${taxBps / 100}% tax${!openInvoice && approved ? ' from the approved estimate' : ''}.`}
         >
           <div className="form-grid mt-1">
             <div className="field">
-              <label>Final amount to bill</label>
+              <label>Final charge before tax</label>
               <input
                 name="final_amount"
                 inputMode="decimal"

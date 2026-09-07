@@ -36,8 +36,8 @@ export async function updateRequestAction(form:FormData) {
 }
 export async function convertRequestAction(form:FormData) {
   const {org}=await context('/requests');
-  const result=await run('/requests',()=>convertRequest(org.id,num(form,'id'),str(form,'target')==='estimate'?'estimate':'job')) as {customerId:number;jobId:number|null};
-  redirect(result.jobId ? `/jobs/${result.jobId}` : `/estimates/new?customerId=${result.customerId}`);
+  const result=await run('/requests',()=>convertRequest(org.id,num(form,'id'),str(form,'target')==='estimate'?'estimate':'job')) as {customerId:number;jobId:number|null;estimateId:number|null};
+  redirect(result.jobId ? `/jobs/${result.jobId}` : `/estimates/${result.estimateId}/edit`);
 }
 export async function dispatchAction(form:FormData) {
   const path=safeAppPath(str(form,'next'),'/dispatch');

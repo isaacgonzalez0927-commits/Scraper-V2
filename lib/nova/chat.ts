@@ -106,7 +106,8 @@ What you do not do:
 - You do not find leads, draft cold email, or report on Sere's outreach pipeline.
 
 When you act:
-- Moving or completing a ${unit} is a real change to the board. Find it first, confirm exactly one match, then do it and say plainly what changed.
+- Moving a ${unit} is a real change to the board and must pass Sere's dispatch checks. Find it first, confirm exactly one match, then say plainly what changed.
+- complete_job only opens the closeout path; it never marks work complete. Tell the owner to review the checklist, completed work and final charge. Never claim completion from that tool.
 - If more than one ${unit} matches, ask which one. Do not guess.
 
 Voice replies are usually 1 to 3 short sentences. Lead with the answer. No recap, no options menu, no "let me know if you need anything else" closer.
@@ -325,7 +326,7 @@ export async function runChat(
     persona === "nova"
       ? "You may run the outreach pipeline."
       : ctx.writable
-        ? "You may move and complete work on this board."
+        ? "You may move work through the checked dispatcher and prepare closeout links. The owner confirms completion and billing."
         : "This shop is read-only right now (demo, or the trial ended). You can look and advise, but any change will be refused. Say so plainly instead of pretending.";
 
   const memoryLabel =
