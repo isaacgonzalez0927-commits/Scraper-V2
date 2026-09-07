@@ -1,4 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
+import { JobJourney } from '@/components/JobJourney';
 import { notFound } from "next/navigation";
 import { addJobCostAction, addNoteAction, invoiceFromJobAction, updateJobStatusAction } from "@/app/actions";
 import { Badge, Banner, Blank, Card, KeyValue, RowLink, Rows, Stat } from "@/components/ui";
@@ -18,7 +19,7 @@ export default async function JobDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
 }) {
   const { org, shell, voice } = await loadApp();
   const { id } = await params;
@@ -71,7 +72,7 @@ export default async function JobDetailPage({
           <a className="btn btn-secondary" href={`/jobs/${job.id}/edit`}>Edit</a>
           {job.status !== "completed" ? (
             <><a className="btn btn-secondary" href={`/field?job=${job.id}`}>Field workspace</a><a className="btn" href={`/jobs/${job.id}/finish`}>Finish and collect</a></>
-          ) : !openInvoice ? (
+          ) : !openInvoice && !job.noCharge ? (
             <form action={invoiceFromJobAction}>
               <input type="hidden" name="job_id" value={job.id} />
               <button className="btn" type="submit">Create invoice</button>
@@ -80,7 +81,10 @@ export default async function JobDetailPage({
         </>
       }
     >
-      <Banner info={q.notice} />
+      <Banner info={q.notice} error={q.error} />
+      <JobJourney organizationId={org.id} jobId={job.id} noCharge={job.noCharge}/>
+      {job.noCharge ? <Banner info="This visit is no charge. It is excluded from unbilled work and expected revenue." /> : null}
+      {job.completionSummary ? <Card title="Completed work"><p className="ops-preline">{job.completionSummary}</p></Card> : null}
       <div className="grid grid-4">
         <Stat label="Revenue" value={formatMoney(revenue)} note="Actual if set, otherwise estimated" />
         <Stat label="Costs" value={formatMoney(costTotal)} note="Materials, labor, and equipment" />

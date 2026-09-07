@@ -30,6 +30,7 @@ import { integrationStatus } from "../integrations";
 import { loadStripeCash } from "../stripe-cash";
 import { loadSquareCash } from "../square-cash";
 import { shopAccess } from "../trial";
+import { jobIsUnbilled } from '../collect';
 
 export type DossierJob = {
   id: number;
@@ -169,7 +170,7 @@ export async function loadDossier(
   }
 
   const invoicedJobIds = new Set(
-    invoiceRows.map((row) => row.invoice.jobId).filter((id): id is number => id != null),
+    invoiceRows.filter(row=>row.invoice.status!=='void').map((row) => row.invoice.jobId).filter((id): id is number => id != null),
   );
 
   const board = {
@@ -181,7 +182,7 @@ export async function loadDossier(
       .map(pack),
     // The money leak Nova should care about most: work done, never billed.
     finishedNotInvoiced: jobRows
-      .filter((r) => r.job.status === "completed" && !invoicedJobIds.has(r.job.id))
+      .filter((r) => jobIsUnbilled(r.job,invoicedJobIds))
       .slice(0, 10)
       .map(pack),
   };

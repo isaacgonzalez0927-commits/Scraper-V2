@@ -168,6 +168,7 @@ export async function convertApprovedEstimate(
         .where(and(eq(estimateLines.estimateId, estimate.id), eq(estimateLines.organizationId, organizationId))),
     ]);
     if (!customer) throw new Error("Estimate customer not found.");
+    const request = (await tx.all<{address:string;priority:string}>(sql`SELECT address,priority FROM service_requests WHERE organization_id=${organizationId} AND estimate_id=${estimate.id} LIMIT 1`))[0];
     const [job] = await tx
       .insert(jobs)
       .values({
@@ -175,12 +176,14 @@ export async function convertApprovedEstimate(
         customerId: estimate.customerId,
         title: lines[0]?.description || `Work from ${estimate.number}`,
         description: lines.map((line) => `${line.quantity} × ${line.description}`).join("\n"),
-        serviceLine1: customer.serviceLine1,
-        serviceCity: customer.serviceCity,
-        serviceState: customer.serviceState,
-        servicePostal: customer.servicePostal,
+        serviceLine1: request?.address || customer.serviceLine1,
+        serviceCity: request?.address ? '' : customer.serviceCity,
+        serviceState: request?.address ? '' : customer.serviceState,
+        servicePostal: request?.address ? '' : customer.servicePostal,
+        priority: request?.priority || 'normal',
         status: "unscheduled",
-        estimatedRevenueCents: estimate.totalCents,
+        // Jobs record the pre-tax charge; invoicing adds tax exactly once.
+        estimatedRevenueCents: Math.max(0,estimate.subtotalCents-estimate.discountCents),
         notes: estimate.notes,
         createdAt: now,
       })
@@ -196,6 +199,7 @@ export async function convertApprovedEstimate(
       message: `Converted to job ${job.id}`,
       createdAt: now,
     });
+    await tx.run(sql`UPDATE service_requests SET job_id=${job.id},status='booked',updated_at=${now} WHERE organization_id=${organizationId} AND estimate_id=${estimate.id}`);
     return { jobId: job.id, created: true };
   });
 }

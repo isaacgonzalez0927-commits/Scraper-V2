@@ -11,6 +11,8 @@
  */
 
 import { and, eq, ne } from "drizzle-orm";
+import { scheduleJob } from '../operations';
+import { operationsBrief } from '../operations-brief';
 import { tradeCopy } from "../business";
 import { db, nowISO } from "../db";
 import { displayName } from "../display";
@@ -57,7 +59,8 @@ const SHOP_TOOLS: NovaToolDef[] = [
         "tomorrow's board, unscheduled work, work finished but never invoiced " +
         "(send them to Collect at /collect), " +
         "overdue and due-soon invoices, and who to follow up with. Call this " +
-        "before answering anything about numbers or the schedule.",
+        "before answering anything about numbers or the schedule. Also includes new requests, " +
+        "unassigned jobs, service plan visits due, low stock, and follow-up drafts awaiting owner review.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -112,8 +115,8 @@ const SHOP_TOOLS: NovaToolDef[] = [
     function: {
       name: "complete_job",
       description:
-        "Mark one job complete. This does not invoice it — say that the owner " +
-        "still needs to finish and bill it, and point at /jobs/<id>/finish.",
+        "Prepare the closeout link for one job. This does not mark the job complete. " +
+        "The owner confirms the checklist, completed work and final charge at /jobs/<id>/finish.",
       parameters: {
         type: "object",
         properties: { job_id: { type: "number" } },
@@ -253,8 +256,8 @@ export async function runNovaTool(
     case "shop":
     case "status":
     case "business": {
-      const dossier = await loadDossier(ctx.organizationId, ctx.isDemo, ctx.now);
-      return JSON.stringify({ ...dossier, headline: dossierHeadline(dossier) });
+      const [dossier,operations] = await Promise.all([loadDossier(ctx.organizationId, ctx.isDemo, ctx.now),operationsBrief(ctx.organizationId,ctx.now.toISOString().slice(0,10))]);
+      return JSON.stringify({ ...dossier, operations, headline: dossierHeadline(dossier) });
     }
 
     case "payments": {
@@ -424,10 +427,8 @@ async function moveJob(
     .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, ctx.organizationId)));
   if (!row) return { ok: false, error: "No job with that id in this shop." };
 
-  await db()
-    .update(jobs)
-    .set({ scheduledStart: stamp, status: "scheduled" })
-    .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, ctx.organizationId)));
+  try { await scheduleJob(ctx.organizationId,jobId,{start:stamp,version:row.job.scheduleVersion}); }
+  catch(error) { return {ok:false,error:error instanceof Error?error.message:'Could not reschedule this job.',href:'/dispatch'}; }
   await logActivity(
     ctx.organizationId,
     "job_rescheduled",
@@ -456,22 +457,12 @@ async function completeJob(ctx: ToolContext, jobId: number): Promise<Record<stri
     .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, ctx.organizationId)));
   if (!row) return { ok: false, error: "No job with that id in this shop." };
 
-  await db()
-    .update(jobs)
-    .set({ status: "completed", completedAt: nowISO() })
-    .where(and(eq(jobs.id, jobId), eq(jobs.organizationId, ctx.organizationId)));
-  await logActivity(
-    ctx.organizationId,
-    "job_completed",
-    `Serenity completed ${row.job.title}`,
-    null,
-    `/jobs/${jobId}`,
-  );
   return {
     ok: true,
-    completed: row.job.title,
+    actionRequired: 'review_closeout',
+    job: row.job.title,
     customer: displayName(row.customer),
-    note: "Not invoiced yet. The owner finishes and bills it.",
+    note: "The job has not been changed. Open closeout to confirm the checklist, work completed and final charge.",
     href: `/jobs/${jobId}/finish`,
   };
 }

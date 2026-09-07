@@ -99,7 +99,8 @@ export function collectTotals(rows: CollectInput[]): {
   let unbilled = 0;
   let unpaid = 0;
   for (const row of rows) {
-    amountCents += Math.max(0, row.amountCents);
+    // Approved estimates are future work, not money already earned.
+    if (row.kind !== 'estimate' && row.kind !== 'followup') amountCents += Math.max(0, row.amountCents);
     if (row.kind === "unbilled") unbilled += 1;
     if (row.kind === "open" || row.kind === "draft") unpaid += 1;
   }
@@ -110,6 +111,7 @@ export function describeCollect(totals: ReturnType<typeof collectTotals>): strin
   if (!totals.count) {
     return "Nothing sitting out. New work shows up here when a job is finished or an invoice is waiting.";
   }
+  if (!totals.unbilled && !totals.unpaid) return 'No completed work or invoice balances waiting. Review estimates and follow-ups below.';
   const money = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -120,8 +122,8 @@ export function describeCollect(totals: ReturnType<typeof collectTotals>): strin
 }
 
 export function jobIsUnbilled(
-  job: { id: number; status: string },
+  job: { id: number; status: string; noCharge?: boolean | number },
   invoicedJobIds: Set<number>,
 ): boolean {
-  return job.status === "completed" && !invoicedJobIds.has(job.id);
+  return job.status === "completed" && !job.noCharge && !invoicedJobIds.has(job.id);
 }

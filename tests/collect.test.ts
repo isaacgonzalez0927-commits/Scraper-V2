@@ -109,3 +109,9 @@ test("pay links use the phone's SMS composer, not a carrier", () => {
   );
   assert.equal(invoicePayUrl("https://www.sere.cash/", "abc"), "https://www.sere.cash/p/inv/abc/pay");
 });
+
+test('approved estimates are not counted as earned money to collect',()=>{
+  const totals=collectTotals([{kind:'estimate',id:1,customerId:1,customerName:'Pat',phone:'',title:'Future work',amountCents:250000,sortAt:'2026-09-01'}]);
+  assert.equal(totals.amountCents,0);
+  assert.match(describeCollect(totals),/estimates and follow-ups/);
+});

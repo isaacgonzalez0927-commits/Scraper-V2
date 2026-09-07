@@ -311,6 +311,8 @@ export const jobs = sqliteTable(
     teamMemberId: integer("team_member_id"),
     priority: text("priority").notNull().default("normal"),
     scheduleVersion: integer("schedule_version").notNull().default(0),
+    noCharge: integer("no_charge", { mode: "boolean" }).notNull().default(false),
+    completionSummary: text("completion_summary").notNull().default(""),
     estimatedRevenueCents: integer("estimated_revenue_cents").notNull().default(0),
     actualRevenueCents: integer("actual_revenue_cents").notNull().default(0),
     estimatedCostCents: integer("estimated_cost_cents").notNull().default(0),

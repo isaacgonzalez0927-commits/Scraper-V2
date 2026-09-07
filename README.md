@@ -59,7 +59,7 @@ npm run build
 | Settings | Company details, trade type, invoice defaults, integrations, account |
 | Team | Dispatch profiles, skills, availability, color, and loaded hourly cost |
 | Serenity | Shop intelligence. Board, books, jobs, cash. Not outreach. |
-| Assistant | Star in the top bar. Surfaces overdue cash and today's jobs, and can move a date or mark a job complete |
+| Assistant | Star in the top bar. Surfaces overdue cash and today's jobs, moves dates through dispatch checks, and opens the owner-reviewed closeout |
 
 Two rules the code keeps:
 

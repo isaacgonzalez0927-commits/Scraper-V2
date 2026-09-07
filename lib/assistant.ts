@@ -1,4 +1,5 @@
 import { and, desc, eq, ne } from "drizzle-orm";
+import { scheduleJob } from './operations';
 import { countLabel, tradeCopy } from "./business";
 import { db } from "./db";
 import { displayName } from "./display";
@@ -791,15 +792,9 @@ export async function runAssistant(
       return { text: `A few ${voice.jobs.toLowerCase()} match. Pick one:`, links: jobLinks(hits) };
     }
     const job = hits[0];
-    await db()
-      .update(jobs)
-      .set({ status: "completed", completedAt: now.toISOString() })
-      .where(and(eq(jobs.id, job.id), eq(jobs.organizationId, organizationId)));
-    await logActivity(organizationId, "job_completed", `Job completed: ${job.title}`, null, `/jobs/${job.id}`);
     return {
-      text: `Marked ${job.title} complete.`,
-      links: [{ href: `/jobs/${job.id}`, label: job.title }],
-      did: "complete",
+      text: `Open ${job.title}'s closeout to confirm the completed work and final charge. I have not changed its status.`,
+      links: [{ href: `/jobs/${job.id}/finish`, label: 'Finish and collect' }],
     };
   }
 
@@ -817,10 +812,8 @@ export async function runAssistant(
     };
   }
   const job = hits[0];
-  await db()
-    .update(jobs)
-    .set({ scheduledStart: intent.when, status: "scheduled" })
-    .where(and(eq(jobs.id, job.id), eq(jobs.organizationId, organizationId)));
+  try { await scheduleJob(organizationId,job.id,{start:intent.when}); }
+  catch(error) { return {text:error instanceof Error?error.message:'Could not reschedule this job.',links:[{href:'/dispatch',label:'Review dispatch'}]}; }
   await logActivity(organizationId, "job_rescheduled", `Moved ${job.title} to ${prettyWhen(intent.when)}`, null, `/jobs/${job.id}`);
   return {
     text: `Moved ${job.title} (${job.customer}) to ${prettyWhen(intent.when)}.`,

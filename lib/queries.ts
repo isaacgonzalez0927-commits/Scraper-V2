@@ -50,8 +50,8 @@ export function periodBounds(key: string, start?: string, end?: string) {
   return monthBounds();
 }
 
-export function jobRevenueCents(job: { actualRevenueCents: number; estimatedRevenueCents: number }) {
-  return job.actualRevenueCents || job.estimatedRevenueCents;
+export function jobRevenueCents(job: { actualRevenueCents: number; estimatedRevenueCents: number; noCharge?: boolean | number }) {
+  return job.noCharge ? 0 : job.actualRevenueCents || job.estimatedRevenueCents;
 }
 
 export async function paidMap(organizationId: number, invoiceIds: number[]) {
@@ -293,4 +293,3 @@ export async function searchOrg(organizationId: number, q: string) {
     })),
   };
 }
-
