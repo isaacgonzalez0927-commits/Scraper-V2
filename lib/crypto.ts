@@ -10,8 +10,8 @@ const FORMAT = "v1";
 
 function encryptionKey(): Buffer {
   const configured = process.env.SERE_SECRET_KEY || process.env.AUTH_SECRET;
-  if (process.env.NODE_ENV === "production" && (!configured || configured.length < 32 || configured === "change-me-in-production" || configured === "sere-dev-only-change-me")) {
-    throw new Error("SERE_SECRET_KEY must be a strong, unique secret of at least 32 characters in production.");
+  if (process.env.NODE_ENV === "production" && (!configured || configured === "change-me-in-production" || configured === "sere-dev-only-change-me")) {
+    throw new Error("SERE_SECRET_KEY must be configured to a non-default secret in production.");
   }
   const raw = configured || "sere-dev-only-change-me";
   return createHash("sha256").update(raw).digest();
