@@ -59,11 +59,8 @@ export async function POST(request: Request) {
     }
     if (paypalOrderPaid(order)) amount = paypalOrderAmountCents(order);
   } catch {
-    if (type === "PAYMENT.CAPTURE.COMPLETED" || type === "CHECKOUT.ORDER.COMPLETED") {
-      amount = Math.round(
-        Number(event.resource?.amount?.value || event.resource?.purchase_units?.[0]?.amount?.value || 0) * 100,
-      );
-    }
+    // Never credit a payment from an unverified webhook payload when PayPal cannot be reached.
+    return Response.json({ error: "Could not verify payment with PayPal." }, { status: 503 });
   }
   if (!amount) {
     return Response.json({ received: true, ignored: "order not captured yet" });
