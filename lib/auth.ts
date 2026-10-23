@@ -26,8 +26,8 @@ const COOKIE = "sere_session";
 
 function secret() {
   const value = process.env.SERE_SECRET_KEY || process.env.AUTH_SECRET;
-  if (process.env.NODE_ENV === "production" && (!value || value.length < 32 || value === "change-me-in-production" || value === "sere-dev-only-change-me")) {
-    throw new Error("SERE_SECRET_KEY must be a strong, unique secret of at least 32 characters in production.");
+  if (process.env.NODE_ENV === "production" && (!value || value === "change-me-in-production" || value === "sere-dev-only-change-me")) {
+    throw new Error("SERE_SECRET_KEY must be configured to a non-default secret in production.");
   }
   return new TextEncoder().encode(value || "sere-dev-only-change-me");
 }
