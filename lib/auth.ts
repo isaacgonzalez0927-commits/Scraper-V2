@@ -25,7 +25,11 @@ export function safeAppPath(next: string | null | undefined, fallback = "/overvi
 const COOKIE = "sere_session";
 
 function secret() {
-  return new TextEncoder().encode(process.env.SERE_SECRET_KEY || process.env.AUTH_SECRET || "sere-dev-only-change-me");
+  const value = process.env.SERE_SECRET_KEY || process.env.AUTH_SECRET;
+  if (process.env.NODE_ENV === "production" && (!value || value.length < 32 || value === "change-me-in-production" || value === "sere-dev-only-change-me")) {
+    throw new Error("SERE_SECRET_KEY must be a strong, unique secret of at least 32 characters in production.");
+  }
+  return new TextEncoder().encode(value || "sere-dev-only-change-me");
 }
 
 export async function issueSessionToken(userId: number, organizationId: number): Promise<string> {
