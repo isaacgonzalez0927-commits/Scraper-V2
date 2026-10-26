@@ -130,7 +130,7 @@ export function NovaManagerPanel() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(95px, 1fr))", gap: 10, marginTop: 18 }}>
           {[
             ["Prospects", stat.total], ["Work queued", stat.queued],
-            ["Sent", stat.sent], ["Replies", stat.replies],
+            ["Recent sends", stat.sent], ["Replies", stat.replies],
             ["Signups", stat.signups], ["Needs review", stat.approvalRequired],
           ].map(([label, value]) => (
             <div key={String(label)} style={{
