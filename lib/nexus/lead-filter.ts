@@ -185,8 +185,18 @@ export function filterLead(candidate: LeadCandidate, cityHint?: string): LeadFil
   }
 
   if (cityHint) {
-    const wanted = cityHint.split(",")[0].trim().toLowerCase();
-    const got = (candidate.city || "").trim().toLowerCase();
+    // A search for "Fort Myers FL" must match the actual locality "Fort Myers".
+    // Places often returns the state separately in addressComponents.
+    const cleanCity = (value: string) => value
+      .toLowerCase()
+      .replace(/,?\s+(?:fl|florida|ga|georgia|tx|texas|ca|california|ny|new york)$/i, "")
+      .replace(/\bsaint\b/g, "st")
+      .replace(/\bste\b/g, "st")
+      .replace(/\./g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+    const wanted = cleanCity(cityHint);
+    const got = cleanCity(candidate.city || "");
     if (wanted && got && got !== wanted) {
       return { ok: false, reason: `Places returned ${candidate.city}, not ${cityHint}.` };
     }

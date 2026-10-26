@@ -7,14 +7,14 @@
  *
  * This is deliberately separate from Serenity and from Nexus's work queue.
  */
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db, nowISO } from "../db";
 import { novaManagerRuns, novaMemory } from "../schema";
 import { TRADE_QUERIES } from "../nexus/lead-filter";
 import { enqueueJob, logAction } from "../nexus/jobs";
 import { runTick } from "../nexus/runner";
 import { loadOutreachState, type OutreachState } from "../nexus/state";
-import { novaKey } from "./chat";
+import { looksLikeOpenAIKey } from "../openai";
 import { novaManagerEnabled } from "./manager-config";
 import { NOVA_MEMORY_ORG } from "./identity";
 
@@ -105,11 +105,11 @@ export function chooseManagerPlan(input: {
 }
 
 async function managerGoal(): Promise<string> {
-  const keyed = await db().select({ key: novaMemory.key, content: novaMemory.content })
+  const [row] = await db().select({ content: novaMemory.content })
     .from(novaMemory)
-    .where(eq(novaMemory.organizationId, NOVA_MEMORY_ORG))
-    .limit(100);
-  return keyed.find((item) => item.key === "manager.goal")?.content || DEFAULT_NOVA_GOAL;
+    .where(and(eq(novaMemory.organizationId, NOVA_MEMORY_ORG), eq(novaMemory.key, "manager.goal")))
+    .limit(1);
+  return row?.content || DEFAULT_NOVA_GOAL;
 }
 
 export async function setManagerGoal(goal: string): Promise<string> {
@@ -131,7 +131,8 @@ async function strategyAdvice(
   trades: string[],
   goal: string,
 ): Promise<StrategicAdvice | null> {
-  const key = novaKey();
+  const rawKey = (process.env.NOVA_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "").trim();
+  const key = looksLikeOpenAIKey(rawKey) ? rawKey : null;
   if (!key || process.env.NOVA_MANAGER_AI_ENABLED === "false") return null;
   const model = process.env.NOVA_MANAGER_MODEL?.trim() || "gpt-4o-mini";
   try {

@@ -111,6 +111,15 @@ export async function claimJobs(limit: number): Promise<NexusJob[]> {
   return claimed;
 }
 
+/** A temporary policy hold is not completion and should not consume retry attempts. */
+export async function deferJob(id: number, reason: string, delaySeconds = 3600): Promise<void> {
+  await db().update(nexusJobs).set({
+    status: "queued", lockedAt: null,
+    runAfter: laterISO(Math.max(60, delaySeconds)),
+    lastError: reason.slice(0, 500), updatedAt: nowISO(),
+  }).where(eq(nexusJobs.id, id));
+}
+
 export async function completeJob(id: number): Promise<void> {
   const now = nowISO();
   await db()

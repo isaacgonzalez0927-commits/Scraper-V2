@@ -11,7 +11,7 @@
  * all apply no matter how the job got queued.
  */
 
-import { claimJobs, completeJob, enqueueJob, failJob, pruneJobs, requeueStaleJobs, queueDepth } from "./jobs";
+import { claimJobs, completeJob, deferJob, enqueueJob, failJob, pruneJobs, requeueStaleJobs, queueDepth } from "./jobs";
 import { runLeadSearch } from "./hands/lead";
 import { queueResearch, runResearchCompany } from "./hands/research";
 import { queueDrafts, runOutreachDraft, runOutreachReview } from "./hands/draft";
@@ -95,12 +95,19 @@ export async function runTick(options: { jobs?: number } = {}): Promise<TickResu
         case "outreach.send": {
           const draftId = Number(job.payload.draftId);
           const sent = await runOutreachSend(draftId);
-          if (sent.sent) {
-            result.sent += 1;
-            result.notes.push(`sent ${draftId}`);
-          } else {
-            result.notes.push(`send ${draftId} held: ${sent.error}`);
+          if (!sent.sent) {
+            const reason = sent.error || "Send failed without an explanation.";
+            result.notes.push(`send ${draftId} held: ${reason}`);
+            // A pending approval, an off switch, or a closed send window must
+            // never be reported as a successful completed job.
+            if (/approval required|not true|outside the send window|cap of .*used|circuit breaker|complaint rate|bounce rate/i.test(reason)) {
+              await deferJob(job.id, reason, 3600);
+              continue;
+            }
+            throw new Error(reason);
           }
+          result.sent += 1;
+          result.notes.push(`sent ${draftId}`);
           break;
         }
         default:
