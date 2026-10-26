@@ -23,6 +23,7 @@ import {
   type Prospect,
 } from "../copy";
 import { enqueueJob, logAction } from "../jobs";
+import { novaManagerEnabled } from "../../nova/manager-config";
 import { isWinner, reviewFloor } from "../policy";
 
 const API = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
@@ -262,12 +263,13 @@ export async function runOutreachReview(draftId: number): Promise<ReviewResult> 
 
   const floor = reviewFloor();
   const approved = score >= floor;
+  const needsHumanApproval = approved && novaManagerEnabled();
   const stamp = nowISO();
   await db()
     .update(nexusDrafts)
     .set({
       confidence: score,
-      status: approved ? "approved" : "rejected",
+      status: approved ? (needsHumanApproval ? "pending_approval" : "approved") : "rejected",
       rejectionReason: approved ? "" : reason,
       reviewedAt: stamp,
       updatedAt: stamp,
@@ -275,7 +277,7 @@ export async function runOutreachReview(draftId: number): Promise<ReviewResult> 
     .where(eq(nexusDrafts.id, draftId));
 
   await logAction({
-    action: approved ? "outreach.review.approved" : "outreach.review.rejected",
+    action: approved ? (needsHumanApproval ? "outreach.review.pending_approval" : "outreach.review.approved") : "outreach.review.rejected",
     entityType: "draft",
     entityId: draftId,
     detail: `${row.company.name}: ${score}/100 — ${reason}`,

@@ -224,6 +224,18 @@ export async function ensureSchema(): Promise<void> {
       updated_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS nova_memory_org ON nova_memory (organization_id, updated_at);
+    CREATE TABLE IF NOT EXISTS nova_manager_runs (
+      day TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'running',
+      goal TEXT NOT NULL DEFAULT '',
+      action TEXT NOT NULL DEFAULT 'observe',
+      city TEXT NOT NULL DEFAULT '',
+      trade TEXT NOT NULL DEFAULT '',
+      rationale TEXT NOT NULL DEFAULT '',
+      outcome TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS nexus_companies (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       place_id TEXT NOT NULL DEFAULT '',
@@ -272,6 +284,7 @@ export async function ensureSchema(): Promise<void> {
       confidence INTEGER NOT NULL DEFAULT 0,
       rejection_reason TEXT NOT NULL DEFAULT '',
       reviewed_at TEXT,
+      human_approved_at TEXT,
       sent_at TEXT,
       provider_id TEXT NOT NULL DEFAULT '',
       opened_demo_at TEXT,
@@ -529,6 +542,7 @@ export async function ensureSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS openai_usage_events_org
       ON openai_usage_events (organization_id, created_at);
   `);
+  await addColumnIfMissing("nexus_drafts", "human_approved_at", "TEXT");
   await addColumnIfMissing("organizations", "business_type", "TEXT NOT NULL DEFAULT 'general'");
   await addColumnIfMissing("organizations", "plan", "TEXT NOT NULL DEFAULT 'trial'");
   await addColumnIfMissing("organizations", "trial_ends_at", "TEXT NOT NULL DEFAULT ''");

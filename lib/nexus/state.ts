@@ -21,6 +21,7 @@ export type OutreachState = {
   };
   drafts: {
     pendingReview: number;
+    pendingApproval: number;
     approved: number;
     rejected: number;
     sent: number;
@@ -104,6 +105,7 @@ export async function loadOutreachState(): Promise<OutreachState> {
     pipeline: { total, byStage, runway },
     drafts: {
       pendingReview: byStatus.pending_review || 0,
+      pendingApproval: byStatus.pending_approval || 0,
       approved: byStatus.approved || 0,
       rejected: byStatus.rejected || 0,
       sent: byStatus.sent || 0,
@@ -132,7 +134,7 @@ export async function loadOutreachState(): Promise<OutreachState> {
 }
 
 export function outreachHeadline(state: OutreachState): string {
-  const pending = state.drafts.pendingReview;
+  const pending = state.drafts.pendingReview + state.drafts.pendingApproval;
   const send = state.send.enabled && state.send.clearToSend ? "send on" : "send off";
   return `${state.pipeline.total} in the pipeline · ${pending} waiting review · ${send}`;
 }

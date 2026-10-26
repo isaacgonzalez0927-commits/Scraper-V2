@@ -101,6 +101,20 @@ export const novaMemory = sqliteTable(
  * no organizationId. A company moves new → researching → ready → queued →
  * contacted, and every draft waits for a review score before it can send.
  */
+/** One idempotent, auditable Nova management cycle per New York business day. */
+export const novaManagerRuns = sqliteTable("nova_manager_runs", {
+  day: text("day").primaryKey(),
+  status: text("status").notNull().default("running"),
+  goal: text("goal").notNull().default(""),
+  action: text("action").notNull().default("observe"),
+  city: text("city").notNull().default(""),
+  trade: text("trade").notNull().default(""),
+  rationale: text("rationale").notNull().default(""),
+  outcome: text("outcome").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const nexusCompanies = sqliteTable(
   "nexus_companies",
   {
@@ -164,6 +178,7 @@ export const nexusDrafts = sqliteTable(
     confidence: integer("confidence").notNull().default(0),
     rejectionReason: text("rejection_reason").notNull().default(""),
     reviewedAt: text("reviewed_at"),
+    humanApprovedAt: text("human_approved_at"),
     sentAt: text("sent_at"),
     providerId: text("provider_id").notNull().default(""),
     openedDemoAt: text("opened_demo_at"),
