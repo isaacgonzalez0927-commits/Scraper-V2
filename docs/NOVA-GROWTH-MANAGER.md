@@ -30,7 +30,9 @@ Nova is now Sere's growth manager, working with the existing Nexus pipeline.
    and pipeline. Costs still depend on providers and actual work.
 8. Configure CRON_SECRET (or NEXUS_CRON_SECRET for a trusted external scheduler)
    for /api/nova/manager/tick. NEVER pass a token in a URL query or logs.
-9. Schedule the protected manager endpoint daily. To finish the queue throughout
+9. The branch includes one DAILY Vercel cron for the protected manager endpoint
+   (14:00 UTC, around 9–10 AM US Eastern). It is inactive unless the deployment
+   has both a matching cron secret and NOVA_MANAGER_ENABLED=true. To finish the queue throughout
    the day, an external cron should invoke the existing /api/nexus/tick worker
    at an approved cadence. A single daily manager call does only one Nexus job.
 10. Keep NEXUS_SEND_ENABLED OFF until cold-domain separation, deliverability,
