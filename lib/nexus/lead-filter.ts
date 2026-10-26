@@ -189,7 +189,7 @@ export function filterLead(candidate: LeadCandidate, cityHint?: string): LeadFil
     // Places often returns the state separately in addressComponents.
     const cleanCity = (value: string) => value
       .toLowerCase()
-      .replace(/,?\s+(?:fl|florida|ga|georgia|tx|texas|ca|california|ny|new york)$/i, "")
+      .replace(/,?\s+(?:[a-z]{2}|florida|georgia|texas|california|new york)$/i, "")
       .replace(/\bsaint\b/g, "st")
       .replace(/\bste\b/g, "st")
       .replace(/\./g, "")
