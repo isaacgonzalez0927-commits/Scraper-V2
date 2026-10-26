@@ -52,8 +52,15 @@ export async function POST(request: Request) {
     rejectionReason: action === "reject" ? "Operator rejected." : "",
     updatedAt: stamp,
   }).where(and(eq(nexusDrafts.id, id), eq(nexusDrafts.status, "pending_approval")))
-    .returning({ id: nexusDrafts.id });
+    .returning({ id: nexusDrafts.id, companyId: nexusDrafts.companyId });
   if (!changed) return Response.json({ error: "Draft is no longer awaiting approval." }, { status: 409 });
+  if (action === "reject") {
+    // Operator rejection parks this business; never automatically regenerate
+    // another near-identical message after the operator refused contact.
+    await db().update(nexusCompanies)
+      .set({ stage: "held", updatedAt: stamp })
+      .where(eq(nexusCompanies.id, changed.companyId));
+  }
   await logAction({
     action: action === "approve" ? "outreach.operator.approved" : "outreach.operator.rejected",
     entityType: "draft", entityId: id, actor: "operator",
