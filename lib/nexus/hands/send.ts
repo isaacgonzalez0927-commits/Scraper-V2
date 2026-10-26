@@ -14,7 +14,8 @@ import { db, nowISO } from "../../db";
 import { nexusCompanies, nexusDrafts } from "../../schema";
 import { assembleBody, sendableProblems } from "../copy";
 import { logAction } from "../jobs";
-import { circuitBreaker, isSendEnabled, planSends, type SentOutcome } from "../policy";
+import { isSendEnabled, planSends, type SentOutcome } from "../policy";
+import { novaManagerEnabled } from "../../nova/manager-config";
 
 export type Sender = {
   apiKey: string;
@@ -107,6 +108,14 @@ export async function sentHistory(): Promise<SentOutcome[]> {
 
 export type SendResult = { sent: boolean; error?: string; providerId?: string };
 
+/** Human approval is mandatory while autonomous management is enabled. */
+export function humanApprovalMissing(
+  approvedAt: string | null | undefined,
+  managerEnabled: boolean = novaManagerEnabled(),
+): boolean {
+  return managerEnabled && !approvedAt;
+}
+
 /**
  * One email. No loop on purpose — pacing belongs to the runner, so nothing in
  * the codebase is able to blast a list in a single call.
@@ -121,8 +130,12 @@ export async function runOutreachSend(draftId: number): Promise<SendResult> {
     return { sent: false, error: "NEXUS_SEND_ENABLED is not true. Nothing transmits." };
   }
 
-  const breaker = circuitBreaker(await sentHistory());
-  if (breaker.tripped) return { sent: false, error: breaker.reasons.join(" ") };
+  // Enforce pacing and daily caps at the actual send boundary, not merely
+  // when a send job is queued. A delayed job must never bypass the policy.
+  const sendPlan = planSends(await sentHistory(), { batch: 1 });
+  if (sendPlan.send < 1) {
+    return { sent: false, error: sendPlan.blocked.join(" ") || "Send is held by policy." };
+  }
 
   const [row] = await db()
     .select({ draft: nexusDrafts, company: nexusCompanies })
@@ -131,6 +144,9 @@ export async function runOutreachSend(draftId: number): Promise<SendResult> {
     .where(eq(nexusDrafts.id, draftId));
   if (!row) return { sent: false, error: `No draft ${draftId}.` };
   if (row.draft.sentAt) return { sent: false, error: "Already sent." };
+  if (humanApprovalMissing(row.draft.humanApprovedAt)) {
+    return { sent: false, error: "Operator approval required before Nova can contact this prospect." };
+  }
   if (row.draft.status !== "approved") {
     return { sent: false, error: `Draft is ${row.draft.status}, not approved.` };
   }

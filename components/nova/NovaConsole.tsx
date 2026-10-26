@@ -58,10 +58,10 @@ const SERENITY_PROMPTS = [
 ];
 
 const NOVA_PROMPTS = [
-  "What's the pipeline",
-  "Find HVAC shops in Fort Myers",
-  "Run a tick",
-  "Can we send",
+  "What's Sere's top growth priority?",
+  "How is our pipeline performing?",
+  "What is blocking signups?",
+  "What needs my approval?",
 ];
 
 export function NovaConsole({
@@ -289,9 +289,9 @@ export function NovaConsole({
           <div className="nova-empty">
             {kind === "nova" ? (
               <p>
-                The pipeline is yours, {ownerName}. I find shops, research them,
-                draft, review, and send. I will not talk about a shop&apos;s jobs
-                or books. That is {SERENITY_NAME}.
+                I'm your growth manager, {ownerName}. I prioritize the pipeline,
+                research prospects, and measure results. You approve external
+                messages. {SERENITY_NAME} handles the individual shop's books.
               </p>
             ) : (
               <p>

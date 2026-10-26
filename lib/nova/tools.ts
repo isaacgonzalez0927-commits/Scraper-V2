@@ -23,6 +23,7 @@ import { shopAccess } from "../trial";
 import { dossierHeadline, loadDossier, recentPayments } from "./dossier";
 import { rememberNova } from "./memory";
 import { enqueueJob } from "../nexus/jobs";
+import { managerStatus } from "./manager";
 import { TRADE_QUERIES } from "../nexus/lead-filter";
 import { isSendEnabled } from "../nexus/policy";
 import { runTick } from "../nexus/runner";
@@ -145,6 +146,15 @@ const REMEMBER_TOOL: NovaToolDef = {
   },
 };
 
+const MANAGER_TOOL: NovaToolDef = {
+  type: "function",
+  function: {
+    name: "manager",
+    description: "Read Nova's growth objective, daily strategy decisions, automation mode, approved markets and real pipeline conversions. Check before giving strategic recommendations.",
+    parameters: { type: "object", properties: {} },
+  },
+};
+
 const OUTREACH_TOOLS: NovaToolDef[] = [
   {
     type: "function",
@@ -220,7 +230,7 @@ const OUTREACH_TOOLS: NovaToolDef[] = [
 export const SERENITY_TOOLS: NovaToolDef[] = [...SHOP_TOOLS, REMEMBER_TOOL];
 
 /** The operator talks to Nova. These hands never touch a shop's book. */
-export const NOVA_TOOLS: NovaToolDef[] = [...OUTREACH_TOOLS, REMEMBER_TOOL];
+export const NOVA_TOOLS: NovaToolDef[] = [...OUTREACH_TOOLS, MANAGER_TOOL, REMEMBER_TOOL];
 
 export function toolNames(tools: NovaToolDef[]): string[] {
   return tools.map((tool) => tool.function.name);
@@ -240,7 +250,7 @@ export async function runNovaTool(
 
   const persona = ctx.persona || "serenity";
   const shopNames = new Set(["shop", "status", "business", "payments", "find_job", "move_job", "complete_job"]);
-  const outreachNames = new Set(["outreach", "find_leads", "work", "outcome"]);
+  const outreachNames = new Set(["outreach", "find_leads", "work", "outcome", "manager"]);
   if (persona === "serenity" && outreachNames.has(name)) {
     return JSON.stringify({
       error: "Serenity does not run outreach. That is Nova, the operator's bot.",
@@ -274,6 +284,9 @@ export async function runNovaTool(
 
     case "complete_job":
       return JSON.stringify(await completeJob(ctx, Number(args.job_id)));
+
+    case "manager":
+      return JSON.stringify(await managerStatus());
 
     case "outreach": {
       const state = await loadOutreachState();

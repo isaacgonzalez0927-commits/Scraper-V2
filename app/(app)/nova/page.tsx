@@ -1,4 +1,5 @@
 import { NovaConsole } from "@/components/nova/NovaConsole";
+import { NovaManagerPanel } from "@/components/nova/NovaManagerPanel";
 import { requireContext } from "@/lib/auth";
 import { NOVA_FORBIDDEN, NOVA_NAME, NOVA_PATH, isNovaOperator } from "@/lib/nova/operator";
 import { SERENITY_PATH } from "@/lib/serenity";
@@ -33,6 +34,7 @@ export default async function NovaPage() {
         Operator only · {NOVA_PATH} · not a shop page ·{" "}
         <a href="/overview">Shop</a>
       </p>
+      <NovaManagerPanel />
       <NovaConsole kind="nova" ownerName={firstName} />
     </main>
   );
