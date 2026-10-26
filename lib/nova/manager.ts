@@ -16,6 +16,7 @@ import { runTick } from "../nexus/runner";
 import { loadOutreachState, type OutreachState } from "../nexus/state";
 import { looksLikeOpenAIKey } from "../openai";
 import { novaManagerEnabled } from "./manager-config";
+export { novaManagerEnabled } from "./manager-config";
 import { NOVA_MEMORY_ORG } from "./identity";
 
 export const DEFAULT_NOVA_GOAL =
